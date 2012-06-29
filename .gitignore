@@ -1,3 +1,5 @@
-.settings
-.pydevproject
-.project
+/.settings
+/.pydevproject
+/.project
+*.py?
+
