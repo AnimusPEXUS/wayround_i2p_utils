@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='org_wayround_utils',
-      version='0.1',
+      version='0.2',
       description='Various service modules required by wayround.org projects',
             long_description="""\
 This package contains various useful modules functions and classes.

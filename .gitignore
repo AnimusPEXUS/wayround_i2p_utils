@@ -1,6 +1,7 @@
 /.settings
 /.pydevproject
 /.project
+/dist
+/build
 *.py?
-
 *~

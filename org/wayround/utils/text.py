@@ -3,7 +3,7 @@
 import copy
 import os
 
-from . import file
+from . import terminal
 
 def columned_list_print(lst, width=None, columns=None,
                         margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
@@ -20,7 +20,7 @@ def return_columned_list_print(lst, width=None, columns=None,
         if (isinstance(fd, int) and os.isatty(fd)) \
                 or (hasattr(fd, 'isatty') and fd.isatty()):
 
-            size = file.get_terminal_size(fd)
+            size = terminal.get_terminal_size(fd)
             if size == None:
                 width = 80
             else:
@@ -78,9 +78,7 @@ def return_columned_list_print(lst, width=None, columns=None,
     return ret
 
 def fill(char=' ', count=80):
-    out = ''
-    for i in range(count):
-        out += char[0]
+    out = char[0] * count
     return out
 
 def remove_empty_lines(lst):
@@ -89,6 +87,7 @@ def remove_empty_lines(lst):
         if i != '':
             ret.append(i)
     return ret
+
 
 def remove_duplicated_lines(lst):
     ret = list(set(copy.copy(lst)))

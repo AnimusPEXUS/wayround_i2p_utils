@@ -2,14 +2,12 @@
 
 import os
 import sys
-import struct
 import shutil
 import glob
-import termios
-import fcntl
 
 from . import text
 from . import error
+from . import terminal
 
 def remove_if_exists(file_or_dir):
     if os.path.exists(file_or_dir):
@@ -116,43 +114,6 @@ def copy_file(config, file1, file2, what):
 
     return
 
-def get_terminal_size(fd=1):
-    res = None
-    io_res = None
-    arg = struct.pack('HHHH', 0, 0, 0, 0)
-
-    # print "-e- op:%(op)s fd:%(fd)s arg:%(arg)s" % {
-    #     'op': repr(termios.TIOCGWINSZ),
-    #     'fd': repr(fd),
-    #     'arg': repr(arg)
-    #     }
-    try:
-        io_res = fcntl.ioctl(
-            fd,
-            termios.TIOCGWINSZ,
-            arg
-            # '        '
-            )
-    except:
-        # print_exception_info(sys.exc_info())
-        res = None
-    else:
-        try:
-            res = struct.unpack('HHHH', io_res)
-        except:
-            # print_exception_info(sys.exc_info())
-            res = None
-
-
-    if res != None:
-        res = {
-            'ws_row': res[0],
-            'ws_col': res[1],
-            'ws_xpixel': res[2],
-            'ws_ypixel': res[3]
-            }
-
-    return res
 
 
 def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
@@ -199,7 +160,7 @@ def list_files_recurcive(dirname, output_filename):
 def progress_write(line_to_write):
 
     width = 80
-    ts = get_terminal_size(sys.stdout.fileno())
+    ts = terminal.get_terminal_size(sys.stdout.fileno())
     if ts != None:
         width = ts['ws_col']
 
