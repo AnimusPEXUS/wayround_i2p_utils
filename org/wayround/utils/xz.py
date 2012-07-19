@@ -1,9 +1,5 @@
 
-import sys
-import subprocess
-
-from . import error
-
+import org.wayround.utils.siexec
 
 def xz_check():
     pass
@@ -11,25 +7,5 @@ def xz_check():
 def xz_version():
     pass
 
-def xz(stdin=subprocess.PIPE,
-       stdout=subprocess.PIPE,
-       stderr=subprocess.PIPE,
-       options=[], bufsize=0, cwd=None):
-
-    p = None
-
-    try:
-        p = subprocess.Popen(
-            ['xz'] + options,
-            stdin=stdin, stdout=stdout, stderr=stderr,
-            bufsize=bufsize,
-            cwd=cwd
-            )
-    except:
-        print("-e- Error starting xz subprocess")
-        p = None
-        e = sys.exc_info()
-        error.print_exception_info(e)
-        raise e[1]
-
-    return p
+def xz(*args, **kwargs):
+    return org.wayround.utils.siexec.se('xz', *args, **kwargs)

@@ -1,38 +1,26 @@
-# -*- coding: utf-8 -*-
 
-import sys
 import subprocess
-
-from . import error
-
-def edit_file(config, filename, what):
-    return edit_file_direct(config, '%(path)s/%(file)s' % {
-            'path': config[what],
-            'file': filename
-            })
+import logging
 
 
-def edit_file_direct(config, filename):
+def edit_file(filename, editor='emacs'):
+    return edit_file_direct(filename, editor=editor)
+
+
+def edit_file_direct(filename, editor='emacs'):
     p = None
     try:
-        p = subprocess.Popen([config['editor'],
-                                            '%(file)s' % {
-                                                'file': filename
-                                                }]
-                                            )
+        p = subprocess.Popen([editor, filename])
     except:
-        print('-e- error starting editor')
-        error.print_exception_info(sys.exc_info())
+        logging.exception("error starting editor")
     else:
         try:
             p.wait()
         except:
-            print('-e- error waiting for editor')
+            logging.exception("error waiting for editor")
 
-        print('-i- editor exited')
+        logging.info("editor exited")
 
     del(p)
 
     return
-
-

@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 
 import os.path
 import subprocess
 import sys
 import tarfile
 import io
+import logging
 
 
-from . import error
-from . import xz
-from . import tar
-from . import stream
+import org.wayround.utils.xz
+import org.wayround.utils.tar
+import org.wayround.utils.stream
 
 
 # TODO: Add safeness to streamed functions
@@ -80,10 +79,10 @@ def extract(file_name, output_dir):
         pass
 
     else:
-        print("-e- unsupported extension")
+        logging.error("unsupported extension")
 
     if ret == None:
-        print("-e- Not implemented")
+        logging.error("Not implemented")
         raise Exception
 
     return ret
@@ -94,7 +93,7 @@ def compress_file_xz(infile, outfile, verbose_xz=False):
     ret = 0
 
     if not os.path.isfile(infile):
-        print("-e- Input file not exists: %(name)s" % {
+        logging.error("Input file not exists: %(name)s" % {
             'name': infile
             })
         ret = 1
@@ -111,7 +110,7 @@ def compress_file_xz(infile, outfile, verbose_xz=False):
 
         options += ['-9', '-M', str(200 * 1024 ** 2), '-']
 
-        xzproc = xz.xz(
+        xzproc = org.wayround.utils.xz.xz(
             stdin=fi,
             stdout=fo,
             options=options,
@@ -134,8 +133,7 @@ def compress_dir_contents_tar_compressor(dirname, output_filename,
     try:
         fobj = open(output_filename, 'w')
     except:
-        print("-e- Error opening file for write")
-        error.print_exception_info(sys.exc_info())
+        logging.exception("Error opening file for write")
         ret = 1
     else:
         ret = compress_dir_contents_tar_compressor_fobj(
@@ -153,13 +151,13 @@ def compress_dir_contents_tar_compressor_fobj(dirname, output_fobj,
     ret = 0
 
     if not compressor in ['xz']:
-        print("-e- Wrong decompressor requested")
+        logging.error("Wrong decompressor requested")
         raise ValueError
 
     dirname = os.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
-        print("-e- Not a directory: %(dirname)s" % {
+        logging.error("Not a directory: %(dirname)s" % {
             'dirname': dirname
             })
     else:
@@ -190,7 +188,7 @@ def compress_dir_contents_tar_compressor_fobj(dirname, output_fobj,
 
         options += ['-c', '.']
 
-        tarproc = tar.tar(
+        tarproc = org.wayround.utils.tar.tar(
             options=options,
             stdin=None,
             stdout=comprproc.stdin,
@@ -216,8 +214,7 @@ def decompress_dir_contents_tar_compressor(input_filename, dirname,
     try:
         fobj = open(input_filename, 'r')
     except:
-        print("-e- Error opening file for read")
-        error.print_exception_info(sys.exc_info())
+        logging.exception("Error opening file for read")
         ret = 1
     else:
         ret = decompress_dir_contents_tar_compressor_fobj(
@@ -237,7 +234,7 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
     ret = 0
 
     if not compressor in ['xz']:
-        print("-e- Wrong decompressor requested")
+        logging.error("Wrong decompressor requested")
         raise ValueError
 
     dirname = os.path.abspath(dirname)
@@ -246,22 +243,22 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
         try:
             os.makedirs(dirname)
         except:
-            print("-e- Destination dir not exists and cant's be created")
+            logging.error("Destination dir not exists and cant's be created")
             ret = 1
         else:
             ret = 0
     else:
         if os.path.isfile(dirname):
-            print("-e- Destination exists but is file")
+            logging.error("Destination exists but is file")
             ret = 2
         elif os.path.islink(dirname):
-            print("-e- Destination exists but is link")
+            logging.error("Destination exists but is link")
             ret = 3
         else:
             ret = 0
 
     if ret != 0:
-        print("-e- Error while checking destination dir: %(dirname)s" % {
+        logging.error("Error while checking destination dir: %(dirname)s" % {
             'dirname': dirname
             })
     else:
@@ -278,7 +275,7 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
 
         tarproc = None
         try:
-            tarproc = tar.tar(
+            tarproc = org.wayround.utils.tar.tar(
                 options=options,
                 stdin=subprocess.PIPE,
                 stdout=sys.stdout,
@@ -287,7 +284,7 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
                 stderr=sys.stdout
                 )
         except:
-            print("-e- tar error detected")
+            logging.error("tar error detected")
             util_errors += 1
 
         # compressor
@@ -310,11 +307,11 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
                 stderr=sys.stderr
                 )
         except:
-            print("-e- compressor error detected")
+            logging.error("compressor error detected")
             util_errors += 1
 
         if util_errors != 0:
-            print("-e- Errors was detected - terminating")
+            logging.error("Errors was detected - terminating")
             if isinstance(tarproc, subprocess.Popen):
                 tarproc.terminate()
             if isinstance(comprproc, subprocess.Popen):
@@ -322,14 +319,14 @@ def decompress_dir_contents_tar_compressor_fobj(input_fobj, dirname,
             ret = 6
         else:
 
-            cat_p1 = stream.cat(input_fobj,
+            cat_p1 = org.wayround.utils.stream.cat(input_fobj,
                                                comprproc.stdin,
                                                threaded=True,
                                                close_output_on_eof=True,
                                                thread_name='File object -> Decompressor')
             cat_p1.start()
 
-            cat_p2 = stream.cat(comprproc.stdout,
+            cat_p2 = org.wayround.utils.stream.cat(comprproc.stdout,
                                                tarproc.stdin,
                                                threaded=True,
                                                close_output_on_eof=True,
@@ -353,7 +350,7 @@ def pack_dir_contents_tar(dirname, output_filename,
     dirname = os.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
-        print("-e- Not a directory: %(dirname)s" % {
+        logging.error("Not a directory: %(dirname)s" % {
             'dirname': dirname
             })
     else:
@@ -368,7 +365,7 @@ def pack_dir_contents_tar(dirname, output_filename,
 
         options += ['-c', '.']
 
-        tarproc = tar.tar(
+        tarproc = org.wayround.utils.tar.tar(
             options=options,
             stdin=None,
             stdout=outf,
@@ -390,8 +387,7 @@ def tar_get_member(tarf, cont_name):
     try:
         ret = tarf.getmember(cont_name)
     except:
-        print("-e- Can't get tar member")
-        print(error.return_exception_info(sys.exc_info()))
+        logging.exception("Can't get tar member")
         ret = 1
 
     return ret
@@ -403,8 +399,7 @@ def tar_member_extract_file(tarf, member):
     try:
         ret = tarf.extractfile(member)
     except:
-        print("-e- Can't get tar member")
-        print(error.return_exception_info(sys.exc_info()))
+        logging.exception("Can't get tar member")
         ret = 1
 
     return ret
@@ -432,7 +427,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
     try:
         fd = open(output_filename, 'w')
     except:
-        print("-e- Error creating output file %(name)s" % {
+        logging.error("Error creating output file %(name)s" % {
             'name': output_filename
             })
         ret = 1
@@ -441,12 +436,12 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
             tarf, cont_name
             )
         if not isinstance(fobj, tarfile.ExFileObject):
-            print("-e- Error getting %(name)s from tar" % {
+            logging.error("Error getting %(name)s from tar" % {
                 'name': cont_name
                 })
             ret = 2
         else:
-            stream.cat(fobj, fd)
+            org.wayround.utils.stream.cat(fobj, fd)
             fobj.close()
 
         fd.close()
@@ -458,7 +453,7 @@ def xzcat(stdin):
 
     comprproc = None
     try:
-        comprproc = xz.xz(
+        comprproc = org.wayround.utils.xz.xz(
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             options=['-d'],
@@ -470,13 +465,13 @@ def xzcat(stdin):
     else:
         outstr = io.StringIO()
 
-        cat_p1 = stream.cat(stdin,
+        cat_p1 = org.wayround.utils.stream.cat(stdin,
                                            comprproc.stdin,
                                            threaded=True,
                                            close_output_on_eof=True)
         cat_p1.start()
 
-        cat_p2 = stream.cat(comprproc.stdout,
+        cat_p2 = org.wayround.utils.stream.cat(comprproc.stdout,
                                            outstr,
                                            threaded=True,
                                            close_output_on_eof=False)

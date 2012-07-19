@@ -6,8 +6,8 @@ import xml.sax.saxutils
 import re
 import urllib.parse
 
-from . import text
-from . import error
+import org.wayround.utils.text
+import org.wayround.utils.error
 
 class DictatorshipUnitTooDeep(Exception): pass
 class MissingDictatorshipUnitAttribute(Exception): pass
@@ -28,7 +28,7 @@ class DictTreeToXMLRenderer:
         # those four attributes are for code formatting
         # purposes
         self.xml_indent_size = xml_indent_size
-        self.xml_indent = text.fill(' ', xml_indent_size)
+        self.xml_indent = org.wayround.utils.text.fill(' ', xml_indent_size)
 
         self.css_and_js_holder = None
 
@@ -124,7 +124,7 @@ class DictTreeToXMLRenderer:
                 self.do_log(
                     "-e- Error while checking `%(path)s'\n%(exc_info)s" % {
                         'path': i,
-                        'exc_info': error.return_exception_info(sys.exc_info())
+                        'exc_info': org.wayround.utils.error.return_exception_info(sys.exc_info())
                         }
                     )
                 ret = 1
@@ -288,7 +288,7 @@ class DictTreeToXMLRenderer:
 
         inaddr_l = len(path)
 
-        indent = text.fill(' ', inaddr_l * self.xml_indent_size)
+        indent = org.wayround.utils.text.fill(' ', inaddr_l * self.xml_indent_size)
 
         for i in keys:
 
@@ -324,7 +324,6 @@ class DictTreeToXMLRenderer:
 
                 content = str(indict[i]['content'])
 
-                # NOTE: May be next line need to be reworked
                 content = content.replace('--', '-')
 
                 end = ' -->'
@@ -341,7 +340,6 @@ class DictTreeToXMLRenderer:
 
             elif indict[i]['type'] == 'cdata':
                 start = '<![CDATA['
-                # NOTE: May be next line need to be reworked
                 content = str(indict[i]['content']).replace(']]>', '')
                 end = ']]>'
 
@@ -465,8 +463,8 @@ class DictTreeToXMLRenderer:
 
         inaddr_l = len(path)
 
-        indent = text.fill(' ', inaddr_l * self.xml_indent_size)
-        nameindent = text.fill(' ', len(tagname))
+        indent = org.wayround.utils.text.fill(' ', inaddr_l * self.xml_indent_size)
+        nameindent = org.wayround.utils.text.fill(' ', len(tagname))
 
         attrs = []
 

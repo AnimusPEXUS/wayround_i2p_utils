@@ -1,30 +1,34 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 # TODO: migrate to multiprocessing
 import threading
 import subprocess
+import logging
 
-from . import error
 
 
 def cat(stdin, stdout, threaded=False, write_method_name='write',
-        close_output_on_eof=False, thread_name='Thread'):
-    return dd(stdin, stdout, bs=(2 * 1024 ** 2), count=None,
+        close_output_on_eof=False, thread_name='Thread', bs=(2 * 1024 ** 2),
+        convert_to_str=None):
+    return dd(stdin, stdout, bs=bs, count=None,
               threaded=threaded, write_method_name=write_method_name,
               close_output_on_eof=close_output_on_eof,
-              thread_name=thread_name)
+              thread_name=thread_name, convert_to_str=convert_to_str)
 
 def dd(stdin, stdout, bs=1, count=None, threaded=False,
        write_method_name='write', close_output_on_eof=False,
-       thread_name='Thread'):
+       thread_name='Thread', convert_to_str=None):
 
     if not write_method_name in ['write', 'update']:
         raise ValueError
 
     if not hasattr(stdin, 'read'):
         raise ValueError
+
+    if convert_to_str != None:
+        if not isinstance(convert_to_str, str):
+            raise ValueError("convert_to_str and ony be str or None")
 
     if threaded:
         return threading.Thread(
@@ -36,14 +40,15 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
                 threaded=False,
                 close_output_on_eof=close_output_on_eof,
                 write_method_name=write_method_name,
-                thread_name=thread_name
+                thread_name=thread_name,
+                convert_to_str=convert_to_str
                 )
             )
 
     else:
 
         if thread_name != 'Thread':
-            print("-i- Starting `%(name)s' thread" % {
+            logging.info("Starting `%(name)s' thread" % {
                 'name':thread_name
                 })
 
@@ -61,10 +66,14 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
         while True:
             buff = stdin.read(bs)
 
+            if not isinstance(buff, bytes):
+                raise ValueError("Can read only with (Not str or anything other)")
+
+            if convert_to_str != None:
+                buff = str(buff, encoding=convert_to_str)
+
             exec(
-                "stdout.%(write_method_name)s(buff)" % {
-                    'write_method_name': write_method_name
-                    }
+                "stdout.{}(buff)".format(write_method_name)
                 )
 
             buff_len = len(buff)
@@ -87,27 +96,29 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
 
         if close_output_on_eof:
             if thread_name != 'Thread':
-                print("-i-  Closing `%(name)s' thread stdout" % {
+                logging.info("Closing `%(name)s' thread stdout" % {
                     'name':thread_name
                     })
             stdout.close()
 
         if thread_name != 'Thread':
-            print("-i-   Ending `%(name)s' thread" % {
-                'name':thread_name
-                })
-            print("        {")
-            print("           %(num)d cycles worked," % {
-                'num' : c                })
-            print("           %(size)d bytes (%(sizem)s MiB) transferred," % {
-                'size': bytes_counter,
-                'sizem': (float(bytes_counter) / 1024 / 1024)
-                })
-            print("           with buffer size %(bufs)s bytes (%(bufm)s MiB)" % {
-                'bufs': bs,
-                'bufm': (float(bs) / 1024 / 1024)
-                })
-            print("        }")
+            logging.info("""\
+  Ending `{name}' thread
+        {{
+           {num} cycles worked,
+           {size} bytes ({sizem} MiB) transferred,
+           with buffer size {bufs} bytes ({bufm} MiB)
+        }}
+""".format_map({
+        'name': thread_name,
+        'num' : c,
+        'size': bytes_counter,
+        'sizem': (float(bytes_counter) / 1024 / 1024),
+        'bufs': bs,
+        'bufm': (float(bs) / 1024 / 1024)
+        }
+        )
+    )
         return
 
     # control shuld never reach this return
@@ -150,11 +161,9 @@ def unix_cat(stdin=subprocess.PIPE,
             cwd=cwd
             )
     except:
-        print("-e- Error starting cat subprocess")
+        logging.exception("Error starting cat subprocess")
         p = None
-        e = sys.exc_info()
-        error.print_exception_info(e)
-        raise e[1]
+        raise
 
     return p
 

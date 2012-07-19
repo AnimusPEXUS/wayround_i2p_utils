@@ -61,7 +61,7 @@ def getopt(args):
 
                         eq_pos = args[i].find('=')
                         if eq_pos != -1:
-                            ret_opts.append((args[i][:eq_pos], args[i][eq_pos+1:]))
+                            ret_opts.append((args[i][:eq_pos], args[i][eq_pos + 1:]))
                         else:
                             ret_opts.append((args[i], None))
 
@@ -75,3 +75,12 @@ def getopt(args):
         i += 1
 
     return ret_opts, ret_args
+
+def getopt_keyed(args):
+    opts, args = getopt(args)
+
+    opts_k = {}
+    for i in opts:
+        opts_k[i[0]] = i[1]
+
+    return opts_k, args

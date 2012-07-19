@@ -1,6 +1,8 @@
-# -*- coding: utf-8 -*-
 
 import traceback
+
+# Do not use this module. use logging.exception
+# Better use this module only with this package's log module
 
 def return_exception_info(e, tb=False):
     txt = """

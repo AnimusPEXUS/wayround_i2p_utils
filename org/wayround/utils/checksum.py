@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 
 import os
-import sys
 import hashlib
 import re
+import logging
 
-from . import stream
-from . import error
-from . import file
+import org.wayround.utils.stream
+import org.wayround.utils.file
 
 def make_dir_checksums(dirname, output_filename):
 
@@ -16,7 +14,7 @@ def make_dir_checksums(dirname, output_filename):
     dirname = os.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
-        print("-e- Not is dir %(name)s" % {
+        logging.error("Not is dir %(name)s" % {
             'name': dirname
             })
         ret = 1
@@ -26,8 +24,7 @@ def make_dir_checksums(dirname, output_filename):
         try:
             sums_fd = open(output_filename, 'w')
         except:
-            print("-e- Error opening output file")
-            error.print_exception_info(sys.exc_info())
+            logging.exception("Error opening output file")
             ret = 2
         else:
             ret = make_dir_checksums_fo(dirname, sums_fd)
@@ -40,7 +37,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
     ret = 0
     dirname = os.path.abspath(dirname)
     if not os.path.isdir(dirname):
-        print("-e- Not a dir %(name)s" % {
+        logging.error("Not a dir %(name)s" % {
             'name': dirname
             })
         ret = 1
@@ -49,15 +46,15 @@ def make_dir_checksums_fo(dirname, output_fileobj):
 
         dirname_l = len(dirname)
 
-        if not isinstance(output_fileobj, file):
-            print("-e- Wrong output file object")
+        if not hasattr(output_fileobj, 'write'):
+            logging.error("Wrong output file object")
             ret = 2
         else:
-            sums_fd = output_fileobj
-            print("-i- Creating checksums")
+
+            logging.info("Creating checksums")
             for root, dirs, files in os.walk(dirname):
                 for f in files:
-                    file.progress_write("    %(dir)s/%(file)s" % {
+                    org.wayround.utils.file.progress_write("    %(dir)s/%(file)s" % {
                         'dir': root,
                         'file': f
                         })
@@ -67,7 +64,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
                         m.update(fd.read())
                         fd.close()
                         wfn = ('/' + (root + '/' + f)[1:])[dirname_l:]
-                        sums_fd.write(
+                        output_fileobj.write(
                             "%(digest)s *%(pkg_file_name)s\n" % {
                                 'digest': m.hexdigest(),
                                 'pkg_file_name':wfn
@@ -82,15 +79,14 @@ def make_file_checksum(filename, method='sha512'):
     try:
         f = open(filename, 'r')
     except:
-        print("-e- Can't open file `%(name)s'" % {
+        logging.exception("Can't open file `%(name)s'" % {
             'name': filename
             })
-        error.print_exception_info(sys.exc_info())
         ret = 1
     else:
         summ = make_fileobj_checksum(f, method)
         if not isinstance(summ, str):
-            print("-e- Can't get checksum for file `%(name)s'" % {
+            logging.error("Can't get checksum for file `%(name)s'" % {
                 'name': filename
                 })
             ret = 2
@@ -107,13 +103,12 @@ def make_fileobj_checksum(fileobj, method='sha512'):
             'method': method
             })
     except:
-        print("-e- Error calling for hashlib method `%(method)s'" % {
+        logging.exception("Error calling for hashlib method `%(method)s'" % {
             'method': method
             })
-        error.print_exception_info(sys.exc_info())
         ret = 1
     else:
-        stream.cat(
+        org.wayround.utils.stream.cat(
             fileobj, m, write_method_name='update'
             )
         ret = m.hexdigest()
@@ -125,17 +120,16 @@ def parse_checksums_file_text(filename):
     try:
         f = open(filename)
     except:
-        print("-e- Can't open file `%(name)s'" % {
+        logging.exception("Can't open file `%(name)s'" % {
             'name': filename
             })
-        error.print_exception_info(sys.exc_info())
         ret = 1
     else:
         txt = f.read()
         f.close()
         sums = parse_checksums_text(txt)
         if not isinstance(sums, dict):
-            print("-e- Can't get checksums from file `%(name)s'" % {
+            logging.error("Can't get checksums from file `%(name)s'" % {
                 'name': filename
                 })
             ret = 2

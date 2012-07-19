@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 
 import os
-import sys
+import logging
 
-from . import time
-from . import error
+import org.wayround.utils.time
 
 class Log:
 
@@ -19,22 +17,19 @@ class Log:
             try:
                 os.makedirs(log_dir)
             except:
-                print("-e- Exception while creating building logs dir")
-                error.print_exception_info(
-                    sys.exc_info()
-                    )
+                logging.exception("Exception while creating building logs dir")
                 ret = 1
         else:
 
             if not os.path.isdir(log_dir) \
                     or os.path.islink(log_dir):
-                print("-e- Current file type is not acceptable: %(name)s" % {
-                    'name': log_dir
-                    })
+                logging.error("Current file type is not acceptable: {}".format(
+                    log_dir
+                    ))
                 ret = 2
 
         if ret == 0:
-            timestamp = time.currenttime_stamp()
+            timestamp = org.wayround.utils.time.currenttime_stamp()
             filename = os.path.abspath(
                 os.path.join(
                     log_dir,
@@ -44,23 +39,24 @@ class Log:
                         }
                     )
                 )
+
             try:
                 self.fileobj = open(filename, 'w')
             except:
-                print("-e- Error opening log file")
-                error.print_exception_info(sys.exc_info())
+                logging.exception("Error opening log file")
                 ret = 3
             else:
-                print((
-                    "[%(ts)s] =///////= Starting `%(name)s' log =///////=\n") % {
+                logging.info(
+                    "[{ts}] =///////= Starting `{name}' log =///////=\n" .format_map({
                         'ts': timestamp,
                         'name': self.logname
-                        })
+                        }))
                 self.fileobj.write(
-                    "[%(ts)s] =///////= Starting `%(name)s' log =///////=\n" % {
+                    "[{ts}] =///////= Starting `{name}' log =///////=\n".format_map({
                         'ts': timestamp,
                         'name': self.logname
                     }
+                    )
                     )
 
         if ret != 0:
@@ -72,15 +68,15 @@ class Log:
         if self.fileobj == None:
             raise Exception
 
-        timestamp = time.currenttime_stamp()
-        print("[%(ts)s] =///////= Stopping `%(name)s' log =///////=\n" % {
+        timestamp = org.wayround.utils.time.currenttime_stamp()
+        logging.info("[{ts}] =///////= Stopping `{name}' log =///////=\n".formap_map({
             'ts': timestamp,
             'name': self.logname
-            })
-        self.fileobj.write("[%(ts)s] =///////= Stopping `%(name)s' log =///////=\n" % {
-                'ts': timestamp,
-                'name': self.logname
-                })
+            }))
+        self.fileobj.write("[{ts}] =///////= Stopping `{name}' log =///////=\n".formap_map({
+            'ts': timestamp,
+            'name': self.logname
+            }))
         self.fileobj.flush()
         self.fileobj.close()
         return
@@ -89,18 +85,26 @@ class Log:
         if self.fileobj == None:
             raise Exception
 
-        timestamp = time.currenttime_stamp()
+        timestamp = org.wayround.utils.time.currenttime_stamp()
         if echo:
-            print("[%(ts)s] %(text)s" % {
+            logging.info("[{ts}] {}".format_map({
                 'ts': timestamp,
                 'text': text
-                })
-        self.fileobj.write("[%(ts)s] %(text)s\n" % {
+                }))
+        self.fileobj.write("[{ts}] {}".format_map({
                 'ts': timestamp,
                 'text': text
-                })
+                }))
         return
 
+    def error(self, text, echo=True):
+        self.write("-e- " + text, echo=echo, typ='error')
+
+    def info(self, text, echo=True):
+        self.write("-i- " + text, echo=echo, typ='info')
+
+    def warning(self, text, echo=True):
+        self.write("-w- " + text, echo=echo, typ='warning')
 
     def __del__(self):
         if not self.fileobj.closed:
@@ -108,5 +112,7 @@ class Log:
                 self.stop()
             except:
                 pass
+
+
 
 

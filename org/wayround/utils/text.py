@@ -3,7 +3,7 @@
 import copy
 import os
 
-from . import terminal
+import org.wayround.utils.terminal
 
 def columned_list_print(lst, width=None, columns=None,
                         margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
@@ -20,7 +20,7 @@ def return_columned_list_print(lst, width=None, columns=None,
         if (isinstance(fd, int) and os.isatty(fd)) \
                 or (hasattr(fd, 'isatty') and fd.isatty()):
 
-            size = terminal.get_terminal_size(fd)
+            size = org.wayround.utils.terminal.get_terminal_size(fd)
             if size == None:
                 width = 80
             else:
@@ -46,7 +46,7 @@ def return_columned_list_print(lst, width=None, columns=None,
     int_l = width - mrr_l - mrl_l
 
     if columns == None:
-        columns = (int_l / (longest + spc_l))
+        columns = int((int_l / (longest + spc_l)))
 
     if columns < 1:
         columns = 1

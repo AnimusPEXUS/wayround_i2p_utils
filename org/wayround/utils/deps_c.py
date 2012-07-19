@@ -1,13 +1,12 @@
 
 import os
-import sys
-import subprocess
 import io
 import copy
 import re
+import logging
 
-from . import error
-from . import stream
+import org.wayround.utils.siexec
+import org.wayround.utils.stream
 
 LDD_RESP_RES = {
     'not_found': r'(?P<name>.*) => not found',
@@ -24,7 +23,7 @@ def elf_deps(filename, mute=True):
     if not os.path.isfile(filename):
         #or os.path.islink(filename):
         if not mute:
-            print("-e- Not a file")
+            logging.error("Not a file")
         ret = 1
     else:
 
@@ -34,7 +33,7 @@ def elf_deps(filename, mute=True):
             options=[filename]
             )
 
-        catproc = stream.cat(
+        catproc = org.wayround.utils.stream.cat(
             lddproc.stdout,
             str_file,
             threaded=True
@@ -57,7 +56,7 @@ def elf_deps(filename, mute=True):
             ret = copy.copy(dep_lst)
         else:
             if not mute:
-                print("-e- ldd returned error")
+                logging.error("ldd returned error")
             ret = 2
 
         del(lddproc)
@@ -97,7 +96,7 @@ def parse_ldd_output(text):
                 break
 
         if re_res == None:
-            print("-e- Couldn't parse line `%(txt)s'" % {
+            logging.error("Couldn't parse line `%(txt)s'" % {
                 'txt': i
                 })
             raise Exception
@@ -106,25 +105,5 @@ def parse_ldd_output(text):
 
     return ret
 
-def ldd(stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        options=[], bufsize=0, cwd=None):
-
-    p = None
-
-    try:
-        p = subprocess.Popen(
-            ['ldd'] + options,
-            stdin=stdin, stdout=stdout, stderr=stderr,
-            bufsize=bufsize,
-            cwd=cwd
-            )
-    except:
-        print("-e- Error starting ldd subprocess")
-        p = None
-        e = sys.exc_info()
-        error.print_exception_info(e)
-        raise e[1]
-
-    return p
+def ldd(*args, **kwargs):
+    return org.wayround.utils.siexec.se('ldd', *args, **kwargs)
