@@ -1,12 +1,38 @@
 
+import os.path
 import subprocess
 import logging
 import sys
 import io
 
 import org.wayround.utils.stream
-import org.wayround.utils.xz
-import org.wayround.utils.bzip2
+
+
+def simple_exec(
+    program,
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    options=[],
+    bufsize=0,
+    cwd=None
+    ):
+
+    p = None
+
+    try:
+        p = subprocess.Popen(
+            [program] + options,
+            stdin=stdin, stdout=stdout, stderr=stderr,
+            bufsize=bufsize,
+            cwd=cwd
+            )
+    except:
+        logging.exception("Error starting `{}' subprocess".format(program))
+        p = None
+        raise
+
+    return p
 
 
 def pipe_subprocesses(processes_list,
@@ -71,6 +97,7 @@ def pipe_subprocesses(processes_list,
 
     return
 
+
 def test_pipes():
 
     for i in [
@@ -91,12 +118,12 @@ def test_pipes():
 
     # =========== xz based testing ===========    
 
-    txt = None
     txt = io.BytesIO()
     txt.write(text)
     txt.seek(0)
 
-    xz1 = org.wayround.utils.xz.xz(
+    xz1 = simple_exec(
+        'xz',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -104,7 +131,8 @@ def test_pipes():
         bufsize=0
         )
 
-    xz2 = org.wayround.utils.xz.xz(
+    xz2 = simple_exec(
+        'xz',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -112,7 +140,8 @@ def test_pipes():
         bufsize=0
         )
 
-    xz3 = org.wayround.utils.xz.xz(
+    xz3 = simple_exec(
+        'xz',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -120,7 +149,8 @@ def test_pipes():
         bufsize=0
         )
 
-    xz4 = org.wayround.utils.xz.xz(
+    xz4 = simple_exec(
+        'xz',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -167,7 +197,8 @@ def test_pipes():
 #    txt.write(text)
     txt.seek(0)
 
-    bzip21 = org.wayround.utils.bzip2.bzip2(
+    bzip21 = simple_exec(
+        'bzip2',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -175,7 +206,8 @@ def test_pipes():
         bufsize=0
         )
 
-    bzip22 = org.wayround.utils.bzip2.bzip2(
+    bzip22 = simple_exec(
+        'bzip2',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -183,7 +215,8 @@ def test_pipes():
         bufsize=0
         )
 
-    bzip23 = org.wayround.utils.bzip2.bzip2(
+    bzip23 = simple_exec(
+        'bzip2',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -191,7 +224,8 @@ def test_pipes():
         bufsize=0
         )
 
-    bzip24 = org.wayround.utils.bzip2.bzip2(
+    bzip24 = simple_exec(
+        'bzip2',
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -232,3 +266,141 @@ def test_pipes():
     cat2.join()
 
     txt.close()
+
+
+def process_stream(
+    program,
+    stdin,
+    stdout,
+    stderr,
+    options=[],
+    proc_bufsize=0,
+    cat_bufsize=200,
+    cwd=None,
+    verbose=False
+    ):
+
+    ret = 0
+
+    try:
+        proc = simple_exec(
+            program,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=stderr,
+            options=options,
+            bufsize=proc_bufsize,
+            cwd=cwd
+            )
+    except:
+        logging.exception("Error starting process {}".format(program))
+        ret = 1
+    else:
+
+        try:
+            thread_name = ''
+
+            if verbose:
+                thread_name = 'in >> {}'.format(proc.pid)
+            else:
+                thread_name = 'Thread'
+
+            cat1 = org.wayround.utils.stream.cat(
+                stdin,
+                proc.stdin,
+                threaded=True,
+                close_output_on_eof=True,
+                bs=cat_bufsize,
+                thread_name=thread_name
+                )
+
+            if verbose:
+                thread_name = '{} >> out'.format(proc.pid)
+            else:
+                thread_name = 'Thread'
+
+            cat2 = org.wayround.utils.stream.cat(
+                proc.stdout,
+                stdout,
+                threaded=True,
+                close_output_on_eof=False,
+                bs=cat_bufsize,
+                thread_name=thread_name
+                )
+
+            cat1.start()
+            cat2.start()
+
+            proc.wait()
+
+            cat1.join()
+            cat2.join()
+        finally:
+            proc.terminate()
+
+    return ret
+
+
+def process_file(
+    program,
+    infile,
+    outfile,
+    stderr,
+    options=[],
+    proc_bufsize=0,
+    cat_bufsize=200,
+    cwd=None,
+    verbose=False
+    ):
+
+    ret = 0
+
+    if not os.path.isfile(infile):
+        logging.error("Input file not exists: %(name)s" % {
+            'name': infile
+            })
+        ret = 1
+    else:
+        try:
+            fi = open(infile, 'rb')
+        except:
+            logging.exception("Can't open file `{}'".format(infile))
+        else:
+
+            try:
+                fo = open(outfile, 'wb')
+            except:
+                logging.exception("Can't rewrite file `{}'".format(outfile))
+            else:
+
+                try:
+                    options = []
+
+                    if process_stream(
+                        program,
+                        fi,
+                        fo,
+                        stderr=stderr,
+                        options=options,
+                        proc_bufsize=proc_bufsize,
+                        cat_bufsize=cat_bufsize,
+                        cwd=cwd,
+                        verbose=verbose
+                        ) != 0:
+                        logging.error(
+                            "Error processing file {in} to {out} through {proc}".format_map(
+                                {
+                                 'in': infile,
+                                 'out': outfile,
+                                 'proc': program
+                                 }
+                                )
+                            )
+                        ret = 2
+                finally:
+                    fo.close()
+
+            finally:
+                fi.close()
+
+    return ret

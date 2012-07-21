@@ -27,9 +27,10 @@ def make_dir_checksums(dirname, output_filename):
             logging.exception("Error opening output file")
             ret = 2
         else:
-            ret = make_dir_checksums_fo(dirname, sums_fd)
-
-            sums_fd.close()
+            try:
+                ret = make_dir_checksums_fo(dirname, sums_fd)
+            finally:
+                sums_fd.close()
 
     return ret
 
@@ -51,6 +52,8 @@ def make_dir_checksums_fo(dirname, output_fileobj):
             ret = 2
         else:
 
+            # TODO: may be optimizations needed
+
             logging.info("Creating checksums")
             for root, dirs, files in os.walk(dirname):
                 for f in files:
@@ -60,17 +63,26 @@ def make_dir_checksums_fo(dirname, output_fileobj):
                         })
                     if os.path.isfile(root + '/' + f) and not os.path.islink(root + '/' + f):
                         m = hashlib.sha512()
-                        fd = open(root + '/' + f, 'r')
-                        m.update(fd.read())
-                        fd.close()
-                        wfn = ('/' + (root + '/' + f)[1:])[dirname_l:]
-                        output_fileobj.write(
-                            "%(digest)s *%(pkg_file_name)s\n" % {
-                                'digest': m.hexdigest(),
-                                'pkg_file_name':wfn
-                                }
-                            )
+                        try:
+                            fd = open(root + '/' + f, 'r')
+                        except:
+                            logging.exception("Can't open file `{}'".format(root + '/' + f))
+                            ret = 3
+                        else:
+                            try:
+                                m.update(fd.read())
+                                wfn = ('/' + (root + '/' + f)[1:])[dirname_l:]
+                                output_fileobj.write(
+                                    "%(digest)s *%(pkg_file_name)s\n" % {
+                                        'digest': m.hexdigest(),
+                                        'pkg_file_name':wfn
+                                        }
+                                    )
+                            finally:
+                                fd.close()
+
                         del(m)
+
     print("")
     return ret
 

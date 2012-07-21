@@ -101,6 +101,7 @@ def copytree(src_dir,
     #print('')
     return ret
 
+
 def isdirempty(dirname):
     return len(os.listdir(dirname)) == 0
 
@@ -130,15 +131,19 @@ def create_if_not_exists_dir(dirname):
         try:
             os.makedirs(dirname)
         except:
+            logging.error("Destination dir not exists and cant's be created")
             ret = 1
         else:
             ret = 0
     else:
         if os.path.isfile(dirname):
+            logging.error("Destination exists but is file")
             ret = 2
         elif os.path.islink(dirname):
+            logging.error("Destination exists but is link")
             ret = 3
         elif not os.path.isdir(dirname):
+            logging.error("Destination exists but is not dir")
             ret = 4
         else:
             ret = 0
@@ -239,10 +244,18 @@ def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
 
 def list_files_recurcive(dirname, output_filename):
 
-    fd = open(output_filename, 'w')
-    absp = os.path.abspath(dirname)
-    _list_files_recurcive(absp, len(absp), absp, fd)
-    fd.close()
+    try:
+        fd = open(output_filename, 'w')
+    except:
+        logging.exception("Can't create file `{}'".format(output_filename))
+        raise
+    else:
+        try:
+            absp = os.path.abspath(dirname)
+            _list_files_recurcive(absp, len(absp), absp, fd)
+        finally:
+            fd.close()
+    return
 
 def progress_write(line_to_write):
 

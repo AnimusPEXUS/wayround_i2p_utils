@@ -24,7 +24,7 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
         raise ValueError
 
     if not hasattr(stdin, 'read'):
-        raise ValueError
+        raise ValueError("Object `{}' have no 'read' function".format(stdin))
 
     if convert_to_str != None:
         if not isinstance(convert_to_str, str):
@@ -72,9 +72,14 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
             if convert_to_str != None:
                 buff = str(buff, encoding=convert_to_str)
 
-            exec(
-                "stdout.{}(buff)".format(write_method_name)
-                )
+            try:
+                exec(
+                    "stdout.{}(buff)".format(write_method_name)
+                    )
+            except TypeError as err_val:
+                if err_val.args[0] == 'must be str, not bytes':
+                    logging.warning("hint: check that output is in bytes mode or do conversion with convert_to_str option")
+                raise
 
             buff_len = len(buff)
             if buff_len == 0:
