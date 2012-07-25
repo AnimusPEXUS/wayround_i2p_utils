@@ -14,7 +14,6 @@ import org.wayround.utils.file
 
 # TODO: Add safeness to streamed functions
 # TODO: Rework old functions to new tune
-# FIXME: Continue Work in this module
 
 CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gz'])
 
@@ -75,23 +74,10 @@ def _extract_tar_7z(file_name, output_dir):
 
 def _extract_tar_arch(file_name, output_dir, arch):
 
-    # TODO: rework this function
-
-    arch_params = ''
-
-    if arch == 'gzip' or arch == 'bzip2':
-        arch_params = '-d'
-
-    else:
-        arch_params = '-dv'
-
-    ret = os.system(
-        "cat '%(file_name)s' | %(arch)s %(arch_params)s | tar --no-same-owner --no-same-permissions -xlRvC '%(output_dir)s' " % {
-            'file_name': file_name,
-            'arch': arch,
-            'output_dir': output_dir,
-            'arch_params': arch_params
-            })
+    ret = extract_tar_canonical(
+        file_name, output_dir, arch,
+        verbose_tar=True, verbose_compressor=True
+        )
 
     return ret
 
@@ -304,8 +290,6 @@ def extract_tar_canonical_fobj(
     verbose_tar=False,
     verbose_compressor=False
     ):
-
-    ret = 0
 
     dirname = os.path.abspath(dirname)
 

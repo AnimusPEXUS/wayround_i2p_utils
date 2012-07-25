@@ -5,7 +5,7 @@ import copy
 import re
 import logging
 
-import org.wayround.utils.siexec
+import org.wayround.utils.exec
 import org.wayround.utils.stream
 
 LDD_RESP_RES = {
@@ -106,4 +106,4 @@ def parse_ldd_output(text):
     return ret
 
 def ldd(*args, **kwargs):
-    return org.wayround.utils.siexec.se('ldd', *args, **kwargs)
+    return org.wayround.utils.exec.simple_exec('ldd', *args, **kwargs)

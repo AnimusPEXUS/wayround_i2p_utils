@@ -1,13 +1,142 @@
-# -*- coding: utf-8 -*-
 
+"""
+This module is for XML and XHTML rendering
+"""
 
 import sys
 import xml.sax.saxutils
 import re
 import urllib.parse
+import logging
 
 import org.wayround.utils.text
 import org.wayround.utils.error
+
+
+# 2e912bf9-c8c1-4dcd-871d-3cd2edc43614 is the uuid for all base
+# elements :D
+
+def pi(content):
+    return {
+        'type': 'pi',
+        'content': content
+        }
+
+
+def comment(text):
+    return {
+        'type': 'comment',
+        'content': text
+        }
+
+def dtd(text):
+    return {
+        'type': 'dtd',
+        'content': text
+        }
+
+def cdata(text):
+    return {
+        'type': 'cdata',
+        'content': text
+        }
+
+def char(text):
+    return {
+        'type': 'char',
+        'content': text
+        }
+
+def static(text):
+    return {
+        'type': 'static',
+        'content': text
+        }
+
+def html(title='', description='', keywords=[], basic_css=[], basic_js=[], content=None):
+    return {
+        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
+        '00015_html_dtd': dtd('html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'),
+        '00020_html': tag(
+            'html',
+            attributes={
+                'version': '-//W3C//DTD XHTML 1.1//EN',
+                'xmlns': 'http://www.w3.org/1999/xhtml',
+                'xml:lang': 'en',
+                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+                'xsi:schemaLocation': 'http://www.w3.org/1999/xhtml http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
+                },
+            closed=False,
+            module=None,
+            uid=None,
+            css_and_js_holder=False,
+            required_css=[],
+            required_js=[],
+            content={
+                '00010_head' : tag(
+                   'head',
+                   css_and_js_holder=True,
+                   content={
+                        '00010_title': tag(
+                            'title',
+                            content=title
+                            ),
+                        '00020_description': tag(
+                            'meta',
+                            closed=True,
+                            attributes={
+                                'name': 'description',
+                                'content':description
+                                }
+                            ),
+                        '00030_keywords': tag(
+                            'meta',
+                            closed=True,
+                            attributes={
+                                'name': 'keywords',
+                                'content':' '.join(keywords)
+                                }
+                            ),
+                        }
+                   ),
+                '00020_body': tag(
+                    'body',
+                    required_js=basic_js,
+                    required_css=basic_css,
+                    content=content
+                    )
+                }
+            )
+        }
+
+def tag(
+    name,
+    attributes={},
+    closed=False,
+    module='basic-2e912bf9-c8c1-4dcd-871d-3cd2edc43614',
+    uid=None,
+    css_and_js_holder=False,
+    required_css=[],
+    required_js=[],
+    content=None
+    ):
+    ret = {
+        'type': 'tag',
+        'tag_info': {
+            'name': name,
+            'closed': closed,
+            'attributes': attributes,
+            'css_and_js_holder': css_and_js_holder
+            },
+        'module': module,
+        'uid': uid,
+        'required_css': required_css,
+        'required_js': required_js,
+        'content': content
+        }
+    return ret
+
+
 
 class DictatorshipUnitTooDeep(Exception): pass
 class MissingDictatorshipUnitAttribute(Exception): pass
@@ -17,7 +146,7 @@ class DictTreeToXMLRenderer:
 
 
     def __init__(self, xml_indent_size=2, generate_css=False, generate_js=False,
-                 log_size=100):
+                 log_size=100, space_before_closing_slash=False):
 
         # here linedup modules are listed. key is path
         self.units = {}
@@ -41,6 +170,7 @@ class DictTreeToXMLRenderer:
 
         self.generate_css = generate_css
         self.generate_js = generate_js
+        self.space_before_closing_slash = space_before_closing_slash
 
         return
 
@@ -63,6 +193,8 @@ class DictTreeToXMLRenderer:
 
 
     def _lineup_tree(self, indict, already_added, path=[]):
+
+        logging.debug("_lineup_tree path {}".format('/'.join(path)))
 
         ret = 0
 
@@ -124,7 +256,11 @@ class DictTreeToXMLRenderer:
                 self.do_log(
                     "-e- Error while checking `%(path)s'\n%(exc_info)s" % {
                         'path': i,
-                        'exc_info': org.wayround.utils.error.return_exception_info(sys.exc_info())
+                        'exc_info':
+                            org.wayround.utils.error.return_exception_info(
+                                sys.exc_info(),
+                                tb=True
+                                )
                         }
                     )
                 ret = 1
@@ -377,7 +513,10 @@ class DictTreeToXMLRenderer:
 
                     space_before_closing_slash = ''
                     if closing_slash != '':
-                        space_before_closing_slash = ' '
+                        if self.space_before_closing_slash:
+                            space_before_closing_slash = ' '
+                        else:
+                            space_before_closing_slash = ''
 
                     start = '<%(tagname)s%(space_before_attributes)s%(attributes)s%(space_before_closing_slash)s%(closing_slash)s>' % {
                         'tagname': indict[i]['tag_info']['name'],
@@ -395,6 +534,8 @@ class DictTreeToXMLRenderer:
                             content = self._render(
                                 root, indict[i]['content'], path=path + [i]
                                 )
+                        elif indict[i]['content'] == None:
+                            content = ''
                         else:
                             content = str(indict[i]['content'])
 
@@ -554,6 +695,8 @@ class DictTreeToXMLRenderer:
 
     def check_unit(self, indict, path=[]):
 
+        logging.debug("check_unit path {}".format('/'.join(path)))
+
         if len(path) >= 255:
             raise DictatorshipUnitTooDeep("Dictatorship tree recursion limit reached `%(path)s'" % {
                     'path': '/'.join(path)
@@ -645,11 +788,16 @@ class DictTreeToXMLRenderer:
 
         for i in ['module', 'uid']:
             if i in indict:
-                if not re.match(r'[a-zA-Z][\w-]*', indict[i]):
-                    raise ValueError("Wrong `%(i)s' value at `%(path)s'" % {
-                        'path': '/'.join(path),
-                        'i': i
-                        })
+                if indict[i] != None:
+                    if isinstance(indict[i], str):
+                        if not re.match(r'[a-zA-Z][\w-]*', indict[i]):
+                            raise ValueError("Wrong `%(i)s' value at `%(path)s'" % {
+                                'path': '/'.join(path),
+                                'i': i
+                                })
+                    else:
+                        raise ValueError("`{}' can be None or str".format(i))
+
             else:
                 if ('required_css' in indict) and (indict['required_css'] != None) \
                     or ('required_js' in indict) and (indict['required_js'] != None):
@@ -685,7 +833,7 @@ class DictTreeToXMLRenderer:
         if indict['type'] == 'tag':
             default_new_line_before_start = True
             if indict['tag_info']['closed']:
-                default_new_line_after_content = True
+                default_new_line_after_content = False
             else:
                 if isinstance(indict['content'], dict):
                     default_new_line_after_content = True
@@ -716,6 +864,9 @@ def test():
     # `dictatorship range'.
     # Dictatorship range's keys must point only on dict-s,
     # othervice it is an error.
+
+    logging.basicConfig(level='DEBUG')
+
     a = {
         '000_xml_pi': {
             'type': 'pi',
@@ -801,7 +952,7 @@ def test():
             }
         }
 
-    print("Dictator test")
+    print("Dictator test #1")
     b = DictTreeToXMLRenderer(2, True, True)
     b.set_tree(a)
     ret = b.render()
@@ -809,3 +960,13 @@ def test():
     b.print_log()
     print(ret)
     return
+
+def test2():
+    logging.basicConfig(level='DEBUG')
+    print("Dictator test #2")
+    b = DictTreeToXMLRenderer(2, True, True)
+    b.set_tree(html())
+    ret = b.render()
+    print(repr(b.units))
+    b.print_log()
+    print(ret)

@@ -6,6 +6,7 @@ import threading
 import subprocess
 import logging
 
+import org.wayround.utils.exec
 
 
 def cat(stdin, stdout, threaded=False, write_method_name='write',
@@ -151,24 +152,23 @@ def lbl_write(stdin, stdout, threaded=False):
 
     return
 
-def unix_cat(stdin=subprocess.PIPE,
-             stdout=subprocess.PIPE,
-             stderr=subprocess.PIPE,
-             options=[], bufsize=0, cwd=None):
+def unix_cat(
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    options=[],
+    bufsize=0,
+    cwd=None
+    ):
 
-    p = None
-
-    try:
-        p = subprocess.Popen(
-            ['cat'] + options,
-            stdin=stdin, stdout=stdout, stderr=stderr,
-            bufsize=bufsize,
-            cwd=cwd
-            )
-    except:
-        logging.exception("Error starting cat subprocess")
-        p = None
-        raise
+    p = org.wayround.utils.exec.simple_exec(
+        'cat',
+        stdin,
+        stdout,
+        stderr,
+        options,
+        bufsize,
+        cwd
+        )
 
     return p
-
