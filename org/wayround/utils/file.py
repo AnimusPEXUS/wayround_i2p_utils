@@ -271,6 +271,10 @@ def progress_write(line_to_write):
             ' ', width - line_to_write_l
             )
         }
+
+    if len(line_to_out) > width:
+        line_to_out = line_to_out[:width + 1]
+
     sys.stdout.write(line_to_out)
     sys.stdout.flush()
     return

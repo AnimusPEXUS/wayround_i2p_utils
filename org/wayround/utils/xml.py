@@ -11,10 +11,9 @@ import logging
 
 import org.wayround.utils.text
 import org.wayround.utils.error
+import org.wayround.utils.dict
 
 
-# 2e912bf9-c8c1-4dcd-871d-3cd2edc43614 is the uuid for all base
-# elements :D
 
 def pi(content):
     return {
@@ -53,9 +52,17 @@ def static(text):
         'content': text
         }
 
-def html(title='', description='', keywords=[], basic_css=[], basic_js=[], content=None):
+def html(
+    title='',
+    description='',
+    keywords=[],
+    basic_css=[],
+    basic_js=[],
+    content=None
+    ):
+
     return {
-        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
+#        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
         '00015_html_dtd': dtd('html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'),
         '00020_html': tag(
             'html',
@@ -69,13 +76,11 @@ def html(title='', description='', keywords=[], basic_css=[], basic_js=[], conte
             closed=False,
             module=None,
             uid=None,
-            css_and_js_holder=False,
             required_css=[],
             required_js=[],
             content={
                 '00010_head' : tag(
                    'head',
-                   css_and_js_holder=True,
                    content={
                         '00010_title': tag(
                             'title',
@@ -115,7 +120,6 @@ def tag(
     closed=False,
     module='basic-2e912bf9-c8c1-4dcd-871d-3cd2edc43614',
     uid=None,
-    css_and_js_holder=False,
     required_css=[],
     required_js=[],
     content=None
@@ -125,8 +129,7 @@ def tag(
         'tag_info': {
             'name': name,
             'closed': closed,
-            'attributes': attributes,
-            'css_and_js_holder': css_and_js_holder
+            'attributes': attributes
             },
         'module': module,
         'uid': uid,
@@ -145,8 +148,15 @@ class ModulesDirError(Exception): pass
 class DictTreeToXMLRenderer:
 
 
-    def __init__(self, xml_indent_size=2, generate_css=False, generate_js=False,
-                 log_size=100, space_before_closing_slash=False):
+    def __init__(
+        self,
+        xml_indent_size=2,
+        generate_css=False,
+        generate_js=False,
+        log_size=100,
+        space_before_closing_slash=False,
+        css_and_js_holder=None
+        ):
 
         # here linedup modules are listed. key is path
         self.units = {}
@@ -159,7 +169,7 @@ class DictTreeToXMLRenderer:
         self.xml_indent_size = xml_indent_size
         self.xml_indent = org.wayround.utils.text.fill(' ', xml_indent_size)
 
-        self.css_and_js_holder = None
+        self.css_and_js_holder = css_and_js_holder
 
         self.css_placeables = []
         self.js_placeables = []
@@ -198,32 +208,65 @@ class DictTreeToXMLRenderer:
 
         ret = 0
 
+        if not isinstance(indict, (dict, list)):
+            raise TypeError("This method accepts only dict or list")
+
+
         if self.check_range(indict) != 0:
-            self.do_log("_lineup_tree wrong input dict at path %(path)s" % {
+            self.do_log("_lineup_tree wrong input data at path %(path)s" % {
                 'path': '/'.join(path)
                 })
+            ret = 1
         else:
 
-            keys = list(indict.keys())
-            keys.sort()
+            index = -1
+
+            if isinstance(indict, dict):
+                keys = list(indict.keys())
+                keys.sort()
+            else:
+                keys = indict
 
             for i in keys:
 
-                if not id(indict[i]) in already_added:
+                index += 1
 
-                    tmp = '/'.join(path + [i])
+
+                if isinstance(indict, dict):
+                    unit = indict[i]
+                elif isinstance(indict, list):
+                    unit = i
+
+
+                if isinstance(indict, dict):
+                    path_name = i
+                    #print(1)
+                elif isinstance(indict, list):
+                    path_name = str(index)
+                    #print(2)
+
+
+                if not id(unit) in already_added:
+
+                    try:
+                        tmp = '/'.join(path + [path_name])
+                    except:
+                        #print("path(" + str(type(path)) + "): " + repr(path))
+                        #print("path_name(" + str(type(path_name)) + "): " + repr(path_name))
+                        raise
 
                     if not tmp in self.units:
-                        self.units[tmp] = indict[i]
+                        self.units[tmp] = unit
 
                     del(tmp)
 
-                    already_added.add(id(indict[i]))
+                    already_added.add(id(unit))
 
-                if 'content' in indict[i]:
-                    if isinstance(indict[i]['content'], dict):
+                if 'content' in unit:
+                    if isinstance(unit['content'], (dict, list)):
+
                         if self._lineup_tree(
-                            indict[i]['content'], already_added, path=path + [i]
+                            unit['content'], already_added, path=path + [path_name]
                             ) != 0:
                             ret = 2
 
@@ -236,7 +279,7 @@ class DictTreeToXMLRenderer:
         ret = self._lineup_tree(
             self.tree_dict, already_added, path=[]
             )
-        print(repr(list(self.units.keys())))
+        #print(repr(list(self.units.keys())))
 
         return ret
 
@@ -267,25 +310,6 @@ class DictTreeToXMLRenderer:
                 break
 
         return ret
-
-
-    def find_css_and_js_holder(self):
-
-        self.css_and_js_holder = None
-
-        keys = list(self.units.keys())
-        keys.sort()
-
-        for i in keys:
-
-            if 'tag_info' in self.units[i] \
-                and 'css_and_js_holder' in self.units[i]['tag_info'] \
-                and self.units[i]['tag_info']['css_and_js_holder']:
-
-                self.css_and_js_holder = self.units[i]
-                break
-
-        return
 
 
     def find_required_css_and_js(self):
@@ -351,66 +375,91 @@ class DictTreeToXMLRenderer:
             'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
             }
 
+    def _place_found_css_or_js(
+        self,
+        i,
+        placement_i,
+        typ,
+        css_path_renderer=css_path_renderer,
+        js_path_renderer=js_path_renderer
+        ):
 
-    def place_found_css_and_js(self,
-              css_path_renderer=css_path_renderer,
-              js_path_renderer=js_path_renderer):
+        if not typ in ['css', 'js']:
+            raise ValueError("Wrong `typ' parameter value")
 
-        last_placer_child_name = max(self.css_and_js_holder['content'])
+        if typ == 'css':
+            new_val = tag(
+                'style',
+                attributes={
+                    'type': 'text/css',
+                    'src': css_path_renderer(self, i)
+                    }
+                )
+
+        elif typ == 'js':
+            new_val = tag(
+                'script',
+                attributes={
+                    'type': 'text/javascript',
+                    'src': js_path_renderer(self, i)
+                    }
+                )
+        else:
+            raise Exception("Wrong programming")
+
+
+        self.check_unit(new_val)
+
+        if isinstance(self.css_and_js_holder['content'], dict):
+            org.wayround.utils.dict.append(
+                self.css_and_js_holder['content'],
+                new_val
+                )
+
+        elif isinstance(self.css_and_js_holder['content'], list):
+            self.css_and_js_holder['content'].append(new_val)
+
+
+    def place_found_css_and_js(
+        self,
+        css_path_renderer=css_path_renderer,
+        js_path_renderer=js_path_renderer
+        ):
+
+        if not isinstance(self.css_and_js_holder, dict):
+            raise ValueError("Wrong self.css_and_js_holder")
+
+        if not isinstance(self.css_and_js_holder['content'], (dict, list)):
+            raise TypeError("self.css_and_js_holder['content'] can be only list or dict")
 
         placement_i = 0
 
         if self.generate_css:
             for i in self.css_placeables:
 
-                new_key = '%(last_placer_child_name)s-%(num)010d' % {
-                    'last_placer_child_name': last_placer_child_name,
-                    'num': placement_i
-                    }
+                self._place_found_css_or_js(
+                    i,
+                    placement_i,
+                    'css',
+                    css_path_renderer=css_path_renderer,
+                    js_path_renderer=js_path_renderer
+                    )
 
                 placement_i += 1
 
-                new_val = {
-                    'type': 'tag',
-                    'tag_info': {
-                        'name': 'style',
-                        'attributes': {
-                            'type': 'text/css',
-                            'src': css_path_renderer(self, i)
-                            },
-                        'closed': False
-                        }
-                    }
-
-                self.check_unit(new_val)
-
-                self.css_and_js_holder['content'][new_key] = new_val
 
         if self.generate_js:
             for i in self.js_placeables:
 
-                new_key = '%(last_placer_child_name)s-%(num)010d' % {
-                    'last_placer_child_name': last_placer_child_name,
-                    'num': placement_i
-                    }
+                self._place_found_css_or_js(
+                    i,
+                    placement_i,
+                    'js',
+                    css_path_renderer=css_path_renderer,
+                    js_path_renderer=js_path_renderer
+                    )
 
                 placement_i += 1
-
-                new_val = {
-                    'type': 'tag',
-                    'tag_info': {
-                        'name': 'script',
-                        'attributes': {
-                            'type': 'text/javascript',
-                            'src': js_path_renderer(self, i)
-                            },
-                        'closed': False
-                        }
-                    }
-
-                self.check_unit(new_val)
-
-                self.css_and_js_holder['content'][new_key] = new_val
 
         return
 
@@ -419,35 +468,54 @@ class DictTreeToXMLRenderer:
 
         ret = ''
 
-        keys = list(indict.keys())
-        keys.sort()
-
         inaddr_l = len(path)
 
         indent = org.wayround.utils.text.fill(' ', inaddr_l * self.xml_indent_size)
 
+        index = -1
+
+        if isinstance(indict, dict):
+            keys = list(indict.keys())
+            keys.sort()
+        else:
+            keys = indict
+
         for i in keys:
+            index += 1
+
+            if isinstance(indict, dict):
+                unit = indict[i]
+            elif isinstance(indict, list):
+                unit = i
+            else:
+                raise TypeError("This method accepts only dict or list")
+
+
+            if isinstance(indict, dict):
+                path_name = i
+            elif isinstance(indict, list):
+                path_name = str(index)
 
             rendered = ''
 
             new_line_before_start = ''
-            if indict[i]['new_line_before_start']:
+            if unit['new_line_before_start']:
                 new_line_before_start = '\n%(indent)s' % {
                     'indent': indent
                     }
 
             new_line_before_content = ''
-            if indict[i]['new_line_before_content']:
+            if unit['new_line_before_content']:
                 new_line_before_content = '\n'
 
             new_line_after_content = ''
-            if indict[i]['new_line_after_content']:
+            if unit['new_line_after_content']:
                 new_line_after_content = '\n%(indent)s' % {
                     'indent': indent
                     }
 
             new_line_after_end = ''
-            if indict[i]['new_line_after_end']:
+            if unit['new_line_after_end']:
                 new_line_after_end = '\n'
 
 
@@ -455,47 +523,47 @@ class DictTreeToXMLRenderer:
             content = ''
             end = ''
 
-            if indict[i]['type'] == 'comment':
+            if unit['type'] == 'comment':
                 start = '<!-- '
 
-                content = str(indict[i]['content'])
+                content = str(unit['content'])
 
                 content = content.replace('--', '-')
 
                 end = ' -->'
 
-            elif indict[i]['type'] == 'pi':
+            elif unit['type'] == 'pi':
                 start = '<?'
-                content = str(indict[i]['content'])
+                content = str(unit['content'])
                 end = '?>'
 
-            elif indict[i]['type'] == 'dtd':
+            elif unit['type'] == 'dtd':
                 start = '<!DOCTYPE '
-                content = str(indict[i]['content'])
+                content = str(unit['content'])
                 end = '>'
 
-            elif indict[i]['type'] == 'cdata':
+            elif unit['type'] == 'cdata':
                 start = '<![CDATA['
-                content = str(indict[i]['content']).replace(']]>', '')
+                content = str(unit['content']).replace(']]>', '')
                 end = ']]>'
 
-            elif indict[i]['type'] == 'char':
+            elif unit['type'] == 'char':
                 start = ''
-                content = xml.sax.saxutils.escape(str(indict[i]['content']))
+                content = xml.sax.saxutils.escape(str(unit['content']))
                 end = ''
 
-            elif indict[i]['type'] == 'static':
+            elif unit['type'] == 'static':
                 start = ''
-                content = indict[i]['content']
+                content = str(unit['content'])
                 end = ''
 
-            elif indict[i]['type'] == 'tag':
+            elif unit['type'] == 'tag':
 
                 attributes = ''
-                if indict[i]['tag_info']['attributes'] != None:
+                if unit['tag_info']['attributes'] != None:
                     attributes = self.render_attributes(
-                        indict[i]['tag_info']['attributes'], path,
-                        tagname=indict[i]['tag_info']['name']
+                        unit['tag_info']['attributes'], path,
+                        tagname=unit['tag_info']['name']
                         )
 
                     if not isinstance(attributes, str):
@@ -504,7 +572,7 @@ class DictTreeToXMLRenderer:
                 if isinstance(ret, str):
 
                     closing_slash = ''
-                    if indict[i]['tag_info']['closed']:
+                    if unit['tag_info']['closed']:
                         closing_slash = '/'
 
                     space_before_attributes = ''
@@ -519,28 +587,29 @@ class DictTreeToXMLRenderer:
                             space_before_closing_slash = ''
 
                     start = '<%(tagname)s%(space_before_attributes)s%(attributes)s%(space_before_closing_slash)s%(closing_slash)s>' % {
-                        'tagname': indict[i]['tag_info']['name'],
+                        'tagname': unit['tag_info']['name'],
                         'space_before_attributes': space_before_attributes,
                         'attributes': attributes,
                         'space_before_closing_slash': space_before_closing_slash,
                         'closing_slash': closing_slash
                         }
 
-                    if not indict[i]['tag_info']['closed']:
+                    if not unit['tag_info']['closed']:
 
-                        if isinstance(indict[i]['content'], str):
-                            content = indict[i]['content']
-                        elif isinstance(indict[i]['content'], dict):
+                        if isinstance(unit['content'], str):
+                            content = unit['content']
+                        elif isinstance(unit['content'], (dict, list)):
+
                             content = self._render(
-                                root, indict[i]['content'], path=path + [i]
+                                root, unit['content'], path=path + [path_name]
                                 )
-                        elif indict[i]['content'] == None:
+                        elif unit['content'] == None:
                             content = ''
                         else:
-                            content = str(indict[i]['content'])
+                            content = str(unit['content'])
 
                         end = '</%(tagname)s>' % {
-                            'tagname': indict[i]['tag_info']['name']
+                            'tagname': unit['tag_info']['name']
                             }
                     else:
                         content = ''
@@ -586,10 +655,7 @@ class DictTreeToXMLRenderer:
 
         if isinstance(ret, str):
 
-            self.find_css_and_js_holder()
-            if self.css_and_js_holder == None:
-                self.do_log('WARNING: css/js css_and_js_holder not located!')
-            else:
+            if self.css_and_js_holder:
                 self.find_required_css_and_js()
                 self.place_found_css_and_js()
 
@@ -675,21 +741,28 @@ class DictTreeToXMLRenderer:
     def check_range(self, indict):
         ret = 0
 
-        if not isinstance(indict, dict):
-            self.do_log("-e- Supplied data is not a dict")
+        if not isinstance(indict, (dict, list)):
+            self.do_log("-e- Supplied data is not a dict and not list: {}".format(repr(indict)))
             ret = 1
 
         else:
 
             for i in indict:
 
-                if not isinstance(indict[i], dict):
-                    self.do_log("-e- Dictatorship `%(name)s' element value is not a dict" % {
-                        'name': i
-                        })
+                if isinstance(indict, dict):
+                    value = indict[i]
+                elif isinstance(indict, list):
+                    value = i
+                else:
+                    raise TypeError("This method accepts only dict or list")
+
+
+                if not isinstance(value, dict):
+                    self.do_log("-e- Dictatorship `{}' element value is not a dict".format(str(value)))
 
                     ret = 2
                     break
+
 
         return ret
 
@@ -702,9 +775,9 @@ class DictTreeToXMLRenderer:
                     'path': '/'.join(path)
                     })
 
-        # Supplied data defenetly must be a dict, othervice - error
-        if not isinstance(indict, dict):
-            raise ValueError("Supplied data is not a dict")
+        # Supplied data defenetly must be a dict or list, othervice - error
+        if not isinstance(indict, (dict, list)):
+            raise ValueError("Supplied data is not a dict or a list")
 
         # 'type' must be supplied
         if not 'type' in indict:
@@ -760,12 +833,6 @@ class DictTreeToXMLRenderer:
                     indict['tag_info']['closed'] = False
 
 
-                if 'css_and_js_holder' in indict['tag_info']:
-                    if not isinstance(indict['tag_info']['css_and_js_holder'], bool):
-                        raise TypeError("wrong `css_and_js_holder' type")
-                else:
-                    indict['tag_info']['css_and_js_holder'] = False
-
 
         for i in ['required_css', 'required_js']:
             if i in indict:
@@ -815,15 +882,11 @@ class DictTreeToXMLRenderer:
             pass
         elif isinstance(indict['content'], dict):
             pass
+        elif isinstance(indict['content'], list):
+            pass
         else:
             raise ValueError("wrong unit content value")
 
-        if 'tag_info' in indict:
-            if isinstance(indict['tag_info'], dict):
-                if 'css_and_js_holder' in indict['tag_info']:
-                    if indict['tag_info']['css_and_js_holder'] == True:
-                        if not isinstance(indict['content'], dict):
-                            raise ValueError("`css_and_js_holder' is True, so `content' MUST be dict")
 
         default_new_line_before_start = False
         default_new_line_before_content = False
@@ -835,7 +898,7 @@ class DictTreeToXMLRenderer:
             if indict['tag_info']['closed']:
                 default_new_line_after_content = False
             else:
-                if isinstance(indict['content'], dict):
+                if isinstance(indict['content'], (dict, list)):
                     default_new_line_after_content = True
 
         elif indict['type'] in ['tag', 'comment', 'dtd', 'pi']:
@@ -924,8 +987,7 @@ def test():
                 '10_head': {
                     'type': 'tag',
                     'tag_info': {
-                        'name': 'head',
-                        'css_and_js_holder': True
+                        'name': 'head'
                         },
                     'content': {
                         'title': {
