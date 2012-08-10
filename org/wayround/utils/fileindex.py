@@ -27,7 +27,7 @@ class FileIndexer:
         self,
         config_string,
         add_commit_items_no=200,
-        del_commit_items_no=200
+        del_commit_items_no=200,
         ):
 
         self._db_engine = \
@@ -47,14 +47,12 @@ class FileIndexer:
         self.del_commit_items_no = del_commit_items_no
         self.del_commit_counter = 0
 
+
         try:
             self.sess = sqlalchemy.orm.Session(bind=self._db_engine)
         except:
             self.sess = None
-            self.block = True
             raise
-        else:
-            self.block = False
 
         self.added_count = 0
         self.exists_count = 0
@@ -138,3 +136,9 @@ class FileIndexer:
     def get_size(self):
         return self.sess.query(self.File).count()
 
+    def get_files(self):
+        q = self.sess.query(self.File).all()
+        ret = []
+        for i in q:
+            ret.append(i.name)
+        return ret

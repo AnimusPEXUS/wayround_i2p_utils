@@ -122,7 +122,11 @@ def tag(
     uid=None,
     required_css=[],
     required_js=[],
-    content=None
+    content=None,
+    new_line_before_start=None,
+    new_line_before_content=None,
+    new_line_after_content=None,
+    new_line_after_end=None
     ):
     ret = {
         'type': 'tag',
@@ -137,6 +141,15 @@ def tag(
         'required_js': required_js,
         'content': content
         }
+    for i in [
+        'new_line_before_start',
+        'new_line_before_content',
+        'new_line_after_content',
+        'new_line_after_end'
+        ]:
+        if eval(i) != None:
+            ret[i] = eval(i)
+
     return ret
 
 
@@ -597,7 +610,7 @@ class DictTreeToXMLRenderer:
                     if not unit['tag_info']['closed']:
 
                         if isinstance(unit['content'], str):
-                            content = unit['content']
+                            content = xml.sax.saxutils.escape(unit['content'])
                         elif isinstance(unit['content'], (dict, list)):
 
                             content = self._render(
