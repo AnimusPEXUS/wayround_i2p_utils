@@ -257,7 +257,17 @@ def list_files_recurcive(dirname, output_filename):
             fd.close()
     return
 
-def progress_write(line_to_write):
+def progress_write_finish():
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+    return
+
+def progress_write(line_to_write, new_line=False):
+
+    new_line_str = ''
+    if line_to_write.endswith("\n"):
+        new_line_str = '\n'
+        line_to_write = line_to_write.rstrip("\n")
 
     width = 80
     ts = org.wayround.utils.terminal.get_terminal_size(sys.stdout.fileno())
@@ -265,15 +275,17 @@ def progress_write(line_to_write):
         width = ts['ws_col']
 
     line_to_write_l = len(line_to_write)
-    line_to_out = "\r%(ltw)s%(spaces)s\r" % {
+
+    line_to_out = "\r%(ltw)s%(spaces)s%(new_line)s\r" % {
         'ltw': line_to_write,
         'spaces': org.wayround.utils.text.fill(
             ' ', width - line_to_write_l
-            )
+            ),
+        'new_line':new_line_str
         }
 
     if len(line_to_out) > width:
-        line_to_out = line_to_out[:width + 1]
+        line_to_out = line_to_out[:width + 1] + new_line_str + '\r'
 
     sys.stdout.write(line_to_out)
     sys.stdout.flush()

@@ -83,7 +83,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
 
                         del(m)
 
-    print("")
+    org.wayround.utils.file.progress_write_finish()
     return ret
 
 def make_file_checksum(filename, method='sha512'):
