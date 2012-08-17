@@ -6,7 +6,7 @@ import org.wayround.utils.time
 
 class Log:
 
-    def __init__(self, log_dir, logname):
+    def __init__(self, log_dir, logname, echo=True):
 
         ret = 0
         self.code = 0
@@ -46,17 +46,12 @@ class Log:
                 logging.exception("Error opening log file")
                 ret = 3
             else:
-                logging.info(
-                    "[{ts}] =///////= Starting `{name}' log =///////=\n" .format_map({
-                        'ts': timestamp,
-                        'name': self.logname
-                        }))
-                self.fileobj.write(
-                    "[{ts}] =///////= Starting `{name}' log =///////=\n".format_map({
-                        'ts': timestamp,
-                        'name': self.logname
-                    }
-                    )
+                self.info(
+                    "=///////= Starting `{}' log =///////=" .format(
+                        self.logname
+                        ),
+                    echo=echo,
+                    timestamp=timestamp
                     )
 
         if ret != 0:
@@ -64,47 +59,73 @@ class Log:
 
         return
 
-    def stop(self):
+    def stop(self, echo=True):
         if self.fileobj == None:
             raise Exception
 
         timestamp = org.wayround.utils.time.currenttime_stamp()
-        logging.info("[{ts}] =///////= Stopping `{name}' log =///////=\n".formap_map({
-            'ts': timestamp,
-            'name': self.logname
-            }))
-        self.fileobj.write("[{ts}] =///////= Stopping `{name}' log =///////=\n".formap_map({
-            'ts': timestamp,
-            'name': self.logname
-            }))
+        self.info(
+            "=///////= Stopping `{}' log =///////=" .format(
+                self.logname
+                ),
+            echo=echo,
+            timestamp=timestamp
+            )
         self.fileobj.flush()
         self.fileobj.close()
         return
 
-    def write(self, text, echo=True):
-        if self.fileobj == None:
-            raise Exception
+    def write(self, text, echo=False, typ='info', timestamp=None):
 
-        timestamp = org.wayround.utils.time.currenttime_stamp()
+        if not typ in ['info', 'error', 'warning']:
+            raise ValueError("Wrong `typ' parameter")
+
+        if self.fileobj == None:
+            raise Exception("Log output file object is None")
+
+        if timestamp:
+            pass
+        else:
+            timestamp = org.wayround.utils.time.currenttime_stamp()
+
         if echo:
-            logging.info("[{ts}] {}".format_map({
-                'ts': timestamp,
-                'text': text
-                }))
-        self.fileobj.write("[{ts}] {}".format_map({
-                'ts': timestamp,
-                'text': text
-                }))
+            msg1 = "[{}] {}".format(
+                timestamp,
+                text
+                )
+
+            if typ == 'info':
+                logging.info(msg1)
+            elif typ == 'error':
+                logging.error(msg1)
+            elif typ == 'warning':
+                logging.warning(msg1)
+
+        icon = '-i-'
+        if typ == 'info':
+            icon = '-i-'
+        elif typ == 'error':
+            icon = '-e-'
+        elif typ == 'warning':
+            icon = '-w-'
+
+        msg2 = "[{}] {} {}".format(
+            timestamp,
+            icon,
+            text
+            )
+
+        self.fileobj.write(msg2)
         return
 
-    def error(self, text, echo=True):
-        self.write("-e- " + text, echo=echo, typ='error')
+    def error(self, text, echo=True, timestamp=None):
+        self.write(text, echo=echo, typ='error', timestamp=timestamp)
 
-    def info(self, text, echo=True):
-        self.write("-i- " + text, echo=echo, typ='info')
+    def info(self, text, echo=True, timestamp=None):
+        self.write(text, echo=echo, typ='info', timestamp=timestamp)
 
-    def warning(self, text, echo=True):
-        self.write("-w- " + text, echo=echo, typ='warning')
+    def warning(self, text, echo=True, timestamp=None):
+        self.write(text, echo=echo, typ='warning', timestamp=timestamp)
 
     def __del__(self):
         if not self.fileobj.closed:
