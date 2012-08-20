@@ -115,7 +115,7 @@ class Log:
             text
             )
 
-        self.fileobj.write(msg2)
+        self.fileobj.write(msg2 + '\n')
         return
 
     def error(self, text, echo=True, timestamp=None):
