@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 def split(str_line):
 

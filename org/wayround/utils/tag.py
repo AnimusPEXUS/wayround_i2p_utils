@@ -35,7 +35,7 @@ class TagEngine:
             default=''
             )
 
-    def __init__(self, config_string, commit_every=200):
+    def __init__(self, config_string, commit_every=1000):
         self._db_engine = \
             sqlalchemy.create_engine(
             config_string,
@@ -73,8 +73,8 @@ class TagEngine:
         return
 
     def set_tags(self, obj, tags=[]):
-        #self.sess.query(self.Tag).filter_by(obj=obj).delete()
-        self.sess.commit()
+        self.sess.query(self.Tag).filter_by(obj=obj).delete()
+        #self.sess.commit()
 
         for i in tags:
             a = self.Tag()
