@@ -19,7 +19,8 @@ def edit_file_direct(filename, editor='emacs'):
         except:
             logging.exception("error waiting for editor")
         finally:
-            p.terminate()
+            if p.returncode == None:
+                p.terminate()
 
         logging.info("editor exited")
 

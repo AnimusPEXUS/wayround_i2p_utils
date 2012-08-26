@@ -36,7 +36,8 @@ def elf_deps(filename, mute=True):
         catproc = org.wayround.utils.stream.cat(
             lddproc.stdout,
             str_file,
-            threaded=True
+            threaded=True,
+            convert_to_str='utf-8'
             )
         catproc.start()
 
@@ -56,7 +57,7 @@ def elf_deps(filename, mute=True):
             ret = copy.copy(dep_lst)
         else:
             if not mute:
-                logging.error("ldd returned error")
+                logging.error("`ldd' returned error")
             ret = 2
 
         del(lddproc)

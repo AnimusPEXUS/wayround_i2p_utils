@@ -279,6 +279,11 @@ def process_stream(
     cwd=None,
     verbose=False
     ):
+    """
+    Starts `program' and uses it to process stdin to stdout
+
+    Streams are workedout using own-fashioned threading mechanisms
+    """
 
     ret = 0
 
@@ -293,7 +298,7 @@ def process_stream(
             cwd=cwd
             )
     except:
-        logging.exception("Error starting process {}".format(program))
+        logging.exception("Error starting process `{}'".format(program))
         ret = 1
     else:
 
@@ -336,7 +341,8 @@ def process_stream(
             cat1.join()
             cat2.join()
         finally:
-            proc.terminate()
+            if proc.returncode == None:
+                proc.terminate()
 
     return ret
 

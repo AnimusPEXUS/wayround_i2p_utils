@@ -9,23 +9,49 @@ import logging
 import org.wayround.utils.exec
 
 
-def cat(stdin, stdout, threaded=False, write_method_name='write',
-        close_output_on_eof=False, thread_name='Thread', bs=(2 * 1024 ** 2),
-        convert_to_str=None):
-    return dd(stdin, stdout, bs=bs, count=None,
-              threaded=threaded, write_method_name=write_method_name,
-              close_output_on_eof=close_output_on_eof,
-              thread_name=thread_name, convert_to_str=convert_to_str)
+def cat(
+    stdin,
+    stdout,
+    threaded=False,
+    write_method_name='write',
+    close_output_on_eof=False,
+    thread_name='Thread',
+    bs=(2 * 1024 ** 2),
+    convert_to_str=None
+    ):
 
-def dd(stdin, stdout, bs=1, count=None, threaded=False,
-       write_method_name='write', close_output_on_eof=False,
-       thread_name='Thread', convert_to_str=None):
+    return dd(
+        stdin,
+        stdout,
+        bs=bs,
+        count=None,
+        threaded=threaded,
+        write_method_name=write_method_name,
+        close_output_on_eof=close_output_on_eof,
+        thread_name=thread_name,
+        convert_to_str=convert_to_str
+        )
+
+def dd(
+    stdin,
+    stdout,
+    bs=1,
+    count=None,
+    threaded=False,
+    write_method_name='write',
+    close_output_on_eof=False,
+    thread_name='Thread',
+    convert_to_str=None
+    ):
 
     if not write_method_name in ['write', 'update']:
-        raise ValueError
+        raise ValueError("Wrong `write_method_name' parameter")
 
     if not hasattr(stdin, 'read'):
-        raise ValueError("Object `{}' have no 'read' function".format(stdin))
+        raise ValueError("Object `{}' have no 'read' method".format(stdin))
+
+    if not hasattr(stdout, 'read') and not hasattr(stdout, 'update'):
+        raise ValueError("Object `{}' have no 'read' nor 'update' methods".format(stdout))
 
     if convert_to_str != None:
         if not isinstance(convert_to_str, str):
@@ -68,7 +94,9 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
             buff = stdin.read(bs)
 
             if not isinstance(buff, bytes):
-                raise ValueError("Can read only with (Not str or anything other)")
+                raise ValueError(
+                    "Can read only binary (bytes) buffer (Not str or anything other)"
+                    )
 
             if convert_to_str != None:
                 buff = str(buff, encoding=convert_to_str)
@@ -79,7 +107,17 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
                     )
             except TypeError as err_val:
                 if err_val.args[0] == 'must be str, not bytes':
-                    logging.warning("hint: check that output is in bytes mode or do conversion with convert_to_str option")
+                    logging.warning(
+                        "hint: check that output is in bytes mode or do conversion with convert_to_str option"
+                        )
+                raise
+            except:
+                logging.error(
+                    "Can't use object's `{}' `{}' method".format(
+                        stdout,
+                        write_method_name
+                        )
+                    )
                 raise
 
             buff_len = len(buff)
@@ -127,7 +165,7 @@ def dd(stdin, stdout, bs=1, count=None, threaded=False,
     )
         return
 
-    # control shuld never reach this return
+    # control should never reach this return
     return
 
 def lbl_write(stdin, stdout, threaded=False):
@@ -141,12 +179,14 @@ def lbl_write(stdin, stdout, threaded=False):
 
         while True:
             l = stdin.readline()
+            if isinstance(l, bytes):
+                l = l.decode('utf-8')
             if l == '':
                 break
             else:
                 l = l.rstrip(' \0\n')
 
-                stdout.write(l)
+                stdout.info(l)
 
         return
 

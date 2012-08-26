@@ -64,7 +64,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
                     if os.path.isfile(root + '/' + f) and not os.path.islink(root + '/' + f):
                         m = hashlib.sha512()
                         try:
-                            fd = open(root + '/' + f, 'r')
+                            fd = open(root + '/' + f, 'rb')
                         except:
                             logging.exception("Can't open file `{}'".format(root + '/' + f))
                             ret = 3

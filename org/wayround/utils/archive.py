@@ -65,7 +65,8 @@ def _extract_tar_7z(file_name, output_dir):
             proc_tar.wait()
 
         finally:
-            proc_tar.terminate()
+            if proc_tar.returncode == None:
+                proc_tar.terminate()
 
         proc_7z.wait()
 
@@ -75,8 +76,11 @@ def _extract_tar_7z(file_name, output_dir):
 def _extract_tar_arch(file_name, output_dir, arch):
 
     ret = extract_tar_canonical(
-        file_name, output_dir, arch,
-        verbose_tar=True, verbose_compressor=True
+        file_name,
+        output_dir,
+        arch,
+        verbose_tar=True,
+        verbose_compressor=True
         )
 
     return ret
@@ -121,6 +125,14 @@ def extract(file_name, output_dir):
 
     return ret
 
+#def canonical_compressor_files(
+#    compressor,
+#    infile,
+#    outfile,
+#    verbose=False,
+#    options=[]
+#    ):
+
 
 def canonical_compressor(
     compressor,
@@ -136,19 +148,13 @@ def canonical_compressor(
 
     Works only with `{}' compressors which
     must support -0 .. -9 , -v and -d options in canonical way
-    """.format(
-        repr(
-             list(CANONICAL_COMPRESSORS)
-             )
-        )
+    """.format(repr(list(CANONICAL_COMPRESSORS)))
 
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
             "canonical_compressor supports only `{}'".format(
-                repr(
-                     list(CANONICAL_COMPRESSORS)
-                     )
+                repr(list(CANONICAL_COMPRESSORS))
                 )
             )
 
@@ -252,7 +258,9 @@ def archive_tar_canonical_fobj(
                     ) != 0:
                     ret = 3
             finally:
-                tarproc.terminate()
+                if tarproc.returncode == None:
+                    tarproc.terminate()
+
 
             tarproc.wait()
 
@@ -276,7 +284,11 @@ def extract_tar_canonical(
     else:
         try:
             ret = extract_tar_canonical_fobj(
-                fobj, dirname, compressor, verbose_tar, verbose_compressor
+                fobj,
+                dirname,
+                compressor,
+                verbose_tar,
+                verbose_compressor
                 )
         finally:
             fobj.close()
@@ -334,13 +346,14 @@ def extract_tar_canonical_fobj(
 
                 options += ['-d']
 
-                if canonical_compressor(compressor,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        options=options,
-                        bufsize=0,
-                        stderr=sys.stderr
-                        ) != 0:
+                if canonical_compressor(
+                    compressor,
+                    stdin=input_fobj,
+                    stdout=tarproc.stdin,
+                    options=options,
+                    stderr=sys.stderr
+                    ) != 0:
+
                     ret = 3
 
             finally:
