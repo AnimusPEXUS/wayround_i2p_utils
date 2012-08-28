@@ -61,17 +61,17 @@ def make_dir_checksums_fo(dirname, output_fileobj):
                         'dir': root,
                         'file': f
                         })
-                    if os.path.isfile(root + '/' + f) and not os.path.islink(root + '/' + f):
+                    if os.path.isfile(root + os.path.sep + f) and not os.path.islink(root + os.path.sep + f):
                         m = hashlib.sha512()
                         try:
-                            fd = open(root + '/' + f, 'rb')
+                            fd = open(root + os.path.sep + f, 'rb')
                         except:
-                            logging.exception("Can't open file `{}'".format(root + '/' + f))
+                            logging.exception("Can't open file `{}'".format(root + os.path.sep + f))
                             ret = 3
                         else:
                             try:
                                 m.update(fd.read())
-                                wfn = ('/' + (root + '/' + f)[1:])[dirname_l:]
+                                wfn = ('/' + (root + os.path.sep + f)[1:])[dirname_l:]
                                 output_fileobj.write(
                                     "%(digest)s *%(pkg_file_name)s\n" % {
                                         'digest': m.hexdigest(),
@@ -152,6 +152,9 @@ def parse_checksums_file_text(filename):
 
 def parse_checksums_text(text):
     ret = 0
+    if isinstance(text, bytes):
+        text = text.decode('utf-8')
+
     lines = text.splitlines()
     sums = {}
     for i in lines:

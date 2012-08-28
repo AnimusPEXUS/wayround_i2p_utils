@@ -93,7 +93,7 @@ class FileIndexer:
         logging.info("Searching for missing files")
 
         for i in names:
-            full_name = os.path.abspath(basedir + '/' + i.name)
+            full_name = os.path.abspath(basedir + os.path.sep + i.name)
             if not os.path.exists(full_name):
 
                 logging.debug("`{}' not found -- deleting".format(full_name))

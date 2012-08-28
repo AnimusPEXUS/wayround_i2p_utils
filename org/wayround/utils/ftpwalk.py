@@ -7,8 +7,8 @@ import logging
 
 def normpath(s):
     np = os.path.normpath(s)
-    while '//' in np:
-        np.replace('//', '/')
+    while os.path.sep * 2 in np:
+        np.replace(os.path.sep * 2, os.path.sep)
     return np
 
 def v(s):

@@ -456,7 +456,6 @@ def combine_data(scheme='http',
 
     parameters can be None or dicrionary like {'name':'value'}
     '''
-    res = ''
 
     auth_str = ''
     port_str = ''
@@ -487,7 +486,7 @@ def combine_data(scheme='http',
         use_param = True
 
     if isinstance(path, list):
-        path_string = '/'.join(path)
+        path = '/'.join(path)
 
     if use_param:
         param_str = '?'
@@ -495,7 +494,6 @@ def combine_data(scheme='http',
         for i in parameters.keys():
             p2 = parameters[i]
 
-            # FIXME: 'long' was removed from check. investigation needed
             if isinstance(p2, (int, float)):
                 p2 = str(p2)
 
