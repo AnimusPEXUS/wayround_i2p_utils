@@ -165,6 +165,9 @@ def tag(
 
 def check_unit(indict, path=[]):
 
+    if isinstance(indict, str):
+        return
+
     for i in list(indict.keys()):
         if not i in [
             'type',
@@ -189,7 +192,7 @@ def check_unit(indict, path=[]):
                 })
 
     # Supplied data defenetly must be a dict or list, othervice - error
-    if not isinstance(indict, (dict, list)):
+    if not isinstance(indict, (dict, list, str)):
         raise ValueError("Supplied data is not a dict or a list")
 
     # 'type' must be supplied
@@ -748,6 +751,9 @@ class DictTreeToXMLRenderer:
 
     def _render_unit(self, root, unit, path, path_name, indent):
 
+        if isinstance(unit, str):
+            return xml.sax.saxutils.escape(unit)
+
         new_line_before_start = ''
         if unit['new_line_before_start']:
             new_line_before_start = '\n%(indent)s' % {
@@ -826,7 +832,6 @@ class DictTreeToXMLRenderer:
                 class_list = list(set(class_list))
                 class_list.sort()
 
-                # FIXME: Very strange results with next line O_O
                 unit['tag_info']['attributes']['class'] = ' '.join(class_list)
 
                 class_list = []
@@ -1002,8 +1007,8 @@ class DictTreeToXMLRenderer:
                     raise TypeError("This method accepts only dict or list")
 
 
-                if not isinstance(unit, dict):
-                    self.do_log("-e- Dictatorship `{}' element value is not a dict".format(str(unit)))
+                if not isinstance(unit, (dict, str)):
+                    self.do_log("-e- Dictatorship `{}' element value is not a dict and not str".format(str(unit)))
 
                     ret = 2
                     break

@@ -2,6 +2,7 @@
 
 import copy
 import os
+import re
 
 import org.wayround.utils.terminal
 
@@ -17,8 +18,8 @@ def return_columned_list_print(lst, width=None, columns=None,
                       fd=1):
 
     if width == None:
-        if (isinstance(fd, int) and os.isatty(fd)) \
-                or (hasattr(fd, 'isatty') and fd.isatty()):
+        if ((isinstance(fd, int) and os.isatty(fd))
+            or (hasattr(fd, 'isatty') and fd.isatty())):
 
             size = org.wayround.utils.terminal.get_terminal_size(fd)
             if size == None:
@@ -105,3 +106,6 @@ def strip_remove_empty_remove_duplicated_lines(lst):
             strip_lines(lst)
             )
         )
+
+def slice_string_to_sections(stri):
+    return re.findall(r'[a-zA-Z]+|\d+|[\.\-\_\~\+]', stri)
