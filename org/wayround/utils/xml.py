@@ -310,7 +310,11 @@ def check_unit(indict, path=[]):
     elif isinstance(indict['content'], list):
         pass
     else:
-        raise ValueError("wrong unit content value")
+        raise ValueError(
+            "wrong unit content value: `{}', but must be None, str, dict or list".format(
+                type(indict['content'])
+                )
+            )
 
 
     default_new_line_before_start = False

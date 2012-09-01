@@ -134,6 +134,9 @@ class Log:
             except:
                 pass
 
-
-
+def verbose_print(s, verbose=False):
+    if verbose:
+        logging.info(s)
+    else:
+        logging.debug(s)
 
