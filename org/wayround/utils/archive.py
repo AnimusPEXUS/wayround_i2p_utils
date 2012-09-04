@@ -292,7 +292,8 @@ def extract_tar_canonical_fobj(
     dirname,
     compressor,
     verbose_tar=False,
-    verbose_compressor=False
+    verbose_compressor=False,
+    add_tar_options=[]
     ):
 
     dirname = os.path.abspath(dirname)
@@ -307,7 +308,7 @@ def extract_tar_canonical_fobj(
     else:
 
         # tar
-        options = []
+        options = [] + add_tar_options
 
         if verbose_tar:
             options += ['-v']
@@ -454,7 +455,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
 
     ret = 0
     try:
-        fd = open(output_filename, 'w')
+        fd = open(output_filename, 'wb')
     except:
         logging.error("Error creating output file %(name)s" % {
             'name': output_filename

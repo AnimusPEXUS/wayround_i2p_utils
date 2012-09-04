@@ -168,13 +168,17 @@ def dd(
     # control should never reach this return
     return
 
-def lbl_write(stdin, stdout, threaded=False):
+def lbl_write(stdin, stdout, threaded=False, typ='info'):
+
+    if not typ in ['info', 'error', 'warning']:
+        raise ValueError("Wrong `typ' value")
 
     if threaded:
         return threading.Thread(
             target=lbl_write,
             args=(stdin, stdout),
-            kwargs=dict(threaded=False))
+            kwargs=dict(threaded=False)
+            )
     else:
 
         while True:
@@ -186,7 +190,12 @@ def lbl_write(stdin, stdout, threaded=False):
             else:
                 l = l.rstrip(' \0\n')
 
-                stdout.info(l)
+                if typ == 'info':
+                    stdout.info(l)
+                elif typ == 'error':
+                    stdout.error(l)
+                elif typ == 'warning':
+                    stdout.warning(l)
 
         return
 
