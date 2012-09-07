@@ -89,7 +89,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
 def make_file_checksum(filename, method='sha512'):
     ret = 0
     try:
-        f = open(filename, 'r')
+        f = open(filename, 'rb')
     except:
         logging.exception("Can't open file `%(name)s'" % {
             'name': filename
@@ -130,7 +130,7 @@ def make_fileobj_checksum(fileobj, method='sha512'):
 def parse_checksums_file_text(filename):
     ret = 0
     try:
-        f = open(filename)
+        f = open(filename, 'rb')
     except:
         logging.exception("Can't open file `%(name)s'" % {
             'name': filename

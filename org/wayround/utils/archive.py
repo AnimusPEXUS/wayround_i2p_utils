@@ -58,6 +58,7 @@ def _extract_tar_7z(file_name, output_dir):
                     output_dir
                     ]
                 )
+            proc_7z.wait()
         except:
             logging.exception("tar start error")
             raise
@@ -68,7 +69,6 @@ def _extract_tar_7z(file_name, output_dir):
             if proc_tar.returncode == None:
                 proc_tar.terminate()
 
-        proc_7z.wait()
 
     return
 
@@ -166,7 +166,8 @@ def archive_tar_canonical(
     dirname, output_filename,
     compressor,
     verbose_tar=False,
-    verbose_compressor=False
+    verbose_compressor=False,
+    bufsize=2 * 1024 ** 2
     ):
 
     ret = 0
@@ -178,8 +179,12 @@ def archive_tar_canonical(
     else:
         try:
             ret = archive_tar_canonical_fobj(
-                dirname, fobj, compressor,
-                verbose_tar, verbose_compressor
+                dirname,
+                fobj,
+                compressor,
+                verbose_tar,
+                verbose_compressor,
+                bufsize=bufsize
                 )
         finally:
             fobj.close()
@@ -191,7 +196,8 @@ def archive_tar_canonical_fobj(
     output_fobj,
     compressor,
     verbose_tar=False,
-    verbose_compressor=False
+    verbose_compressor=False,
+    bufsize=2 * 1024 ** 2
     ):
 
     ret = 0
@@ -222,7 +228,7 @@ def archive_tar_canonical_fobj(
                 stdin=None,
                 stdout=subprocess.PIPE,
                 cwd=dirname,
-                bufsize=2 * 1024 ** 2,
+                bufsize=bufsize,
                 stderr=stderr
                 )
         except:
@@ -249,12 +255,10 @@ def archive_tar_canonical_fobj(
                     verbose=verbose_compressor
                     ) != 0:
                     ret = 3
+                tarproc.wait()
             finally:
                 if tarproc.returncode == None:
                     tarproc.terminate()
-
-
-            tarproc.wait()
 
     return ret
 
@@ -349,10 +353,11 @@ def extract_tar_canonical_fobj(
 
                     ret = 3
 
-            finally:
-                tarproc.terminate()
+                ret = tarproc.wait()
 
-            tarproc.wait()
+            finally:
+                if tarproc.returncode == None:
+                    tarproc.terminate()
 
     return ret
 
