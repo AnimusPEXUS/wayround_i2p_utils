@@ -487,7 +487,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
     return ret
 
 
-def xzcat(stdin):
+def xzcat(stdin, convert_to_str=None):
 
     ret = 0
 
@@ -519,7 +519,8 @@ def xzcat(stdin):
                 comprproc.stdout,
                 outstr,
                 threaded=True,
-                close_output_on_eof=False
+                close_output_on_eof=False,
+                convert_to_str=convert_to_str
                 )
             cat_p2.start()
 

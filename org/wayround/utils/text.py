@@ -82,30 +82,6 @@ def fill(char=' ', count=80):
     out = char[0] * count
     return out
 
-def remove_empty_lines(lst):
-    ret = []
-    for i in lst:
-        if i != '':
-            ret.append(i)
-    return ret
-
-
-def remove_duplicated_lines(lst):
-    ret = list(set(copy.copy(lst)))
-    return ret
-
-def strip_lines(lst):
-    ret = []
-    for i in lst:
-        ret.append(i.strip())
-    return ret
-
-def strip_remove_empty_remove_duplicated_lines(lst):
-    return remove_duplicated_lines(
-        remove_empty_lines(
-            strip_lines(lst)
-            )
-        )
 
 def slice_string_to_sections(stri):
     return re.findall(r'[a-zA-Z]+|\d+|[\.\-\_\~\+]', stri)

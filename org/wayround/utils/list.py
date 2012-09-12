@@ -57,3 +57,28 @@ def list_sort(lst, cmp=None):
                         lst[j] = x
 
     return
+
+def list_remove_empty_lines(lst):
+    ret = []
+    for i in lst:
+        if i != '':
+            ret.append(i)
+    return ret
+
+def list_remove_duplicated_lines(lst):
+    ret = list(set(lst))
+    return ret
+
+def list_strip_lines(lst):
+    ret = []
+    for i in lst:
+        ret.append(i.strip())
+    return ret
+
+def list_strip_remove_empty_remove_duplicated_lines(lst):
+    return list_remove_duplicated_lines(
+        list_remove_empty_lines(
+            list_strip_lines(copy.copy(lst))
+            )
+        )
+
