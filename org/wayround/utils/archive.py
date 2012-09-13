@@ -15,7 +15,7 @@ import org.wayround.utils.file
 # TODO: Add safeness to streamed functions
 # TODO: Rework old functions to new tune
 
-CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gz'])
+CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
 
 def _extract_zip(file_name, output_dir):
 
@@ -145,8 +145,9 @@ def canonical_compressor(
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
-            "canonical_compressor supports only `{}'".format(
-                repr(list(CANONICAL_COMPRESSORS))
+            "canonical_compressor supports only `{}', but `{}' requested".format(
+                repr(list(CANONICAL_COMPRESSORS)),
+                compressor
                 )
             )
 

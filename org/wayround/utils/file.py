@@ -108,21 +108,33 @@ def isdirempty(dirname):
 
 def remove_if_exists(file_or_dir):
     file_or_dir = os.path.abspath(file_or_dir)
-    if os.path.exists(file_or_dir):
-        if os.path.isdir(file_or_dir):
-            try:
-                shutil.rmtree(file_or_dir)
-            except:
-                logging.exception("Can't remove dir %(dir)s" % {
-                    'dir': file_or_dir})
-                return 1
-        else:
-            try:
-                os.unlink(file_or_dir)
-            except:
-                logging.exception("      can't remove file %(file)s" % {
-                    'file': file_or_dir})
-                return 1
+
+    if not os.path.islink(file_or_dir):
+
+        if os.path.exists(file_or_dir):
+            if os.path.isdir(file_or_dir):
+                try:
+                    shutil.rmtree(file_or_dir)
+                except:
+                    logging.exception("Can't remove dir %(dir)s" % {
+                        'dir': file_or_dir})
+                    return 1
+            else:
+                try:
+                    os.unlink(file_or_dir)
+                except:
+                    logging.exception("      can't remove file %(file)s" % {
+                        'file': file_or_dir})
+                    return 1
+
+    else:
+        try:
+            os.unlink(file_or_dir)
+        except:
+            logging.exception("      can't remove link %(file)s" % {
+                'file': file_or_dir})
+            return 1
+
     return 0
 
 def create_if_not_exists_dir(dirname):
@@ -299,4 +311,44 @@ def null_file(filename):
         ret = 1
     else:
         f.close()
+    return ret
+
+def get_dir_size(name):
+    name = os.path.abspath(name)
+    if not os.path.isdir(name):
+        raise OSError("Not a dir `{}'".format(name))
+
+    size = 0
+
+    lst = os.listdir(name)
+    for i in ['.', '..']:
+        if i in lst:
+            lst.remove(i)
+
+    lst.sort()
+
+    for i in lst:
+        f_pth = os.path.abspath(name + os.path.sep + i)
+        if not os.path.islink(f_pth):
+            if os.path.isfile(f_pth):
+                s = os.stat(f_pth)
+                size += s.st_size
+            elif os.path.isdir(f_pth):
+                size += get_dir_size(f_pth)
+
+    return size
+
+def get_file_size(name):
+
+    ret = None
+
+    if not os.path.exists(name):
+        ret = None
+    else:
+        if os.path.isfile(name):
+            s = os.stat(name)
+            ret = s.st_size
+        elif os.path.isdir(name):
+            ret = get_dir_size(name)
+
     return ret

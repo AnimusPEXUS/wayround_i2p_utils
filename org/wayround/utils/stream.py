@@ -53,9 +53,15 @@ def dd(
     if not hasattr(stdout, 'read') and not hasattr(stdout, 'update'):
         raise ValueError("Object `{}' have no 'read' nor 'update' methods".format(stdout))
 
-    if convert_to_str != None:
-        if not isinstance(convert_to_str, str):
-            raise ValueError("convert_to_str and ony be str or None")
+    if convert_to_str == True:
+        convert_to_str = 'utf-8'
+    elif convert_to_str == False:
+        convert_to_str = None
+
+    if (convert_to_str != None
+        and not isinstance(convert_to_str, str)
+        ):
+        raise ValueError("convert_to_str can ony be str, bool or None")
 
     if threaded:
         return threading.Thread(

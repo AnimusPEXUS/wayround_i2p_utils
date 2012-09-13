@@ -9,11 +9,11 @@ import org.wayround.utils.terminal
 def columned_list_print(lst, width=None, columns=None,
                         margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
                         fd=1):
-    print(return_columned_list_print(lst, width=width, columns=columns,
+    print(return_columned_list(lst, width=width, columns=columns,
                                      margin_right=margin_right, margin_left=margin_left,
                                      spacing=spacing, fd=fd))
 
-def return_columned_list_print(lst, width=None, columns=None,
+def return_columned_list(lst, width=None, columns=None,
                       margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
                       fd=1):
 
