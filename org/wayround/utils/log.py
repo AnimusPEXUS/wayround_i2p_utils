@@ -59,6 +59,13 @@ class Log:
 
         return
 
+    def __del__(self):
+        if not self.fileobj.closed:
+            try:
+                self.stop()
+            except:
+                pass
+
     def stop(self, echo=True):
         if self.fileobj == None:
             raise Exception
@@ -126,13 +133,6 @@ class Log:
 
     def warning(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='warning', timestamp=timestamp)
-
-    def __del__(self):
-        if not self.fileobj.closed:
-            try:
-                self.stop()
-            except:
-                pass
 
 def verbose_print(s, verbose=False):
     if verbose:
