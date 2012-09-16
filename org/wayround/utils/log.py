@@ -82,6 +82,8 @@ class Log:
         self.fileobj.close()
         return
 
+    close = stop
+
     def write(self, text, echo=False, typ='info', timestamp=None):
 
         if not typ in ['info', 'error', 'warning']:
