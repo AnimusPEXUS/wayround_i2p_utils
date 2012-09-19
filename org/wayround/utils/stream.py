@@ -156,8 +156,8 @@ def dd(
   Ending `{name}' thread
         {{
            {num} cycles worked,
-           {size} bytes ({sizem} MiB) transferred,
-           with buffer size {bufs} bytes ({bufm} MiB)
+           {size} bytes ({sizem:4.2f} MiB) transferred,
+           with buffer size {bufs} bytes ({bufm:4.2f} MiB)
         }}
 """.format_map({
         'name': thread_name,
