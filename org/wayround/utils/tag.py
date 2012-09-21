@@ -36,10 +36,12 @@ class TagEngine:
             )
 
     def __init__(self, config_string, commit_every=1000):
-        self._db_engine = \
-            sqlalchemy.create_engine(
-            config_string,
-            echo=False
+
+        self._db_engine = (
+                sqlalchemy.create_engine(
+                config_string,
+                echo=False
+                )
             )
 
         self.Base.metadata.bind = self._db_engine
@@ -103,7 +105,36 @@ class TagEngine:
 
         return list(ret)
 
-    def objects_by_tags(self, tags):
+
+    def get_objects(self):
+
+        q = self.sess.query(self.Tag).all()
+
+        ret = set()
+        for i in q:
+            ret.add(i.obj)
+
+        return list(ret)
+
+    get_all_object = get_objects
+
+    def get_all_tags(self):
+        q = self.sess.query(self.Tag).all()
+
+        ret = set()
+        for i in q:
+            ret.add(i.tag)
+
+        return list(ret)
+
+    def get_size(self):
+
+        self.commit()
+        ret = self.sess.query(self.Tag).count()
+
+        return ret
+
+    def get_objects_by_tags(self, tags):
 
         ret = set()
 
@@ -114,6 +145,8 @@ class TagEngine:
                 ret.add(y.obj)
 
         return list(ret)
+
+    objects_by_tags = get_objects_by_tags
 
     def del_object_tags(self, obj):
 
@@ -131,16 +164,6 @@ class TagEngine:
 
         return
 
-    def get_objects(self):
-
-        q = self.sess.query(self.Tag).all()
-
-        ret = set()
-        for i in q:
-            ret.add(i.obj)
-
-        return list(ret)
-
     def clear(self):
 
         self.sess.query(self.Tag).delete()
@@ -148,8 +171,3 @@ class TagEngine:
 
         return
 
-    def get_size(self):
-
-        self.commit()
-        lst = self.get_objects()
-        return len(lst)
