@@ -1,7 +1,7 @@
 
 import inspect
 
-def render_help(object_dic, order_list=None, only_synopsis=False):
+def render_help(object_dic, order_list=None, only_titles=False, key=None):
 
     key_list = []
 
@@ -29,7 +29,11 @@ def render_help(object_dic, order_list=None, only_synopsis=False):
 
     for i in key_list:
 
-        txt = inspect.getdoc(object_dic[i])
+        txt = ''
+        if not key:
+            txt = inspect.getdoc(object_dic[i])
+        else:
+            txt = inspect.getdoc(key(object_dic[i]))
 
         if isinstance(txt, str):
             txt = txt.strip()
@@ -41,10 +45,8 @@ def render_help(object_dic, order_list=None, only_synopsis=False):
         elif not isinstance(txt, str):
             txt = str(txt)
 
-        if only_synopsis:
-            if not isinstance(txt, str):
-                txt = str(txt)
-
+        if only_titles:
+            txt = str(txt)
             txt = '        ' + txt.splitlines()[0].strip()
         else:
             text = ''
@@ -54,13 +56,15 @@ def render_help(object_dic, order_list=None, only_synopsis=False):
             txt = text
 
 
-        out += """\
+        out += (
+"""\
     {key}
 {help}
 """.format(
     key=i,
     help=txt
     )
+                )
 
 
     return out

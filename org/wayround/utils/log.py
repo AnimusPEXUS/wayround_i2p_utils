@@ -136,9 +136,4 @@ class Log:
     def warning(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='warning', timestamp=timestamp)
 
-def verbose_print(s, verbose=False):
-    if verbose:
-        logging.info(s)
-    else:
-        logging.debug(s)
 
