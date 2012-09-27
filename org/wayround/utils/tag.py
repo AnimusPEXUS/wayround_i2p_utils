@@ -116,6 +116,17 @@ class TagEngine:
 
         return list(ret)
 
+    def get_objects_and_tags_dict(self):
+
+        ret = dict()
+
+        objs = self.get_objects()
+
+        for i in objs:
+            ret[i] = self.get_tags(i)
+
+        return ret
+
     get_all_object = get_objects
 
     def get_all_tags(self):
