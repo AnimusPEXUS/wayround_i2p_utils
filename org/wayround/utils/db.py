@@ -107,8 +107,8 @@ class BasicDB:
 
     def __del__(self):
         logging.debug("PKG Index DB cleaning")
-        self.close()
-
+        if self:
+            self.close()
         return
 
     def commit(self):

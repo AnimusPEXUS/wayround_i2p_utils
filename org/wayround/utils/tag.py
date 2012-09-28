@@ -60,7 +60,8 @@ class TagEngine:
         return
 
     def __del__(self):
-        self.close()
+        if self:
+            self.close()
         return
 
     def close(self):
