@@ -116,23 +116,24 @@ def remove_if_exists(file_or_dir):
                 try:
                     shutil.rmtree(file_or_dir)
                 except:
-                    logging.exception("Can't remove dir %(dir)s" % {
-                        'dir': file_or_dir})
+                    logging.exception(
+                        "Can't remove dir {}".format(file_or_dir)
+                        )
                     return 1
             else:
                 try:
                     os.unlink(file_or_dir)
                 except:
-                    logging.exception("      can't remove file %(file)s" % {
-                        'file': file_or_dir})
+                    logging.exception(
+                        "      can't remove file {}".format(file_or_dir)
+                        )
                     return 1
 
     else:
         try:
             os.unlink(file_or_dir)
         except:
-            logging.exception("      can't remove link %(file)s" % {
-                'file': file_or_dir})
+            logging.exception("      can't remove link {}".format(file_or_dir))
             return 1
 
     return 0
@@ -204,10 +205,7 @@ def inderictory_copy_file(directory, file1, file2):
         if os.path.exists(f2):
             logging.error("destination file or dir already exists")
         else:
-            logging.info("copying %(f1)s to %(f2)s" % {
-                'f1': f1,
-                'f2': f2
-                })
+            logging.info("copying {} to {}".format(f1, f2))
             try:
                 shutil.copy(f1, f2)
             except:
@@ -242,12 +240,7 @@ def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
         else:
 
             if not os.path.isdir(full_path):
-                fd.write("%(filename)s\n" % {
-                        'filename': "%(filename)s" % {
-                            'filename': full_path[start_root_len:]
-                            }
-                        }
-                    )
+                fd.write("{}\n".format(full_path[start_root_len:]))
             else:
                 # TODO: figure out what to do now
                 raise Exception
@@ -288,13 +281,15 @@ def progress_write(line_to_write, new_line=False):
 
     line_to_write_l = len(line_to_write)
 
-    line_to_out = "\r%(ltw)s%(spaces)s%(new_line)s\r" % {
-        'ltw': line_to_write,
-        'spaces': org.wayround.utils.text.fill(
-            ' ', width - line_to_write_l
-            ),
-        'new_line':new_line_str
-        }
+    line_to_out = "\r{ltw}{spaces}{new_line}\r".format_map(
+        {
+            'ltw': line_to_write,
+            'spaces': org.wayround.utils.text.fill(
+                ' ', width - line_to_write_l
+                ),
+            'new_line':new_line_str
+            }
+        )
 
     if len(line_to_out) > width:
         line_to_out = line_to_out[:width + 1] + new_line_str + '\r'

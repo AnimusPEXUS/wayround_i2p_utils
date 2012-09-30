@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import os
 # TODO: migrate to multiprocessing
@@ -81,9 +80,7 @@ def dd(
     else:
 
         if thread_name != 'Thread':
-            logging.info("Starting `%(name)s' thread" % {
-                'name':thread_name
-                })
+            logging.info("Starting `{}' thread".format(thread_name))
 
         buff = ' '
 
@@ -146,9 +143,7 @@ def dd(
 
         if close_output_on_eof:
             if thread_name != 'Thread':
-                logging.info("Closing `%(name)s' thread stdout" % {
-                    'name':thread_name
-                    })
+                logging.info("Closing `{}' thread stdout".format(thread_name))
             stdout.close()
 
         if thread_name != 'Thread':

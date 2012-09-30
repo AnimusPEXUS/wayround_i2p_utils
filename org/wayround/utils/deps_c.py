@@ -97,9 +97,7 @@ def parse_ldd_output(text):
                 break
 
         if re_res == None:
-            logging.error("Couldn't parse line `%(txt)s'" % {
-                'txt': i
-                })
+            logging.error("Couldn't parse line `{}'".format(i))
             raise Exception
 
     ret = dep_lst

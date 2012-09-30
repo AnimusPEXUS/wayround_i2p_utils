@@ -81,7 +81,7 @@ class FTPWalk:
     def fstats(self, dirname, force=False):
 
         if self._verbose:
-            v("Getting directory stats: %(dir)s" % {'dir': dirname})
+            v("Getting directory stats: {}".format(dirname))
 
         if self._ftpc == None:
             return 'not connected'
@@ -350,8 +350,7 @@ class FTPWalkSole(FTPWalk):
         isok = True
 
         if self._verbose:
-            v("Connecting to %(server)s" % {
-                    'server': self._server})
+            v("Connecting to {}".format(self._server))
 
         if self._ftpc != None:
             return True

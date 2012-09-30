@@ -6,20 +6,30 @@ import re
 
 import org.wayround.utils.terminal
 
-def columned_list_print(lst, width=None, columns=None,
-                        margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
-                        fd=1):
-    print(return_columned_list(lst, width=width, columns=columns,
-                                     margin_right=margin_right, margin_left=margin_left,
-                                     spacing=spacing, fd=fd))
+def columned_list_print(
+    lst, width=None, columns=None,
+    margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
+    fd=1
+    ):
+    print(
+        return_columned_list(
+            lst, width=width, columns=columns,
+            margin_right=margin_right, margin_left=margin_left,
+            spacing=spacing, fd=fd
+            )
+          )
 
-def return_columned_list(lst, width=None, columns=None,
-                      margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
-                      fd=1):
+def return_columned_list(
+    lst, width=None, columns=None,
+    margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
+    fd=1
+    ):
 
     if width == None:
-        if ((isinstance(fd, int) and os.isatty(fd))
-            or (hasattr(fd, 'isatty') and fd.isatty())):
+        if (
+            (isinstance(fd, int) and os.isatty(fd))
+            or (hasattr(fd, 'isatty') and fd.isatty())
+            ):
 
             size = org.wayround.utils.terminal.get_terminal_size(fd)
             if size == None:
@@ -29,7 +39,6 @@ def return_columned_list(lst, width=None, columns=None,
         else:
             width = 80
 
-
     #print "width " + str(width)
 
     longest = 0
@@ -38,7 +47,6 @@ def return_columned_list(lst, width=None, columns=None,
         l = len(i)
         if l > longest:
             longest = l
-
 
     mrr_l = len(margin_right)
     mrl_l = len(margin_left)
@@ -52,12 +60,6 @@ def return_columned_list(lst, width=None, columns=None,
     if columns < 1:
         columns = 1
 
-    #print "int_l   == " + str(int_l)
-    #print "longest == " + str(longest)
-    #print "width   == " + str(width)
-    #print "lst_l   == " + str(lst_l)
-    #print "columns == " + str(columns)
-
     ret = ''
     for i in range(0, lst_l, columns):
         # print "i == " + str(i)
@@ -70,17 +72,24 @@ def return_columned_list(lst, width=None, columns=None,
         while len(l3) != columns:
             l3.append(''.ljust(longest))
 
-        ret += "%(mrl)s%(row)s%(mrr)s\n" % {
+        ret += "{mrl}{row}{mrr}\n".format_map(
+            {
                 'mrl': margin_left,
                 'mrr': margin_right,
                 'row': spacing.join(l3)
                 }
+            )
 
     return ret
 
 def fill(char=' ', count=80):
-    out = char[0] * count
-    return out
+    char = str(char)
+
+    if len(char) < 1:
+        char = ' '
+
+    ret = char[0] * count
+    return ret
 
 
 def slice_string_to_sections(stri):

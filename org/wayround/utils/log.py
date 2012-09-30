@@ -33,10 +33,12 @@ class Log:
             filename = os.path.abspath(
                 os.path.join(
                     log_dir,
-                    "%(ts)s-%(name)s.txt" % {
-                        'ts': timestamp,
-                        'name': logname
-                        }
+                    "{}-{}.txt".format_map(
+                        {
+                            'ts': timestamp,
+                            'name': logname
+                            }
+                        )
                     )
                 )
 

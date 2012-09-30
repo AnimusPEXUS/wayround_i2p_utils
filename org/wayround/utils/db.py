@@ -1,9 +1,10 @@
 
 import logging
 
+import sqlalchemy
 import sqlalchemy.ext
 import sqlalchemy.orm
-
+import sqlalchemy.ext.declarative
 
 class BasicDBConfigError(Exception): pass
 

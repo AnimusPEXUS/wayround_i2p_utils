@@ -187,9 +187,11 @@ def check_unit(indict, path=[]):
     logging.debug("check_unit path {}".format('/'.join(path)))
 
     if len(path) >= 255:
-        raise DictatorshipUnitTooDeep("Dictatorship tree recursion limit reached `%(path)s'" % {
-                'path': '/'.join(path)
-                })
+        raise DictatorshipUnitTooDeep(
+            "Dictatorship tree recursion limit reached `{}'".format(
+                '/'.join(path)
+                )
+            )
 
     # Supplied data defenetly must be a dict or list, othervice - error
     if not isinstance(indict, (dict, list, str)):
@@ -263,15 +265,13 @@ def check_unit(indict, path=[]):
             if indict[i] == None:
                 indict[i] = []
             elif not isinstance(indict[i], list):
-                raise TypeError("`%(i)s' can be list or None" % {
-                    'i': i
-                    })
+                raise TypeError("`{}' can only be list or None".format(i))
             else:
                 for j in indict[i]:
                     if not isinstance(j, str):
-                        raise TypeError("All `%(i)s' values must be strings" % {
-                            'i': i
-                            })
+                        raise TypeError(
+                            "All `{}' values must be strings".format(i)
+                            )
 
         else:
             indict[i] = []
@@ -282,10 +282,14 @@ def check_unit(indict, path=[]):
             if indict[i] != None:
                 if isinstance(indict[i], str):
                     if not re.match(r'[a-zA-Z][a-zA-Z\-]*', indict[i]):
-                        raise ValueError("Wrong `%(i)s' value at `%(path)s'" % {
-                            'path': '/'.join(path),
-                            'i': i
-                            })
+                        raise ValueError(
+                            "Wrong `{i}' value at `{path}'".format_map(
+                                {
+                                    'path': '/'.join(path),
+                                    'i': i
+                                    }
+                                )
+                            )
                 else:
                     raise ValueError("`{}' can be None or str".format(i))
 
@@ -342,9 +346,7 @@ def check_unit(indict, path=[]):
         ]:
         if i[0] in indict:
             if not isinstance(indict[i[0]], bool):
-                raise TypeError("-e- wrong `%(name)s' value type" % {
-                    'name': i[0]
-                    })
+                raise TypeError("Wrong `{}' value type".format(i[0]))
         else:
             indict[i[0]] = i[1]
 
@@ -406,15 +408,19 @@ def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
         for i in attrs:
             ind = ''
             if ind_req and not first:
-                ind = "\n%(indent)s %(nameindent)s " % {
-                    'indent': indent,
-                    'nameindent': nameindent
-                    }
+                ind = "\n{indent} {nameindent} ".format_map(
+                    {
+                        'indent': indent,
+                        'nameindent': nameindent
+                        }
+                    )
 
-            ret += "%(ind)s%(new_attr)s" % {
-                'ind': ind,
-                'new_attr': i
-                }
+            ret += "{ind}{new_attr}".format_map(
+                {
+                    'ind': ind,
+                    'new_attr': i
+                    }
+                )
 
             if curr_attr_i < attrs_l - 1:
                 ret += ' '
@@ -500,9 +506,12 @@ class DictTreeToXMLRenderer:
 
 
         if self.check_range(indict) != 0:
-            self.do_log("_lineup_tree wrong input data at path %(path)s" % {
-                'path': '/'.join(path)
-                })
+            self.do_log(
+                "_lineup_tree wrong input data at path {}".format(
+                    '/'.join(path)
+                    )
+                )
+
             ret = 1
         else:
 
@@ -584,14 +593,16 @@ class DictTreeToXMLRenderer:
                     )
             except:
                 self.do_log(
-                    "-e- Error while checking `%(path)s'\n%(exc_info)s" % {
-                        'path': i,
-                        'exc_info':
-                            org.wayround.utils.error.return_exception_info(
-                                sys.exc_info(),
-                                tb=True
-                                )
-                        }
+                    "-e- Error while checking `{path}'\n{exc_info}".format_map(
+                        {
+                            'path': i,
+                            'exc_info':
+                                org.wayround.utils.error.return_exception_info(
+                                    sys.exc_info(),
+                                    tb=True
+                                    )
+                            }
+                        )
                     )
                 ret = 1
                 break
@@ -621,22 +632,26 @@ class DictTreeToXMLRenderer:
             if self.generate_css:
                 if 'required_css' in self.units[i]:
                     for j in self.units[i]['required_css']:
-                        placeable_name = "%(module)s/%(uid)s/%(required)s" % {
-                            'module': self.units[i]['module'],
-                            'uid': self.units[i]['uid'],
-                            'required': j,
-                            }
+                        placeable_name = "{module}/{uid}/{required}".format_map(
+                            {
+                                'module': self.units[i]['module'],
+                                'uid': self.units[i]['uid'],
+                                'required': j,
+                                }
+                            )
                         if not placeable_name in self.css_placeables:
                             self.css_placeables.append(placeable_name)
 
             if self.generate_js:
                 if 'required_js' in self.units[i]:
                     for j in self.units[i]['required_js']:
-                        placeable_name = "%(module)s/%(uid)s/%(required)s" % {
-                            'module': self.units[i]['module'],
-                            'uid': self.units[i]['uid'],
-                            'required': j,
-                            }
+                        placeable_name = "{module}/{uid}/{required}".format_map(
+                            {
+                                'module': self.units[i]['module'],
+                                'uid': self.units[i]['uid'],
+                                'required': j,
+                                }
+                            )
                         if not placeable_name in self.js_placeables:
                             self.js_placeables.append(placeable_name)
 
@@ -646,21 +661,25 @@ class DictTreeToXMLRenderer:
     def css_path_renderer(self, inname):
         module, uid, file = inname.split('/')[0:3]
 
-        return "css?module=%(module)s&uid=%(uid)s&file=%(file)s" % {
-            'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
-            'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
-            'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
-            }
+        return "css?module={module}&uid={uid}&file={file}".format_map(
+            {
+                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
+                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
+                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
+                }
+            )
 
 
     def js_path_renderer(self, inname):
         module, uid, file = inname.split('/')[0:3]
 
-        return "js?module=%(module)s&uid=%(uid)s&file=%(file)s" % {
-            'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
-            'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
-            'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
-            }
+        return "js?module={module}&uid={uid}&file={file}".format_map(
+            {
+                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
+                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
+                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
+                }
+            )
 
     def _place_found_css_or_js(
         self,
@@ -760,9 +779,7 @@ class DictTreeToXMLRenderer:
 
         new_line_before_start = ''
         if unit['new_line_before_start']:
-            new_line_before_start = '\n%(indent)s' % {
-                'indent': indent
-                }
+            new_line_before_start = '\n{}'.format(indent)
 
         new_line_before_content = ''
         if unit['new_line_before_content']:
@@ -770,9 +787,7 @@ class DictTreeToXMLRenderer:
 
         new_line_after_content = ''
         if unit['new_line_after_content']:
-            new_line_after_content = '\n%(indent)s' % {
-                'indent': indent
-                }
+            new_line_after_content = '\n{}'.format(indent)
 
         new_line_after_end = ''
         if unit['new_line_after_end']:
@@ -890,9 +905,7 @@ class DictTreeToXMLRenderer:
                 else:
                     content = str(unit['content'])
 
-                end = '</%(tagname)s>' % {
-                    'tagname': unit['tag_info']['name']
-                    }
+                end = '</{}>'.format(unit['tag_info']['name'])
             else:
                 content = ''
                 end = ''
@@ -901,13 +914,14 @@ class DictTreeToXMLRenderer:
             raise ValueError("Wrong type at `{}'".format('/'.join(path)))
 
         ret = (""
-            + "%(new_line_before_start)s"
-            + "%(start)s"
-            + "%(new_line_before_content)s"
-            + "%(content)s"
-            + "%(new_line_after_content)s"
-            + "%(end)s"
-            + "%(new_line_after_end)s") % {
+            + "{new_line_before_start}"
+            + "{start}"
+            + "{new_line_before_content}"
+            + "{content}"
+            + "{new_line_after_content}"
+            + "{end}"
+            + "{new_line_after_end}").format_map(
+            {
                 'new_line_before_start': new_line_before_start,
                 'new_line_before_content': new_line_before_content,
                 'new_line_after_content': new_line_after_content,
@@ -916,6 +930,7 @@ class DictTreeToXMLRenderer:
                 'content': content,
                 'end': end
                 }
+            )
 
         return ret
 

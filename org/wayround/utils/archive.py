@@ -207,9 +207,7 @@ def archive_tar_canonical_fobj(
     dirname = os.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
-        logging.error("Not a directory: %(dirname)s" % {
-            'dirname': dirname
-            })
+        logging.error("Not a directory: {}".format(dirname))
         ret = 1
     else:
 
@@ -306,9 +304,9 @@ def extract_tar_canonical_fobj(
     ret = org.wayround.utils.file.create_if_not_exists_dir(dirname)
 
     if ret != 0:
-        logging.error("Error while checking destination dir: %(dirname)s" % {
-            'dirname': dirname
-            })
+        logging.error(
+            "Error while checking destination dir: {}".format(dirname)
+            )
         ret = 1
     else:
 
@@ -374,9 +372,7 @@ def pack_dir_contents_tar(
     dirname = os.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
-        logging.error("Not a directory: %(dirname)s" % {
-            'dirname': dirname
-            })
+        logging.error("Not a directory: {}".format(dirname))
         ret = 1
     else:
         try:
@@ -463,9 +459,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
     try:
         fd = open(output_filename, 'wb')
     except:
-        logging.error("Error creating output file %(name)s" % {
-            'name': output_filename
-            })
+        logging.error("Error creating output file {}".format(output_filename))
         ret = 1
     else:
         try:
@@ -474,9 +468,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
                 )
             try:
                 if not isinstance(fobj, tarfile.ExFileObject):
-                    logging.error("Error getting %(name)s from tar" % {
-                        'name': cont_name
-                        })
+                    logging.error("Error getting {} from tar".format(cont_name))
                     ret = 2
                 else:
                     org.wayround.utils.stream.cat(fobj, fd)

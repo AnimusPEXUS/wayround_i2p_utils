@@ -362,9 +362,7 @@ def process_file(
     ret = 0
 
     if not os.path.isfile(infile):
-        logging.error("Input file not exists: %(name)s" % {
-            'name': infile
-            })
+        logging.error("Input file not exists: {}".format(infile))
         ret = 1
     else:
         try:
