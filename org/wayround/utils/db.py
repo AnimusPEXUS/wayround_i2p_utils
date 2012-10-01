@@ -1,6 +1,4 @@
 
-import logging
-
 import sqlalchemy
 import sqlalchemy.ext
 import sqlalchemy.orm
@@ -107,7 +105,6 @@ class BasicDB:
         return
 
     def __del__(self):
-        logging.debug("PKG Index DB cleaning")
         if self:
             self.close()
         return

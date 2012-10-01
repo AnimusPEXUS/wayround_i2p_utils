@@ -54,12 +54,7 @@ def make_dir_checksums_fo(dirname, output_fileobj):
             for root, dirs, files in os.walk(dirname):
                 for f in files:
                     org.wayround.utils.file.progress_write(
-                        "    %(dir)s/%(file)s".format_map(
-                            {
-                                'dir': root,
-                                'file': f
-                                }
-                            )
+                        "    {}/{}".format(root, f)
                         )
                     if os.path.isfile(root + os.path.sep + f) and not os.path.islink(root + os.path.sep + f):
                         m = hashlib.sha512()
