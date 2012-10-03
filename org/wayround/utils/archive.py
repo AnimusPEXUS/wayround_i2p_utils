@@ -12,9 +12,6 @@ import org.wayround.utils.exec
 import org.wayround.utils.file
 
 
-# TODO: Add safeness to streamed functions
-# TODO: Rework old functions to new tune
-
 CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
 
 def _extract_zip(file_name, output_dir):
@@ -73,12 +70,15 @@ def _extract_tar_7z(file_name, output_dir):
     return
 
 
-def _extract_tar_arch(file_name, output_dir, arch):
+def _extract_tar_arch(file_name, output_dir, compressor):
+
+    if not compressor in CANONICAL_COMPRESSORS:
+        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
 
     ret = extract_tar_canonical(
         file_name,
         output_dir,
-        arch,
+        compressor,
         verbose_tar=True,
         verbose_compressor=True
         )
@@ -270,6 +270,9 @@ def extract_tar_canonical(
     verbose_compressor=False
     ):
 
+    if not compressor in CANONICAL_COMPRESSORS:
+        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
+
     ret = 0
     try:
         fobj = open(input_filename, 'rb')
@@ -298,6 +301,9 @@ def extract_tar_canonical_fobj(
     verbose_compressor=False,
     add_tar_options=[]
     ):
+
+    if not compressor in CANONICAL_COMPRESSORS:
+        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
 
     dirname = os.path.abspath(dirname)
 
@@ -410,11 +416,11 @@ def pack_dir_contents_tar(
     return ret
 
 
-def tar_get_member(tarf, cont_name):
+def tar_get_member(tarobject, cont_name):
     ret = None
 
     try:
-        ret = tarf.getmember(cont_name)
+        ret = tarobject.getmember(cont_name)
     except:
         logging.exception("Can't get tar member")
         ret = 1
@@ -422,11 +428,11 @@ def tar_get_member(tarf, cont_name):
     return ret
 
 
-def tar_member_extract_file(tarf, member):
+def tar_member_extract_file(tarobject, member):
     ret = None
 
     try:
-        ret = tarf.extractfile(member)
+        ret = tarobject.extractfile(member)
     except:
         logging.exception("Can't get tar member")
         ret = 1
@@ -434,16 +440,16 @@ def tar_member_extract_file(tarf, member):
     return ret
 
 
-def tar_member_get_extract_file(tarf, cont_name):
+def tar_member_get_extract_file(tarobject, cont_name):
 
     ret = None
 
-    member = tar_get_member(tarf, cont_name)
+    member = tar_get_member(tarobject, cont_name)
 
     if not isinstance(member, tarfile.TarInfo):
         ret = 1
     else:
-        fileobj = tar_member_extract_file(tarf, member)
+        fileobj = tar_member_extract_file(tarobject, member)
 
         if not isinstance(fileobj, tarfile.ExFileObject):
             ret = 2

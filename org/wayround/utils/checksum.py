@@ -48,8 +48,6 @@ def make_dir_checksums_fo(dirname, output_fileobj):
             ret = 2
         else:
 
-            # TODO: may be optimizations needed
-
             logging.info("Creating checksums")
             for root, dirs, files in os.walk(dirname):
                 for f in files:
@@ -85,7 +83,10 @@ def make_dir_checksums_fo(dirname, output_fileobj):
 
 def make_file_checksum(filename, method='sha512'):
     ret = 0
-    # TODO: protect method
+
+    if not method.isidentifier() or not hasattr(hashlib, method):
+        raise ValueError("hashlib doesn't have `{}'".format(method))
+
     try:
         f = open(filename, 'rb')
     except:
@@ -104,7 +105,10 @@ def make_file_checksum(filename, method='sha512'):
 def make_fileobj_checksum(fileobj, method='sha512'):
     ret = None
     m = None
-    # TODO: protect method
+
+    if not method.isidentifier() or not hasattr(hashlib, method):
+        raise ValueError("hashlib doesn't have `{}'".format(method))
+
     try:
         m = eval("hashlib.{}()".format(method))
     except:

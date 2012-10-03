@@ -81,7 +81,6 @@ def html_link_get_links(url, tag_attr=[
 
     re_res = re.match(r'text/html(; *codepage=(.*))?', ct)
 
-    # TODO: next lines may require some reworking
     if re_res != None and re_res.group(1) != None and re_res.group(2) != None:
 
         text = url_object.read().decode(re_res.group(2))

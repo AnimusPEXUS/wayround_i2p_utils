@@ -1,6 +1,5 @@
 
 import os
-# TODO: migrate to multiprocessing
 import threading
 import subprocess
 import logging
@@ -143,7 +142,7 @@ def dd(
 
         if close_output_on_eof:
             if thread_name != 'Thread':
-                logging.info("Closing `{}' thread stdout".format(thread_name))
+                logging.info(" Closing `{}' thread stdout".format(thread_name))
             stdout.close()
 
         if thread_name != 'Thread':

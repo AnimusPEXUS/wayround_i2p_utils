@@ -21,11 +21,15 @@ class Log:
                 ret = 1
         else:
 
-            if not os.path.isdir(log_dir) \
-                    or os.path.islink(log_dir):
-                logging.error("Current file type is not acceptable: {}".format(
-                    log_dir
-                    ))
+            if (
+                not os.path.isdir(log_dir)
+                or os.path.islink(log_dir)
+                ):
+                logging.error(
+                    "Current file type is not acceptable: {}".format(
+                        log_dir
+                        )
+                    )
                 ret = 2
 
         if ret == 0:
@@ -33,7 +37,7 @@ class Log:
             filename = os.path.abspath(
                 os.path.join(
                     log_dir,
-                    "{}-{}.txt".format_map(
+                    "{name}-{ts}.txt".format_map(
                         {
                             'ts': timestamp,
                             'name': logname
@@ -62,11 +66,13 @@ class Log:
         return
 
     def __del__(self):
-        if not self.fileobj.closed:
-            try:
-                self.stop()
-            except:
-                pass
+        if self:
+            if self.fileobj:
+                if not self.fileobj.closed:
+                    try:
+                        self.stop()
+                    except:
+                        pass
 
     def stop(self, echo=True):
         if self.fileobj == None:

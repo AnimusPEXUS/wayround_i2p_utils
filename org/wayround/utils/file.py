@@ -107,27 +107,27 @@ def isdirempty(dirname):
 
 
 def remove_if_exists(file_or_dir):
+
     file_or_dir = os.path.abspath(file_or_dir)
 
     if not os.path.islink(file_or_dir):
 
-        if os.path.exists(file_or_dir):
-            if os.path.isdir(file_or_dir):
-                try:
-                    shutil.rmtree(file_or_dir)
-                except:
-                    logging.exception(
-                        "Can't remove dir {}".format(file_or_dir)
-                        )
-                    return 1
-            else:
-                try:
-                    os.unlink(file_or_dir)
-                except:
-                    logging.exception(
-                        "      can't remove file {}".format(file_or_dir)
-                        )
-                    return 1
+        if os.path.isdir(file_or_dir):
+            try:
+                shutil.rmtree(file_or_dir)
+            except:
+                logging.exception(
+                    "Can't remove dir {}".format(file_or_dir)
+                    )
+                return 1
+        else:
+            try:
+                os.unlink(file_or_dir)
+            except:
+                logging.exception(
+                    "      can't remove file {}".format(file_or_dir)
+                    )
+                return 1
 
     else:
         try:
@@ -163,10 +163,21 @@ def create_if_not_exists_dir(dirname):
     return ret
 
 def cleanup_dir(dirname):
-    files = glob.glob(os.path.join(dirname, '*'))
+
+    ret = 0
+
+    files = os.listdir(dirname)
+
+    for i in range(len(files)):
+        files[i] = os.path.abspath(
+            dirname + os.path.sep + files[i]
+            )
+
     for i in files:
-        remove_if_exists(i)
-    return
+        if remove_if_exists(i) != 0:
+            ret = 1
+
+    return ret
 
 
 def list_files(path, mask):
@@ -242,7 +253,6 @@ def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
             if not os.path.isdir(full_path):
                 fd.write("{}\n".format(full_path[start_root_len:]))
             else:
-                # TODO: figure out what to do now
                 raise Exception
 
     return
