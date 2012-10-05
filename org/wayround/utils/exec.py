@@ -14,7 +14,7 @@ def simple_exec(
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     options=[],
-    bufsize=0,
+    bufsize=(2 * 1024 ** 2),
     cwd=None
     ):
 
@@ -37,7 +37,7 @@ def simple_exec(
 
 def pipe_subprocesses(processes_list,
                       processes_names,
-                      bufsize=2 * 1024 ** 2,
+                      bufsize=(2 * 1024 ** 2),
                       verbose=False
                       ):
 
@@ -275,7 +275,7 @@ def process_stream(
     stderr,
     options=[],
     proc_bufsize=0,
-    cat_bufsize=200,
+    cat_bufsize=(2 * 1024 ** 2),
     cwd=None,
     verbose=False
     ):
@@ -354,7 +354,7 @@ def process_file(
     stderr,
     options=[],
     proc_bufsize=0,
-    cat_bufsize=200,
+    cat_bufsize=(2 * 1024 ** 2),
     cwd=None,
     verbose=False
     ):

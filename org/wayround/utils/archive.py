@@ -132,7 +132,8 @@ def canonical_compressor(
     stdout=None,
     stderr=None,
     verbose=False,
-    options=[]
+    options=[],
+    bufsize=(2 * 1024 ** 2)
     ):
 
     """
@@ -157,7 +158,8 @@ def canonical_compressor(
         stdout=stdout,
         stderr=stderr,
         options=options,
-        verbose=verbose
+        verbose=verbose,
+        cat_bufsize=bufsize
         )
 
     return ret
@@ -168,7 +170,7 @@ def archive_tar_canonical(
     compressor,
     verbose_tar=False,
     verbose_compressor=False,
-    bufsize=2 * 1024 ** 2
+    bufsize=(2 * 1024 ** 2)
     ):
 
     ret = 0
@@ -198,7 +200,7 @@ def archive_tar_canonical_fobj(
     compressor,
     verbose_tar=False,
     verbose_compressor=False,
-    bufsize=2 * 1024 ** 2
+    bufsize=(2 * 1024 ** 2)
     ):
 
     ret = 0

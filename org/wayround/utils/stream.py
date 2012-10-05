@@ -33,7 +33,7 @@ def cat(
 def dd(
     stdin,
     stdout,
-    bs=1,
+    bs=(2 * 1024 ** 2),
     count=None,
     threaded=False,
     write_method_name='write',
