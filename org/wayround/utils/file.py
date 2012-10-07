@@ -105,6 +105,7 @@ def copytree(src_dir,
 def isdirempty(dirname):
     return len(os.listdir(dirname)) == 0
 
+is_dir_empty = isdirempty
 
 def remove_if_exists(file_or_dir):
 
@@ -236,24 +237,28 @@ def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
     files.sort()
 
     for each in files:
-        if each in ['.', '..']:
-            continue
 
         full_path = os.path.abspath(
             os.path.join(
                 root_dir,
-                each)
+                each
+                )
             )
 
-        if os.path.isdir(full_path) \
-                and not os.path.islink(full_path):
+        if (
+            os.path.isdir(full_path) 
+            and not 
+            os.path.islink(full_path)
+            ):
             _list_files_recurcive(start_root, start_root_len, full_path, fd)
         else:
 
-            if not os.path.isdir(full_path):
-                fd.write("{}\n".format(full_path[start_root_len:]))
-            else:
-                raise Exception
+            fd.write("{}\n".format(full_path[start_root_len:]))
+            # if not os.path.isdir(full_path):
+            #     fd.write("{}\n".format(full_path[start_root_len:]))
+            # else:
+            #     # Sym-Link to dir hit. Ignore in this case.
+            #     pass
 
     return
 
