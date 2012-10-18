@@ -16,6 +16,8 @@ CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
 
 def _extract_zip(file_name, output_dir):
 
+    ret = 0
+
     try:
         proc = org.wayround.utils.exec.simple_exec(
             'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr,
@@ -23,11 +25,16 @@ def _extract_zip(file_name, output_dir):
             )
     except:
         logging.exception("unzip start error")
+        ret = 1
+    else:
+        ret = proc.wait()
 
-    return proc.wait()
+    return ret
 
 
 def _extract_tar_7z(file_name, output_dir):
+
+    ret = 0
 
     try:
         proc_7z = org.wayround.utils.exec.simple_exec(
@@ -39,7 +46,8 @@ def _extract_tar_7z(file_name, output_dir):
             )
     except:
         logging.exception("7z start error")
-        raise
+        ret = 1
+
     else:
 
         try:
@@ -58,7 +66,7 @@ def _extract_tar_7z(file_name, output_dir):
             proc_7z.wait()
         except:
             logging.exception("tar start error")
-            raise
+            ret = 2
         else:
             proc_tar.wait()
 
@@ -67,7 +75,7 @@ def _extract_tar_7z(file_name, output_dir):
                 proc_tar.terminate()
 
 
-    return
+    return ret
 
 
 def _extract_tar_arch(file_name, output_dir, compressor):
@@ -105,6 +113,9 @@ def extract(file_name, output_dir):
     elif file_name.endswith('.tar.7z'):
         ret = _extract_tar_7z(file_name, output_dir)
 
+    elif file_name.endswith('.tbz2'):
+        ret = _extract_tar_arch(file_name, output_dir, 'bzip2')
+
     elif file_name.endswith('.tgz'):
         ret = _extract_tar_arch(file_name, output_dir, 'gzip')
 
@@ -112,8 +123,7 @@ def extract(file_name, output_dir):
         logging.error("Unsupported extension")
 
     if ret == None:
-        logging.error("Not implemented")
-        raise Exception
+        raise Exception("Not implemented")
 
     return ret
 
@@ -133,7 +143,8 @@ def canonical_compressor(
     stderr=None,
     verbose=False,
     options=[],
-    bufsize=(2 * 1024 ** 2)
+    bufsize=(2 * 1024 ** 2),
+    close_output_on_eof=False
     ):
 
     """
@@ -159,7 +170,8 @@ def canonical_compressor(
         stderr=stderr,
         options=options,
         verbose=verbose,
-        cat_bufsize=bufsize
+        cat_bufsize=bufsize,
+        close_output_on_eof=close_output_on_eof
         )
 
     return ret
@@ -204,7 +216,6 @@ def archive_tar_canonical_fobj(
     ):
 
     ret = 0
-
 
     dirname = os.path.abspath(dirname)
 
@@ -253,7 +264,8 @@ def archive_tar_canonical_fobj(
                     stdin=tarproc.stdout,
                     stdout=output_fobj,
                     stderr=stderr,
-                    verbose=verbose_compressor
+                    verbose=verbose_compressor,
+                    close_output_on_eof=True
                     ) != 0:
                     ret = 3
                 tarproc.wait()
@@ -355,7 +367,8 @@ def extract_tar_canonical_fobj(
                     stdin=input_fobj,
                     stdout=tarproc.stdin,
                     options=options,
-                    stderr=sys.stderr
+                    stderr=sys.stderr,
+                    close_output_on_eof=True
                     ) != 0:
 
                     ret = 3

@@ -116,7 +116,7 @@ def test_pipes():
     text = f.read()
     f.close()
 
-    # =========== xz based testing ===========    
+    # =========== xz based testing ===========
 
     txt = io.BytesIO()
     txt.write(text)
@@ -190,7 +190,7 @@ def test_pipes():
     cat1.join()
     cat2.join()
 
-    # =========== bzip2 based testing ===========    
+    # =========== bzip2 based testing ===========
 
 #    txt = None
 #    txt = io.BytesIO()
@@ -277,7 +277,8 @@ def process_stream(
     proc_bufsize=0,
     cat_bufsize=(2 * 1024 ** 2),
     cwd=None,
-    verbose=False
+    verbose=False,
+    close_output_on_eof=False
     ):
     """
     Starts `program' and uses it to process stdin to stdout
@@ -328,7 +329,7 @@ def process_stream(
                 proc.stdout,
                 stdout,
                 threaded=True,
-                close_output_on_eof=False,
+                close_output_on_eof=close_output_on_eof,
                 bs=cat_bufsize,
                 thread_name=thread_name
                 )

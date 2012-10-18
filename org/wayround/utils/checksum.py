@@ -48,11 +48,11 @@ def make_dir_checksums_fo(dirname, output_fileobj):
             ret = 2
         else:
 
-            logging.info("Creating checksums")
             for root, dirs, files in os.walk(dirname):
                 for f in files:
+                    rel_path = os.path.relpath(root + os.path.sep + f, dirname)
                     org.wayround.utils.file.progress_write(
-                        "    {}/{}".format(root, f)
+                        "    {}".format(rel_path)
                         )
                     if os.path.isfile(root + os.path.sep + f) and not os.path.islink(root + os.path.sep + f):
                         m = hashlib.sha512()

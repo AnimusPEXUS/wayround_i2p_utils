@@ -165,7 +165,7 @@ def dd(
     )
         return
 
-    # control should never reach this return
+
     return
 
 def lbl_write(stdin, stdout, threaded=False, typ='info'):

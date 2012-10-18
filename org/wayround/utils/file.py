@@ -4,6 +4,7 @@ import sys
 import shutil
 import glob
 import logging
+import fnmatch
 
 
 import org.wayround.utils.text
@@ -246,8 +247,8 @@ def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
             )
 
         if (
-            os.path.isdir(full_path) 
-            and not 
+            os.path.isdir(full_path)
+            and not
             os.path.islink(full_path)
             ):
             _list_files_recurcive(start_root, start_root_len, full_path, fd)
@@ -360,5 +361,93 @@ def get_file_size(name):
             ret = s.st_size
         elif os.path.isdir(name):
             ret = get_dir_size(name)
+
+    return ret
+
+def dereference_file(filename):
+
+    ret = 0
+
+    filename = os.path.abspath(filename)
+
+    if not os.path.exists(filename):
+        ret = 1
+
+    else:
+        if os.path.isdir(filename):
+            ret = 0
+        else:
+            if not os.path.islink(filename):
+                ret = 0
+            else:
+                lnk = None
+                dir_name = os.path.abspath(os.path.dirname(filename))
+
+                try:
+                    lnk = os.readlink(filename)
+                except:
+                    ret = 2
+                else:
+                    if lnk[0] != '/':
+                        lnk = os.path.abspath(dir_name + os.path.sep + lnk)
+
+                    os.unlink(filename)
+                    shutil.copy2(lnk, filename)
+
+    return ret
+
+def dereference_files_in_dir(dirname):
+
+    ret = 0
+
+    dirname = os.path.abspath(dirname)
+
+    try:
+        for dirpath, dirnames, filenames in os.walk(dirname):
+            filenames.sort()
+            dirnames.sort()
+            dirpath = os.path.abspath(dirpath)
+
+            for i in filenames:
+                if dereference_file(os.path.join(dirpath , i)) != 0:
+                    logging.error(
+                        "Could not dereference `{}'".format(
+                            os.path.relpath(
+                                dirname,
+                                os.getcwd()
+                                )
+                            )
+                        )
+
+                    ret = 1
+    except:
+        logging.exception("Dir files dereferencing exception")
+        ret = 2
+
+    return ret
+
+def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
+
+    in_dir = os.path.abspath(in_dir)
+    out_dir = os.path.abspath(out_dir)
+
+    ret = 0
+    try:
+        for dirpath, dirnames, filenames in os.walk(in_dir):
+            filenames.sort()
+            dirnames.sort()
+            dirpath = os.path.abspath(dirpath)
+
+            for i in filenames:
+                if fnmatch.fnmatch(i, mask):
+                    shutil.copy2(
+                        dirpath + os.path.sep + i,
+                        out_dir + os.path.sep + i,
+                        follow_symlinks=True
+                        )
+
+    except:
+        logging.exception("Files by mask copy to dir exception")
+        ret = 1
 
     return ret
