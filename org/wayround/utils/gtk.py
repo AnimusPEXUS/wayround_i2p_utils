@@ -3,8 +3,6 @@ import os.path
 import threading
 import logging
 
-import org.wayround.utils.gtk
-
 def widget_dict(builder):
 
     from gi.repository import Gtk
@@ -91,7 +89,7 @@ class TextView:
         ui = Gtk.Builder()
         ui.add_from_file(ui_file)
 
-        self.ui = org.wayround.utils.gtk.widget_dict(ui)
+        self.ui = widget_dict(ui)
 
         self.ui['button1'].connect('clicked', self.onSaveAsActivated)
 
