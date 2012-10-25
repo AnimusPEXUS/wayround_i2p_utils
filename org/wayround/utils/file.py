@@ -286,9 +286,14 @@ def progress_write_finish():
 def progress_write(line_to_write, new_line=False):
 
     new_line_str = ''
+
     if line_to_write.endswith("\n"):
-        new_line_str = '\n'
+        new_line = True
         line_to_write = line_to_write.rstrip("\n")
+
+    if new_line:
+        new_line = True
+        new_line_str = "\n"
 
     width = 80
     ts = org.wayround.utils.terminal.get_terminal_size(sys.stdout.fileno())

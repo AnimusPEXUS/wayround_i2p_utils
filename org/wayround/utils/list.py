@@ -2,6 +2,9 @@
 import copy
 
 def remove_all_values(lst, lst2):
+    """
+    Removes all values of list lst2 from list lst
+    """
     for i in lst2:
         while i in lst:
             lst.remove(i)

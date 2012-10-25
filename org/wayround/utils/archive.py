@@ -119,6 +119,9 @@ def extract(file_name, output_dir):
     elif file_name.endswith('.tgz'):
         ret = _extract_tar_arch(file_name, output_dir, 'gzip')
 
+    elif file_name.endswith('.zip'):
+        ret = _extract_zip(file_name, output_dir)
+
     else:
         logging.error("Unsupported extension")
 

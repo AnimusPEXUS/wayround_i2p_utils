@@ -1,4 +1,6 @@
 
+import logging
+
 def getopt(args):
     """
     Parser for command line options
@@ -11,7 +13,7 @@ def getopt(args):
 
     Example:
 
-       getopt2.getopt(['a', 'b', 'c', 'd=123', 'dd=123', '-a',
+       getopt.getopt(['a', 'b', 'c', 'd=123', 'dd=123', '-a',
                        '3', '-b=3', '--c=4', '--long=5',
                        '---strange=6', '--', '-e=7'])
 
@@ -84,3 +86,4 @@ def getopt_keyed(args):
         opts_k[i[0]] = i[1]
 
     return opts_k, args
+
