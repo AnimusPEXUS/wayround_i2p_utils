@@ -99,7 +99,7 @@ def copytree(src_dir,
             if _copytree(src_dir, dst_dir, overwrite_files=overwrite_files) != 0:
                 logging.error("Some errors occurred while copying `{}' to `{}'".format(src_dir, dst_dir))
                 ret = 3
-    #print('')
+
     return ret
 
 
@@ -107,6 +107,7 @@ def isdirempty(dirname):
     return len(os.listdir(dirname)) == 0
 
 is_dir_empty = isdirempty
+
 
 def remove_if_exists(file_or_dir):
 
@@ -140,6 +141,7 @@ def remove_if_exists(file_or_dir):
 
     return 0
 
+
 def create_if_not_exists_dir(dirname):
     ret = 0
     if not os.path.exists(dirname):
@@ -164,6 +166,7 @@ def create_if_not_exists_dir(dirname):
             ret = 0
     return ret
 
+
 def cleanup_dir(dirname):
 
     ret = 0
@@ -181,30 +184,6 @@ def cleanup_dir(dirname):
 
     return ret
 
-
-def list_files(path, mask):
-
-    lst = glob.glob('{}/{}'.format(path, mask))
-
-    lst.sort()
-
-    len_lst = len(lst)
-
-    semi = ''
-    if len_lst > 0:
-        semi = ':'
-
-    print("found {} file(s){}".format(len_lst, semi))
-
-    bases = []
-    for each in lst:
-        bases.append(os.path.basename(each))
-
-    org.wayround.utils.text.columned_list_print(bases, fd=sys.stdout.fileno())
-    if len_lst > 0:
-        print("found {} file(s)".format(len_lst))
-
-    return
 
 def inderictory_copy_file(directory, file1, file2):
 
@@ -230,53 +209,33 @@ def inderictory_copy_file(directory, file1, file2):
     return
 
 
+def files_recurcive_list(
+    dirname,
+    onerror=None,
+    followlinks=False,
+    add_links=False
+    ):
 
-def _list_files_recurcive(start_root, start_root_len, root_dir, fd):
+    lst = []
 
-    files = os.listdir(root_dir)
+    for dir, files, dirs in os.walk(dirname, onerror=onerror, followlinks=followlinks):
 
-    files.sort()
+        for f in files:
 
-    for each in files:
+            if dirname.startswith('/'):
+                f_path = os.path.join(dir, f)
+            else:
+                f_path = os.path.join(dirname, dir, f)
 
-        full_path = os.path.abspath(
-            os.path.join(
-                root_dir,
-                each
-                )
-            )
+            if (
+                (not os.path.islink(f_path))
+                or
+                (os.path.islink(f_path) and add_links)
+                ):
+                lst.append(f_path)
 
-        if (
-            os.path.isdir(full_path)
-            and not
-            os.path.islink(full_path)
-            ):
-            _list_files_recurcive(start_root, start_root_len, full_path, fd)
-        else:
+    return lst
 
-            fd.write("{}\n".format(full_path[start_root_len:]))
-            # if not os.path.isdir(full_path):
-            #     fd.write("{}\n".format(full_path[start_root_len:]))
-            # else:
-            #     # Sym-Link to dir hit. Ignore in this case.
-            #     pass
-
-    return
-
-def list_files_recurcive(dirname, output_filename):
-
-    try:
-        fd = open(output_filename, 'w')
-    except:
-        logging.exception("Can't create file `{}'".format(output_filename))
-        raise
-    else:
-        try:
-            absp = os.path.abspath(dirname)
-            _list_files_recurcive(absp, len(absp), absp, fd)
-        finally:
-            fd.close()
-    return
 
 def progress_write_finish():
     sys.stdout.write("\n")

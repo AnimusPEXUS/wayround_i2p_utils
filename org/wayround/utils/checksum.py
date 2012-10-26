@@ -7,6 +7,7 @@ import logging
 import org.wayround.utils.stream
 import org.wayround.utils.file
 
+
 def make_dir_checksums(dirname, output_filename):
 
     ret = 0
@@ -32,16 +33,34 @@ def make_dir_checksums(dirname, output_filename):
 
     return ret
 
-def make_dir_checksums_fo(dirname, output_fileobj):
+def make_dir_checksums_fo(
+    dirname,
+    output_fileobj,
+    rel_to=None,
+    conv_to_rooted=False
+    ):
+
+    if not isinstance(rel_to, str):
+        rel_to = dirname
+
     ret = 0
+
     dirname = os.path.abspath(dirname)
+    dirname_l = len(dirname)
+
+
+    if not isinstance(rel_to, str):
+        rel_to = dirname
+
+
+    rel_to = os.path.abspath(rel_to)
+    rel_to_l = len(rel_to)
+
     if not os.path.isdir(dirname):
         logging.error("Not a dir {}".format(dirname))
         ret = 1
 
     else:
-
-        dirname_l = len(dirname)
 
         if not hasattr(output_fileobj, 'write'):
             logging.error("Wrong output file object")
@@ -54,17 +73,27 @@ def make_dir_checksums_fo(dirname, output_fileobj):
                     org.wayround.utils.file.progress_write(
                         "    {}".format(rel_path)
                         )
-                    if os.path.isfile(root + os.path.sep + f) and not os.path.islink(root + os.path.sep + f):
+                    if (
+                        (os.path.isfile(root + os.path.sep + f))
+                        and
+                        (not os.path.islink(root + os.path.sep + f))
+                        ):
                         m = hashlib.sha512()
                         try:
                             fd = open(root + os.path.sep + f, 'rb')
                         except:
-                            logging.exception("Can't open file `{}'".format(root + os.path.sep + f))
+                            logging.exception(
+                                "Can't open file `{}'".format(
+                                    root + os.path.sep + f
+                                    )
+                                )
                             ret = 3
                         else:
                             try:
                                 m.update(fd.read())
+
                                 wfn = ('/' + (root + os.path.sep + f)[1:])[dirname_l:]
+
                                 output_fileobj.write(
                                     "{digest} *{pkg_file_name}\n".format_map(
                                         {
@@ -99,7 +128,9 @@ def make_file_checksum(filename, method='sha512'):
             ret = 2
         else:
             ret = summ
+
         f.close()
+
     return ret
 
 def make_fileobj_checksum(fileobj, method='sha512'):
@@ -163,5 +194,31 @@ def parse_checksums_text(text):
 
     if ret == 0:
         ret = sums
+
+    return ret
+
+def checksums_by_list(file_lst, method):
+
+    if not method.isidentifier() or not hasattr(hashlib, method):
+        raise ValueError("hashlib doesn't have `{}'".format(method))
+
+    ret = {}
+
+    for i in file_lst:
+        ret[i] = make_file_checksum(i, method=method)
+
+    return ret
+
+def render_checksum_dict_to_txt(sums_dict, sort=False):
+
+    keys = list(sums_dict.keys())
+
+    if sort:
+        keys.sort()
+
+    ret = ''
+
+    for i in keys:
+        ret += '{sum} *{path}\n'.format(sum=str(sums_dict[i]), path=str(i))
 
     return ret

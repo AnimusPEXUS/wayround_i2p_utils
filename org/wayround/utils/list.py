@@ -1,5 +1,6 @@
 
 import copy
+import re
 
 def remove_all_values(lst, lst2):
     """
@@ -85,3 +86,22 @@ def list_strip_remove_empty_remove_duplicated_lines(lst):
             )
         )
 
+def list_filter_list_white_or_black(in_str_list, in_filters_lst, white=True):
+
+    ret = []
+
+    for i in in_str_list:
+        i = str(i)
+
+        for j in in_filters_lst:
+
+            if white:
+                if re.match(j, i):
+                    ret.append(i)
+                    break
+            else:
+                if not re.match(j, i):
+                    ret.append(i)
+                    break
+
+    return ret
