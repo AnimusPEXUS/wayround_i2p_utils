@@ -2,7 +2,6 @@
 import os
 import sys
 import shutil
-import glob
 import logging
 import fnmatch
 
@@ -212,13 +211,12 @@ def inderictory_copy_file(directory, file1, file2):
 def files_recurcive_list(
     dirname,
     onerror=None,
-    followlinks=False,
-    add_links=False
+    followlinks=False
     ):
 
     lst = []
 
-    for dir, files, dirs in os.walk(dirname, onerror=onerror, followlinks=followlinks):
+    for dir, dirs, files in os.walk(dirname, onerror=onerror, followlinks=followlinks):
 
         for f in files:
 
@@ -227,12 +225,7 @@ def files_recurcive_list(
             else:
                 f_path = os.path.join(dirname, dir, f)
 
-            if (
-                (not os.path.islink(f_path))
-                or
-                (os.path.islink(f_path) and add_links)
-                ):
-                lst.append(f_path)
+            lst.append(f_path)
 
     return lst
 
