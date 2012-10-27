@@ -439,8 +439,11 @@ def tar_get_member(tarobject, cont_name):
 
     try:
         ret = tarobject.getmember(cont_name)
+    except KeyError:
+        logging.error("Can't get tar member: {}".format(cont_name))
+        ret = 2
     except:
-        logging.exception("Can't get tar member")
+        logging.exception("Can't get tar member: {}".format(cont_name))
         ret = 1
 
     return ret

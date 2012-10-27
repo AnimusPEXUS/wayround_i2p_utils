@@ -79,10 +79,35 @@ def list_strip_lines(lst):
         ret.append(i.strip())
     return ret
 
+def list_strip_filelines(lst):
+    ret = []
+    for i in lst:
+        ret.append(i.strip('\n'))
+    return ret
+
 def list_strip_remove_empty_remove_duplicated_lines(lst):
+    """
+    Do some actions with list of lines
+
+    Do not use this function for file lists,
+    use filelist_strip_remove_empty_remove_duplicated_lines
+    """
     return list_remove_duplicated_lines(
         list_remove_empty_lines(
             list_strip_lines(copy.copy(lst))
+            )
+        )
+
+def filelist_strip_remove_empty_remove_duplicated_lines(lst):
+    """
+    Does not strips spaces from file names.
+
+    Use this function for file lists,
+    not list_strip_remove_empty_remove_duplicated_lines
+    """
+    return list_remove_duplicated_lines(
+        list_remove_empty_lines(
+            list_strip_filelines(copy.copy(lst))
             )
         )
 
