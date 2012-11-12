@@ -1,11 +1,11 @@
 
+import io
+import logging
 import os.path
+import shutil
 import subprocess
 import sys
 import tarfile
-import io
-import logging
-
 
 import org.wayround.utils.exec
 import org.wayround.utils.file
@@ -561,3 +561,58 @@ def xzcat(stdin, convert_to_str=None):
 
     return ret
 
+def extract_low(
+    log,
+    tmpdir,
+    tarball,
+    outdir,
+    unwrap_dir=False,
+    rename_dir=False
+    ):
+
+    ret = 0
+
+    if not os.path.isdir(outdir):
+        os.makedirs(outdir)
+
+    if not os.path.isdir(tmpdir):
+        os.makedirs(tmpdir)
+
+    log.info("Extracting {}".format(os.path.basename(tarball)))
+    extr_error = extract(
+        tarball, tmpdir
+        )
+
+    if extr_error != 0:
+        log.error(
+            "Extraction error: {}".format(extr_error)
+            )
+        ret = 3
+    else:
+
+        extracted_dir = os.listdir(tmpdir)
+
+        if len(extracted_dir) > 1:
+            log.error("too many extracted files")
+            ret = 4
+        else:
+
+            extracted_dir = tmpdir + os.path.sep + extracted_dir[0]
+
+            if unwrap_dir:
+
+                extracted_dir_files = os.listdir(extracted_dir)
+                for i in extracted_dir_files:
+                    shutil.move(extracted_dir + os.path.sep + i, outdir)
+                shutil.rmtree(extracted_dir)
+
+            else:
+                if rename_dir:
+                    n = outdir + os.path.sep + str(rename_dir)
+                    log.info("moving extracted dir as `{}'".format(n))
+                    shutil.move(extracted_dir, n)
+                else:
+                    log.info("moving extracted dir to `{}'".format(outdir))
+                    shutil.move(extracted_dir, outdir)
+
+    return ret
