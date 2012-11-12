@@ -7,9 +7,10 @@ import io
 import logging
 
 
-import org.wayround.utils.stream
 import org.wayround.utils.exec
 import org.wayround.utils.file
+import org.wayround.utils.path
+import org.wayround.utils.stream
 
 
 CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
@@ -220,7 +221,7 @@ def archive_tar_canonical_fobj(
 
     ret = 0
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not a directory: {}".format(dirname))
@@ -322,7 +323,7 @@ def extract_tar_canonical_fobj(
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     ret = org.wayround.utils.file.create_if_not_exists_dir(dirname)
 
@@ -393,7 +394,7 @@ def pack_dir_contents_tar(
 
     ret = 0
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not a directory: {}".format(dirname))

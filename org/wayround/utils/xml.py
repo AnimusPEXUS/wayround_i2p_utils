@@ -3,16 +3,15 @@
 This module is for XML and XHTML rendering
 """
 
-import sys
-import xml.sax.saxutils
-import re
-import urllib.parse
 import logging
-import copy
+import re
+import sys
+import urllib.parse
+import xml.sax.saxutils
 
-import org.wayround.utils.text
-import org.wayround.utils.error
 import org.wayround.utils.dict
+import org.wayround.utils.error
+import org.wayround.utils.text
 
 
 
@@ -295,7 +294,7 @@ def check_unit(indict, path=[]):
 
 # error present in next code
 #        else:
-#            if (('required_css' in indict) and isinstane(indict['required_css'], list) and len() 
+#            if (('required_css' in indict) and isinstane(indict['required_css'], list) and len()
 #                or ('required_js' in indict) and (indict['required_js'] != None)):
 #                raise MissingDictatorshipUnitAttribute(
 #                    "`%(i)s' required to be in unit!" % {
@@ -1076,7 +1075,7 @@ def test():
                 'name': 'html',
 
                 # None or dict
-                # dict values must be strings 
+                # dict values must be strings
                 'attributes': {
                     'version': '-//W3C//DTD XHTML 1.1//EN',
                     'xmlns': 'http://www.w3.org/1999/xhtml',

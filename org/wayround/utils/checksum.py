@@ -4,15 +4,16 @@ import hashlib
 import re
 import logging
 
-import org.wayround.utils.stream
 import org.wayround.utils.file
+import org.wayround.utils.path
+import org.wayround.utils.stream
 
 
 def make_dir_checksums(dirname, output_filename):
 
     ret = 0
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not is dir {}".format(dirname))
@@ -45,7 +46,7 @@ def make_dir_checksums_fo(
 
     ret = 0
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
     dirname_l = len(dirname)
 
 
@@ -53,7 +54,7 @@ def make_dir_checksums_fo(
         rel_to = dirname
 
 
-    rel_to = os.path.abspath(rel_to)
+    rel_to = org.wayround.utils.path.abspath(rel_to)
     rel_to_l = len(rel_to)
 
     if not os.path.isdir(dirname):
@@ -69,7 +70,7 @@ def make_dir_checksums_fo(
 
             for root, dirs, files in os.walk(dirname):
                 for f in files:
-                    rel_path = os.path.relpath(root + os.path.sep + f, dirname)
+                    rel_path = org.wayround.utils.path.relpath(root + os.path.sep + f, dirname)
                     org.wayround.utils.file.progress_write(
                         "    {}".format(rel_path)
                         )

@@ -1,11 +1,11 @@
 
-import os.path
 import logging
+import os.path
 
-import sqlalchemy
-import sqlalchemy.orm
 import sqlalchemy.ext.declarative
+import sqlalchemy.orm
 
+import org.wayround.utils.path
 
 class FileIndexer:
 
@@ -93,7 +93,7 @@ class FileIndexer:
         logging.info("Searching for missing files")
 
         for i in names:
-            full_name = os.path.abspath(basedir + os.path.sep + i.name)
+            full_name = org.wayround.utils.path.abspath(basedir + os.path.sep + i.name)
             if not os.path.exists(full_name):
 
                 logging.debug("`{}' not found -- deleting".format(full_name))

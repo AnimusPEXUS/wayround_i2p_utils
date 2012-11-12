@@ -1,7 +1,8 @@
 
-import os
 import logging
+import os
 
+import org.wayround.utils.path
 import org.wayround.utils.time
 
 class Log:
@@ -34,7 +35,7 @@ class Log:
 
         if ret == 0:
             timestamp = org.wayround.utils.time.currenttime_stamp()
-            filename = os.path.abspath(
+            filename = org.wayround.utils.path.abspath(
                 os.path.join(
                     log_dir,
                     "{name}-{ts}.txt".format_map(

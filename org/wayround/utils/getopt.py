@@ -1,6 +1,4 @@
 
-import logging
-
 def getopt(args):
     """
     Parser for command line options

@@ -1,9 +1,9 @@
 
+import io
+import logging
 import os.path
 import subprocess
-import logging
 import sys
-import io
 
 import org.wayround.utils.stream
 

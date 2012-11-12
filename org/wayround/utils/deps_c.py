@@ -1,12 +1,14 @@
 
-import os
-import io
 import copy
-import re
+import io
 import logging
+import os
+import re
 
 import org.wayround.utils.exec
+import org.wayround.utils.path
 import org.wayround.utils.stream
+
 
 LDD_RESP_RES = {
     'not_found': r'(?P<name>.*) => not found',
@@ -18,7 +20,7 @@ def elf_deps(filename, mute=True):
 
     ret = 0
 
-    filename = os.path.abspath(filename)
+    filename = org.wayround.utils.path.abspath(filename)
 
     if not os.path.isfile(filename):
         #or os.path.islink(filename):

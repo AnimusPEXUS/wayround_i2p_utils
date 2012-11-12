@@ -4,7 +4,6 @@ Tag Utils
 
 import logging
 
-import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
 

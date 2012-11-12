@@ -1,15 +1,11 @@
 
-import os.path
-import re
 import ftplib
 import logging
+import os.path
+import re
 
+import org.wayround.utils.path
 
-def normpath(s):
-    np = os.path.normpath(s)
-    while os.path.sep * 2 in np:
-        np.replace(os.path.sep * 2, os.path.sep)
-    return np
 
 def v(s):
     logging.debug(s)
@@ -183,7 +179,7 @@ class FTPWalk:
         if name == '':
             raise ValueError
 
-        name = normpath(name)
+        name = org.wayround.utils.path.normpath(name)
         fdir = os.path.dirname(name)
         name = os.path.basename(name)
         return self.fstat_d_n(fdir, name)

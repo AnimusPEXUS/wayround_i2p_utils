@@ -1,13 +1,14 @@
 
-import os
-import sys
-import shutil
-import logging
 import fnmatch
+import logging
+import os
+import shutil
+import sys
 
 
-import org.wayround.utils.text
+import org.wayround.utils.path
 import org.wayround.utils.terminal
+import org.wayround.utils.text
 
 
 def _copytree(src_dir, dst_dir, overwrite_files=False, copy_links=False,
@@ -15,8 +16,8 @@ def _copytree(src_dir, dst_dir, overwrite_files=False, copy_links=False,
 
     ret = 0
 
-    full_src_dir = os.path.abspath(src_dir)
-    full_dst_dir = os.path.abspath(dst_dir)
+    full_src_dir = org.wayround.utils.path.abspath(src_dir)
+    full_dst_dir = org.wayround.utils.path.abspath(dst_dir)
 
     if not os.path.isdir(full_src_dir):
         logging.error("Source dir not exists `{}'".format(src_dir))
@@ -73,8 +74,8 @@ def copytree(src_dir,
              clear_before_copy=False,
              dst_must_be_empty=True):
 
-    src_dir = os.path.abspath(src_dir)
-    dst_dir = os.path.abspath(dst_dir)
+    src_dir = org.wayround.utils.path.abspath(src_dir)
+    dst_dir = org.wayround.utils.path.abspath(dst_dir)
 
     ret = 0
 
@@ -110,7 +111,7 @@ is_dir_empty = isdirempty
 
 def remove_if_exists(file_or_dir):
 
-    file_or_dir = os.path.abspath(file_or_dir)
+    file_or_dir = org.wayround.utils.path.abspath(file_or_dir)
 
     if not os.path.islink(file_or_dir):
 
@@ -173,7 +174,7 @@ def cleanup_dir(dirname):
     files = os.listdir(dirname)
 
     for i in range(len(files)):
-        files[i] = os.path.abspath(
+        files[i] = org.wayround.utils.path.abspath(
             dirname + os.path.sep + files[i]
             )
 
@@ -282,7 +283,7 @@ def null_file(filename):
     return ret
 
 def get_dir_size(name):
-    name = os.path.abspath(name)
+    name = org.wayround.utils.path.abspath(name)
     if not os.path.isdir(name):
         raise OSError("Not a dir `{}'".format(name))
 
@@ -296,7 +297,7 @@ def get_dir_size(name):
     lst.sort()
 
     for i in lst:
-        f_pth = os.path.abspath(name + os.path.sep + i)
+        f_pth = org.wayround.utils.path.abspath(name + os.path.sep + i)
         if not os.path.islink(f_pth):
             if os.path.isfile(f_pth):
                 s = os.stat(f_pth)
@@ -325,7 +326,7 @@ def dereference_file(filename):
 
     ret = 0
 
-    filename = os.path.abspath(filename)
+    filename = org.wayround.utils.path.abspath(filename)
 
     if not os.path.exists(filename):
         ret = 1
@@ -338,7 +339,7 @@ def dereference_file(filename):
                 ret = 0
             else:
                 lnk = None
-                dir_name = os.path.abspath(os.path.dirname(filename))
+                dir_name = org.wayround.utils.path.abspath(os.path.dirname(filename))
 
                 try:
                     lnk = os.readlink(filename)
@@ -346,7 +347,7 @@ def dereference_file(filename):
                     ret = 2
                 else:
                     if lnk[0] != '/':
-                        lnk = os.path.abspath(dir_name + os.path.sep + lnk)
+                        lnk = org.wayround.utils.path.abspath(dir_name + os.path.sep + lnk)
 
                     os.unlink(filename)
                     shutil.copy2(lnk, filename)
@@ -357,19 +358,19 @@ def dereference_files_in_dir(dirname):
 
     ret = 0
 
-    dirname = os.path.abspath(dirname)
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     try:
         for dirpath, dirnames, filenames in os.walk(dirname):
             filenames.sort()
             dirnames.sort()
-            dirpath = os.path.abspath(dirpath)
+            dirpath = org.wayround.utils.path.abspath(dirpath)
 
             for i in filenames:
                 if dereference_file(os.path.join(dirpath , i)) != 0:
                     logging.error(
                         "Could not dereference `{}'".format(
-                            os.path.relpath(
+                            org.wayround.utils.path.relpath(
                                 dirname,
                                 os.getcwd()
                                 )
@@ -385,15 +386,15 @@ def dereference_files_in_dir(dirname):
 
 def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
 
-    in_dir = os.path.abspath(in_dir)
-    out_dir = os.path.abspath(out_dir)
+    in_dir = org.wayround.utils.path.abspath(in_dir)
+    out_dir = org.wayround.utils.path.abspath(out_dir)
 
     ret = 0
     try:
         for dirpath, dirnames, filenames in os.walk(in_dir):
             filenames.sort()
             dirnames.sort()
-            dirpath = os.path.abspath(dirpath)
+            dirpath = org.wayround.utils.path.abspath(dirpath)
 
             for i in filenames:
                 if fnmatch.fnmatch(i, mask):
