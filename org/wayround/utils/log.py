@@ -3,7 +3,29 @@ import logging
 import os
 
 import org.wayround.utils.path
+import org.wayround.utils.stream
 import org.wayround.utils.time
+
+def process_output_logger(process, log):
+    t = org.wayround.utils.stream.lbl_write(
+        process.stdout,
+        log,
+        True
+        )
+    t.start()
+
+    t2 = org.wayround.utils.stream.lbl_write(
+        process.stderr,
+        log,
+        True,
+        typ='error'
+        )
+    t2.start()
+
+    t.join()
+    t2.join()
+
+    return
 
 class Log:
 
