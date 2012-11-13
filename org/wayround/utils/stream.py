@@ -389,16 +389,16 @@ class SocketStreamer:
 
         # From remote process to current process.
         # For instance internals.
-        self._strout = open(self._pipe_outside[1], 'wb', buffering = 4096)
+        self._strout = open(self._pipe_outside[1], 'wb', buffering = 0)
         # For instance user.
-        self.strout = open(self._pipe_outside[0], 'rb', buffering = 4096)
+        self.strout = open(self._pipe_outside[0], 'rb', buffering = 0)
 
 
         # From current process to remote process.
         # For instance internals.
-        self._strin = open(self._pipe_inside[0], 'rb', buffering = 4096)
+        self._strin = open(self._pipe_inside[0], 'rb', buffering = 0)
         # For instance user.
-        self.strin = open(self._pipe_inside[1], 'wb', buffering = 4096)
+        self.strin = open(self._pipe_inside[1], 'wb', buffering = 0)
 
 
         # from strin to socket
@@ -413,10 +413,10 @@ class SocketStreamer:
             bs = socket_transfer_size,
             convert_to_str = None,
             read_method_name = 'read',
-            exit_on_input_eof = False,
-            waiting_for_input = True,
+            exit_on_input_eof = True,
+            waiting_for_input = False,
             descriptor_to_wait_for_input = self._strin.fileno(),
-            waiting_for_output = True,
+            waiting_for_output = False,
             descriptor_to_wait_for_output = self.sock.fileno(),
             apply_input_seek = False,
             apply_output_seek = False,
@@ -436,9 +436,9 @@ class SocketStreamer:
             convert_to_str = None,
             read_method_name = 'recv',
             exit_on_input_eof = True,
-            waiting_for_input = True,
+            waiting_for_input = False,
             descriptor_to_wait_for_input = self.sock.fileno(),
-            waiting_for_output = True,
+            waiting_for_output = False,
             descriptor_to_wait_for_output = self._strout.fileno(),
             apply_input_seek = False,
             apply_output_seek = False,
