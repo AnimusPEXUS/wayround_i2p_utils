@@ -37,8 +37,8 @@ def make_dir_checksums(dirname, output_filename):
 def make_dir_checksums_fo(
     dirname,
     output_fileobj,
-    rel_to=None,
-    conv_to_rooted=False
+    rel_to = None,
+    conv_to_rooted = False
     ):
 
     if not isinstance(rel_to, str):
@@ -111,7 +111,7 @@ def make_dir_checksums_fo(
     org.wayround.utils.file.progress_write_finish()
     return ret
 
-def make_file_checksum(filename, method='sha512'):
+def make_file_checksum(filename, method = 'sha512'):
     ret = 0
 
     if not method.isidentifier() or not hasattr(hashlib, method):
@@ -134,15 +134,15 @@ def make_file_checksum(filename, method='sha512'):
 
     return ret
 
-def make_fileobj_checksum(fileobj, method='sha512'):
+def make_fileobj_checksum(fileobj, method = 'sha512'):
     ret = None
-    m = None
+    hash_method_name = None
 
     if not method.isidentifier() or not hasattr(hashlib, method):
         raise ValueError("hashlib doesn't have `{}'".format(method))
 
     try:
-        m = eval("hashlib.{}()".format(method))
+        hash_method_name = eval("hashlib.{}()".format(method))
     except:
         logging.exception(
             "Error calling for hashlib method `{}'".format(method)
@@ -150,10 +150,13 @@ def make_fileobj_checksum(fileobj, method='sha512'):
         ret = 1
     else:
         org.wayround.utils.stream.cat(
-            fileobj, m, write_method_name='update'
+            fileobj,
+            hash_method_name,
+            write_method_name = 'update',
+            standard_write_method_result = False
             )
-        ret = m.hexdigest()
-        del(m)
+        ret = hash_method_name.hexdigest()
+        del(hash_method_name)
     return ret
 
 def parse_checksums_file_text(filename):
@@ -206,11 +209,11 @@ def checksums_by_list(file_lst, method):
     ret = {}
 
     for i in file_lst:
-        ret[i] = make_file_checksum(i, method=method)
+        ret[i] = make_file_checksum(i, method = method)
 
     return ret
 
-def render_checksum_dict_to_txt(sums_dict, sort=False):
+def render_checksum_dict_to_txt(sums_dict, sort = False):
 
     keys = list(sums_dict.keys())
 
@@ -220,6 +223,6 @@ def render_checksum_dict_to_txt(sums_dict, sort=False):
     ret = ''
 
     for i in keys:
-        ret += '{sum} *{path}\n'.format(sum=str(sums_dict[i]), path=str(i))
+        ret += '{sum} *{path}\n'.format(sum = str(sums_dict[i]), path = str(i))
 
     return ret
