@@ -1,10 +1,10 @@
 
-import io
 import logging
 import os
 import select
 import subprocess
 import threading
+import time
 
 import org.wayround.utils.exec
 
@@ -27,7 +27,9 @@ def cat(
     apply_input_seek = True,
     apply_output_seek = True,
     flush_on_input_eof = False,
-    standard_write_method_result = True
+    standard_write_method_result = True,
+    on_exit_callback = None,
+    callback_for_termination_flag = None
     ):
 
     return dd(
@@ -49,7 +51,9 @@ def cat(
         apply_input_seek = apply_input_seek,
         apply_output_seek = apply_output_seek,
         flush_on_input_eof = flush_on_input_eof,
-        standard_write_method_result = standard_write_method_result
+        standard_write_method_result = standard_write_method_result,
+        on_exit_callback = on_exit_callback,
+        callback_for_termination_flag = callback_for_termination_flag
         )
 
 def dd(
@@ -71,7 +75,9 @@ def dd(
     apply_input_seek = True,
     apply_output_seek = True,
     flush_on_input_eof = False,
-    standard_write_method_result = True
+    standard_write_method_result = True,
+    on_exit_callback = None,
+    callback_for_termination_flag = None
     ):
 
     if not read_method_name.isidentifier():
@@ -107,6 +113,7 @@ def dd(
 
     if threaded:
 
+#        return multiprocessing.Process(
         return threading.Thread(
             target = dd,
             args = (stdin, stdout),
@@ -127,7 +134,9 @@ def dd(
                 apply_input_seek = apply_input_seek,
                 apply_output_seek = apply_output_seek,
                 flush_on_input_eof = flush_on_input_eof,
-                standard_write_method_result = standard_write_method_result
+                standard_write_method_result = standard_write_method_result,
+                on_exit_callback = on_exit_callback,
+                callback_for_termination_flag = callback_for_termination_flag
                 ),
             name = thread_name
             )
@@ -150,6 +159,10 @@ def dd(
 
         while True:
 
+            if callback_for_termination_flag:
+                if callback_for_termination_flag():
+                    break
+
             if waiting_for_input:
                 logging.debug(
                     "waiting for input descriptor {}".format(
@@ -167,6 +180,10 @@ def dd(
                         descriptor_to_wait_for_input
                         )
                     )
+
+            if callback_for_termination_flag:
+                if callback_for_termination_flag():
+                    break
 
             if waiting_for_output:
                 logging.debug(
@@ -186,6 +203,10 @@ def dd(
                         )
                     )
 
+            if callback_for_termination_flag:
+                if callback_for_termination_flag():
+                    break
+
             buff = None
 
             logging.debug(
@@ -195,12 +216,24 @@ def dd(
                     )
                 )
 
+            if callback_for_termination_flag:
+                if callback_for_termination_flag():
+                    break
+
             try:
                 buff = eval("stdin.{}(bs)".format(read_method_name))
             except:
                 raise
 
+            if callback_for_termination_flag:
+                if callback_for_termination_flag():
+                    break
+
             if buff:
+
+                if callback_for_termination_flag:
+                    if callback_for_termination_flag():
+                        break
 
                 if not isinstance(buff, bytes):
                     raise TypeError(
@@ -239,6 +272,11 @@ def dd(
                 this_time_written = 0
 
                 while True:
+
+                    if callback_for_termination_flag:
+                        if callback_for_termination_flag():
+                            break
+
                     try:
                         this_time_written = eval(
                             "stdout.{}(buff[written_total:])".format(
@@ -261,6 +299,10 @@ def dd(
                             )
                         raise
 
+                    if callback_for_termination_flag:
+                        if callback_for_termination_flag():
+                            break
+
                     if standard_write_method_result:
                         if this_time_written == 0:
                             raise RuntimeError("Output write error")
@@ -273,6 +315,9 @@ def dd(
                         #       was
                         break
 
+                    if callback_for_termination_flag:
+                        if callback_for_termination_flag():
+                            break
                 if isinstance(buff, bytes):
                     bytes_counter += buff_len
             else:
@@ -284,6 +329,10 @@ def dd(
 
                 if exit_on_input_eof:
                     break
+
+                if callback_for_termination_flag:
+                    if callback_for_termination_flag():
+                        break
 
             c += 1
 
@@ -320,6 +369,9 @@ def dd(
         }
         )
     )
+
+        if on_exit_callback:
+            on_exit_callback()
         return
 
 
@@ -420,7 +472,9 @@ class SocketStreamer:
             descriptor_to_wait_for_output = self.sock.fileno(),
             apply_input_seek = False,
             apply_output_seek = False,
-            flush_on_input_eof = False
+            flush_on_input_eof = False,
+            on_exit_callback = self.on_in_thread_exit,
+            callback_for_termination_flag = self.callback_for_termination_flag
             )
 
         # from socket to strout
@@ -442,22 +496,66 @@ class SocketStreamer:
             descriptor_to_wait_for_output = self._strout.fileno(),
             apply_input_seek = False,
             apply_output_seek = False,
-            flush_on_input_eof = True
+            flush_on_input_eof = True,
+            on_exit_callback = self.on_out_thread_exit,
+            callback_for_termination_flag = self.callback_for_termination_flag
             )
 
 
     def start(self):
+        self.turned_on = True
         self.in_thread.start()
         self.out_thread.start()
 
 
-    def close(self):
+    def stop(self, wait = False):
 
-        if not self.strout.closed:
-            self.strout.close()
+        ret = 0
 
-        if not self.strin.closed:
-            self.strin.close()
+        self.turned_on = False
 
-        self.out_thread.join()
-        self.in_thread.join()
+        if wait:
+            ret = self.wait()
+
+        return ret
+
+    def is_working(self):
+
+        return (
+            self.turned_on
+            or self.in_thread
+            or self.out_thread
+            )
+
+    def wait(self, check_interval = 0.5, timeout = 60.0):
+
+        ret = 0
+
+        total_slept = 0.0
+
+        while True:
+            if not self.is_working():
+                ret = 0
+                break
+            if total_slept >= timeout:
+                ret = 1
+                break
+            time.sleep(check_interval)
+            total_slept += check_interval
+
+        return ret
+
+    def on_in_thread_exit(self):
+        self.in_thread = None
+
+    def on_out_thread_exit(self):
+        self.out_thread = None
+
+    def callback_for_termination_flag(self):
+
+        ret = False
+
+        if not self.turned_on:
+            ret = True
+
+        return ret
