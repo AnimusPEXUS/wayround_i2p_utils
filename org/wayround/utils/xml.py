@@ -101,7 +101,7 @@ class ExpatReadStream:
 
         self.parser = parser
         self.on_xml_error = on_xml_error
-        self.on_stream_close = on_stream_close
+        self._on_stream_close = on_stream_close
         self.on_read_error = on_read_error
 
 
@@ -129,7 +129,7 @@ class ExpatReadStream:
 
 
             if len(self.xml_integrity_tracking) == 0:
-                self.on_stream_close()
+                self._on_stream_close()
 
 
 def pi(content):

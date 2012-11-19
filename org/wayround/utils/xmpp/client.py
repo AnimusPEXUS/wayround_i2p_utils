@@ -9,28 +9,68 @@ import socket
 
 import org.wayround.utils.stream
 
+import org.wayround.utils.xmpp.core
+
 _GLOBAL_DEFAULT_TIMEOUT = socket.getdefaulttimeout()
 
 
-def connect_xmpp(address, timeout = _GLOBAL_DEFAULT_TIMEOUT, source_address = None):
+class Client:
 
-    sock = socket.create_connection(address, timeout, source_address)
+    def __init__(self):
 
-#    sock.send(b"asd\n")
-#    print(str(sock.recv(1) + sock.recv(1), encoding='utf-8'))
+        self._clear()
 
-    logging.debug("creating ss")
-    ss = org.wayround.utils.stream.SocketStreamer(
-        sock,
-        socket_transfer_size = 4096
-        )
 
-    ch = XMPPContentHandler()
+    def _clear(self):
+        self.socket_streamer = None
+        self.stanza_processor = None
+        self.input_stream_handler = None
 
-    ss.start()
 
-    xml.sax.parse(ss.strout, ch)
+    def connect(self, address, timeout = _GLOBAL_DEFAULT_TIMEOUT, source_address = None):
 
-    ss.close()
-    sock.close()
+        sock = socket.create_connection(address, timeout, source_address)
 
+        self.socket_streamer = org.wayround.utils.stream.SocketStreamer(
+            sock,
+            socket_transfer_size = 4096
+            )
+
+        self.XMPPInputStreamHandler_target = XMPPInputStreamReaderTarget(
+            on_stream_start,
+            on_stream_start_error,
+            on_stream_end,
+            on_element_readed
+            )
+
+        self.lxml_parser = lxml.etree.XMLParser(
+            target = self.XMPPInputStreamHandler_target
+            )
+
+
+        self.input_stream_handler = org.wayround.utils.xmpp.core.XMPPInputStreamHandler(
+            on_stream_close = self.on_stream_close_reciver,
+            on_stanza_read = None,
+            on_protocol_start = None
+            )
+
+#        self.stanza_processor = org.wayround.utils.xmpp.core.XMPPStreamProcessor(
+#            self.socket_streamer.strout,
+#            self.socket_streamer.strin,
+#            on_input_read_error,
+#            on_input_cutter_error
+#            )
+
+        self.socket_streamer.start()
+
+
+        self.socket_streamer.stop()
+        sock.close()
+
+
+
+    def on_stream_close_reciver(self):
+        pass
+
+    def on_next_stanza_read(self):
+        pass

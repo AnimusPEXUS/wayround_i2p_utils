@@ -2,8 +2,11 @@
 import logging
 import threading
 import time
-import xml.parsers.expat
+
+
 import lxml.etree
+
+import mako.template
 
 import org.wayround.utils.stream
 import org.wayround.utils.xml
@@ -13,385 +16,269 @@ class Stanza:
     def __init__(self):
         pass
 
-class XMPPInputStreamHandler:
+def start_stream(
+    fro,
+    to,
+    version = '1.0',
+    xml_lang = 'en',
+    xmlns = 'jabber:client',
+    xmlns_stream = 'http://etherx.jabber.org/streams'
+    ):
+
+    return mako.template.Template(
+        """\
+<?xml version="1.0"?>
+<stream:stream
+    from="${ fro | x }"
+    to="${ to | x }"
+    version="${ version | x }"
+    xml:lang="${ xml_lang | x }"
+    xmlns="${ xmlns | x }"
+    xmlns:stream="${ xmlns_stream | x }">
+""").render(
+            fro = fro,
+            to = to,
+            version = version,
+            xml_lang = xml_lang,
+            xmlns = xmlns,
+            xmlns_stream = xmlns_stream
+            )
+
+def check_stream_handler_correctness(handler):
+
+    ret = 0
+
+
+    return ret
+
+
+def _info_dict_to_add(handler):
+
+    return dict(
+        handler = handler,
+        name = handler.name,
+        tag = handler.tag,
+        ns = handler.ns
+        )
+
+
+class XMPPInputStreamReaderTarget:
 
     def __init__(
         self,
-        on_read_error = None,
-        on_stream_close = None,
-        on_xml_error = None,
-        on_stanza_read = None,
-        on_protocol_start = None
+        on_stream_start = None,
+        on_stream_start_error = None,
+        on_stream_end = None,
+        on_element_readed = None
         ):
 
-        self.on_xml_error = on_xml_error
-        self.on_stream_close = on_stream_close
-        self.on_read_error = on_read_error
+        self._on_stream_start = on_stream_start
+        self._on_stream_start_error = on_stream_start_error
+        self._on_stream_end = on_stream_end
+        self._on_element_readed = on_element_readed
 
-        self.stanza_layer = False
-
-        self.tree_builder = None
-        self.tree_builder_start_depth = None
-
-        self.depth_tracking = []
+        self.clear(init = True)
 
 
-    def parse_stanza(self, boolean):
+    def clear(self, init = False):
+        self._tree_builder = None
+        self._tree_builder_start_depth = None
 
-        self.stanza_layer = boolean
-
-        if not self.stanza_layer:
-            self.tree_builder = None
-            self.tree_builder_start_depth = None
-
-        return
+        self._depth_tracker = []
 
 
     def start(self, name, attributes):
 
-        self.depth_tracking.append(name)
+        logging.debug("{} :: start tag: `{}'; attrs: {}".format(type(self).__name__, name, attributes))
 
-        if len(self.depth_tracking) == 1:
-            if self.on_protocol_start:
-                self.on_protocol_start(name, attributes)
+        if len(self._depth_tracker) == 0:
 
-        if self.stanza_layer:
+            if name == '{http://etherx.jabber.org/streams}stream':
+                if self._on_stream_start:
+                    self._on_stream_start(attributes)
 
-            if not self.tree_builder:
-                self.tree_builder_start_depth = len(self.depth_tracking)
-                self.tree_builder = lxml.etree.TreeBuilder()
+            else:
+                if self._on_stream_start_error:
+                    self._on_stream_start_error()
 
-            self.tree_builder.start(name, attributes)
+        else:
+
+            if not self._tree_builder:
+                self._tree_builder = lxml.etree.TreeBuilder()
+
+            self._tree_builder.start(name, attributes)
+
+        self._depth_tracker.append(name)
 
         return
 
     def end(self, name):
 
-        if len(self.depth_tracking) == 0:
-            if self.on_xml_error:
-                self.on_xml_error()
-        else:
+        logging.debug("{} :: end `{}'".format(type(self).__name__, name))
 
-            if not self.depth_tracking[-1] == name:
-                if self.on_xml_error:
-                    self.on_xml_error()
-            else:
-                del self.depth_tracking[-1]
+        self._tree_builder.end(name)
 
+        del self._depth_tracker[-1]
 
-            if len(self.depth_tracking) == 0:
-                self.on_stream_close()
-            else:
-                if self.stanza_layer:
-                    self.tree_builder.end(name)
+        if len(self._depth_tracker) == 1:
 
-                    if len(self.depth_tracking) == self.tree_builder_start_depth:
-                        stanza = self.tree_builder.close()
+            element = self._tree_builder.close()
+            self._tree_builder = None
 
-                        if self.on_read_error:
-                            self.on_read_error(stanza)
-
-                        self.tree_builder = None
+            if self._on_element_readed:
+                self._on_element_readed(element)
 
         return
 
     def data(self, data):
 
-        if self.stanza_layer:
-            self.tree_builder.data(data)
+        logging.debug("{} :: data `{}'".format(type(self).__name__, data))
+
+        self._tree_builder.data(data)
 
         return
 
     def comment(self, text):
 
-        if self.stanza_layer:
-            self.tree_builder.comment(text)
+        logging.debug("{} :: comment `{}'".format(type(self).__name__, text))
+
+        self._tree_builder.comment(text)
 
         return
 
     def close(self):
 
-        if self.on_stream_close:
-            self.on_stream_close()
+        logging.debug("{} :: close".format(type(self).__name__))
+
+        if self._on_stream_end:
+            self._on_stream_end()
 
         return
 
-class StanzaProcessor:
+
+
+
+class XMPPInputStreamReader:
 
     def __init__(
         self,
-        in_stream,
-        out_stream,
-        on_input_read_error = None,
-        on_input_cutter_error = None
+        read_from,
+        xml_parser
         ):
+        """
+        read_from - xml stream input
+        """
 
-        self.on_input_read_error = on_input_read_error
-        self.on_input_cutter_error = on_input_cutter_error
+        self._read_from = read_from
 
-        self.turned_on = False
+        self._xml_parser = xml_parser
 
-        self.in_stream = in_stream
-        self.out_stream = out_stream
+        self._clean(init = True)
 
-        self.sliced_stanza_queue_in = []
-        self.sliced_stanza_queue_out = []
 
-        self.input_pool = b''
-        self.working_input_pool = b''
+    def _clean(self, init = False):
 
-        self.output_pool = b''
+        if not init:
+            if self.is_working():
+                raise RuntimeError("Working. Cleaning not allowed")
 
-        self.wait_for_stanzas = []
+        self._stop_flag = False
 
-        self.stream_reader_thread = None
-        self.stream_writer_thread = None
-
-        self.input_pool_slicer_thread = None
-        self.input_pool_slicer_error = False
-
-        self.output_queue_processor_thread = None
-
-        self.lxml_parser = lxml.etree.XMLParser(target = EchoTarget())
-
+        self._stream_reader_thread = None
+        return
 
     def start(self):
-        self.turned_on = True
 
-        thread_name_in = 'Thread Appending Data to StanzaReader Input Pool'
-        thread_name_out = 'Thread Appending Data to StanzaReader Output Pool'
 
-        if not self.stream_reader_thread:
-            try:
-                self.stream_reader_thread = org.wayround.utils.stream.cat(
-                    stdin = self.in_stream,
-                    stdout = self,
-                    threaded = True,
-                    write_method_name = 'append_data_to_input_pool',
-                    close_output_on_eof = False,
-                    thread_name = thread_name_in,
-                    bs = (2 * 1024 ** 2),
-                    convert_to_str = False,
-                    read_method_name = 'read',
-                    exit_on_input_eof = True,
-                    waiting_for_input = False,
-                    descriptor_to_wait_for_input = None,
-                    waiting_for_output = False,
-                    descriptor_to_wait_for_output = None,
-                    apply_input_seek = False,
-                    apply_output_seek = False,
-                    flush_on_input_eof = False,
-                    standard_write_method_result = True,
-                    on_exit_callback = self.on_stream_reader_thread_exit,
-                    callback_for_termination_flag = self.callback_for_termination_flag
-                    )
-            except:
-                logging.exception("Error on starting {}".format(thread_name_in))
+        thread_name_in = 'Thread feeding data to XML parser'
 
-        if not self.stream_writer_thread:
-            try:
-                self.stream_writer_thread = org.wayround.utils.stream.cat(
-                    stdin = self,
-                    stdout = self.out_stream,
-                    threaded = True,
-                    write_method_name = 'write',
-                    close_output_on_eof = False,
-                    thread_name = thread_name_out,
-                    bs = (2 * 1024 ** 2),
-                    convert_to_str = False,
-                    read_method_name = 'read',
-                    exit_on_input_eof = True,
-                    waiting_for_input = False,
-                    descriptor_to_wait_for_input = None,
-                    waiting_for_output = False,
-                    descriptor_to_wait_for_output = None,
-                    apply_input_seek = False,
-                    apply_output_seek = False,
-                    flush_on_input_eof = True,
-                    standard_write_method_result = True,
-                    on_exit_callback = self.on_stream_writer_thread_exit,
-                    callback_for_termination_flag = self.callback_for_termination_flag
-                    )
-            except:
-                logging.exception("Error on starting {}".format(thread_name_out))
+        if self.is_working():
+            raise RuntimeError("Already working")
 
-    def stop(self, wait = False):
+        else:
+            self._stop_flag = False
 
-        ret = 0
+            if not self._stream_reader_thread:
+                try:
+                    self._stream_reader_thread = org.wayround.utils.stream.cat(
+                        stdin = self._read_from,
+                        stdout = self,
+                        threaded = True,
+                        write_method_name = '_feed',
+                        close_output_on_eof = False,
+                        thread_name = thread_name_in,
+                        bs = (2 * 1024 ** 2),
+                        convert_to_str = False,
+                        read_method_name = 'read',
+                        exit_on_input_eof = True,
+                        waiting_for_input = False,
+                        descriptor_to_wait_for_input = None,
+                        waiting_for_output = False,
+                        descriptor_to_wait_for_output = None,
+                        apply_input_seek = False,
+                        apply_output_seek = False,
+                        flush_on_input_eof = False,
+                        standard_write_method_result = True,
+                        on_exit_callback = self._on_stream_reader_thread_exit,
+                        callback_for_termination_flag = self._callback_for_termination_flag,
+                        verbose = True
+                        )
+                except:
+                    logging.exception("Error on starting {}".format(thread_name_in))
+                else:
+                    self._stream_reader_thread.start()
 
-        self.turned_on = False
+        return
 
-        if wait:
-            ret = self.wait()
 
-        return ret
+    def stop(self):
+
+        self._stop_flag = True
+
+        self._wait()
+
+        return
 
     def is_working(self):
 
         return (
-            self.turned_on
-            or self.input_pool_slicer_thread
-            or self.stream_reader_thread
-            or self.output_queue_processor_thread
+            bool(self._stream_reader_thread)
             )
 
-    def wait(self, check_interval = 0.5, timeout = 60.0):
-
-        ret = 0
-
-        total_slept = 0.0
+    def _wait(self):
 
         while True:
             if not self.is_working():
-                ret = 0
                 break
-            if total_slept >= timeout:
-                ret = 1
-                break
-            time.sleep(check_interval)
-            total_slept += check_interval
 
-        return ret
+            time.sleep(0.5)
 
-    def on_stream_reader_thread_exit(self):
-        self.stream_reader_thread = None
+        return
 
-    def on_stream_writer_thread_exit(self):
-        self.stream_writer_thread = None
+    def _on_stream_reader_thread_exit(self):
+        self._stream_reader_thread = None
 
-    def callback_for_termination_flag(self):
+    def _callback_for_termination_flag(self):
 
-        ret = False
-
-        if not self.turned_on:
-            ret = True
-
-        return ret
+        return self._stop_flag
 
 
-    def write(self, bytes_text):
+    def _feed(self, bytes_text):
 
-        ret = len(bytes_text)
+        logging.debug("{} :: received feed of {}".format(type(self).__name__, repr(bytes_text)))
 
-        self.input_pool += bytes_text
-
-        if self.input_pool_slicer_error:
-            raise Exception("Some error")
-
-        if (
-            len(self.input_pool) > 0
-            and
-            not self.input_pool_slicer_thread
-            ):
-
-            self.input_pool_slicer_thread = threading.Thread(
-                self.working_input_pool_slicer,
-                'Thread of StanzaReader Input Pool',
-                args = tuple(),
-                kwargs = dict()
-                )
-
-            self.input_pool_slicer_thread.start()
-
-
-        return ret
-
-    def read(self, buff_size):
-
-        # TODO: check needed
-        ret = self.output_pool[:buff_size]
-
-        self.output_pool = self.output_pool[buff_size:]
-
-        return ret
-
-    def working_input_pool_slicer(self):
+        if not isinstance(bytes_text, bytes):
+            raise TypeError("bytes_text must be bytes type")
 
         ret = 0
 
-        while True:
-            cut_res = self.cutout_next_stanza_from_working_input_pool()
-
-            if cut_res in [0, 3]:
-                if len(self.input_pool) > 0:
-                    self.working_input_pool += self.input_pool
-                    self.input_pool = b''
-                else:
-                    break
-            else:
-                ret = 1
-                break
-
-        self.input_pool_slicer_thread = None
-
-        return ret
-
-    def cutout_next_stanza_from_working_input_pool(self):
-
-        ret = 0
-
-        if self.working_input_pool.isspace():
-            self.working_input_pool = b''
+        try:
+            self._xml_parser.feed(bytes_text)
+        except:
+            logging.debug("{} :: _feed {}".format(type(self).__name__, str(bytes_text, encoding = 'utf-8')))
             ret = 0
-
         else:
-            next_stanza_end = -1
-            try:
-                next_stanza_end = (
-                    org.wayround.utils.xml.find_next_tag_end(self.working_input_pool)
-                    )
-            except:
-                logging.exception("Some error while seeking for stanza end")
-                ret = 1
-            else:
-                if next_stanza_end == -1:
-                    ret = 3
-                else:
-                    str_repr = ''
-                    try:
-                        str_repr = str(
-                            self.working_input_pool[:next_stanza_end],
-                            encoding = 'utf-8'
-                            )
-                    except:
-                        logging.exception("bytes to str convert exception")
-                        ret = 2
-                    else:
-                        self.sliced_stanza_queue_in.append(str_repr)
-                        self.working_input_pool = self.working_input_pool[next_stanza_end:]
+            ret = len(bytes_text)
 
         return ret
 
-    def append_object_to_output_queue(self, obj):
-
-        if not isinstance(obj, (str, Stanza)):
-            raise TypeError("Not supported type `{}'".format(type(obj).__name__))
-
-        self.sliced_stanza_queue_out.append(obj)
-
-    def output_queue_processor(self):
-
-        if not self.output_queue_processor_thread:
-            self.output_queue_processor_thread = threading.Thread(
-                target = self.process_next_output_queue_object,
-                name = 'Output Queue Processor Thread',
-                args = tuple(),
-                kwargs = dict()
-                )
-
-    def process_next_output_queue_object(self):
-
-        if len(self.sliced_stanza_queue_out) > 0:
-            obj = self.sliced_stanza_queue_out[0]
-            del self.sliced_stanza_queue_out[0]
-
-            if isinstance(obj, str):
-                self.output_pool += obj
-
-            if isinstance(obj, Stanza):
-                self.output_pool += str(obj)
-
-        if len(self.output_pool) > 0:
-
-            self.out_stream.write(bytes(self.output_pool, encoding = 'utf-8'))
-            self.output_pool = b''
