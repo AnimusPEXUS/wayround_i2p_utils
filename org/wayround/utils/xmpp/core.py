@@ -3,18 +3,13 @@ import logging
 import threading
 import time
 
-
-import lxml.etree
+import xml.etree.ElementTree
 
 import mako.template
 
 import org.wayround.utils.stream
 import org.wayround.utils.xml
 
-class Stanza:
-
-    def __init__(self):
-        pass
 
 def start_stream(
     fro,
@@ -43,6 +38,9 @@ def start_stream(
             xmlns = xmlns,
             xmlns_stream = xmlns_stream
             )
+
+def stop_stream():
+    return '</stream:stream>'
 
 def check_stream_handler_correctness(handler):
 
@@ -93,7 +91,7 @@ class XMPPInputStreamReaderTarget:
 
         if len(self._depth_tracker) == 0:
 
-            if name == '{http://etherx.jabber.org/streams}stream':
+            if name == 'stream:stream':
                 if self._on_stream_start:
                     self._on_stream_start(attributes)
 
@@ -104,7 +102,8 @@ class XMPPInputStreamReaderTarget:
         else:
 
             if not self._tree_builder:
-                self._tree_builder = lxml.etree.TreeBuilder()
+
+                self._tree_builder = xml.etree.ElementTree.TreeBuilder()
 
             self._tree_builder.start(name, attributes)
 
@@ -115,6 +114,7 @@ class XMPPInputStreamReaderTarget:
     def end(self, name):
 
         logging.debug("{} :: end `{}'".format(type(self).__name__, name))
+        logging.debug("{} :: end len(trac) == `{}'".format(type(self).__name__, len(self._depth_tracker)))
 
         self._tree_builder.end(name)
 
@@ -184,7 +184,7 @@ class XMPPInputStreamReader:
 
         self._stop_flag = False
 
-        self._stream_reader_thread = None
+        self._stream_writer_thread = None
         return
 
     def start(self):
@@ -198,9 +198,9 @@ class XMPPInputStreamReader:
         else:
             self._stop_flag = False
 
-            if not self._stream_reader_thread:
+            if not self._stream_writer_thread:
                 try:
-                    self._stream_reader_thread = org.wayround.utils.stream.cat(
+                    self._stream_writer_thread = org.wayround.utils.stream.cat(
                         stdin = self._read_from,
                         stdout = self,
                         threaded = True,
@@ -226,7 +226,7 @@ class XMPPInputStreamReader:
                 except:
                     logging.exception("Error on starting {}".format(thread_name_in))
                 else:
-                    self._stream_reader_thread.start()
+                    self._stream_writer_thread.start()
 
         return
 
@@ -242,7 +242,7 @@ class XMPPInputStreamReader:
     def is_working(self):
 
         return (
-            bool(self._stream_reader_thread)
+            bool(self._stream_writer_thread)
             )
 
     def _wait(self):
@@ -256,7 +256,7 @@ class XMPPInputStreamReader:
         return
 
     def _on_stream_reader_thread_exit(self):
-        self._stream_reader_thread = None
+        self._stream_writer_thread = None
 
     def _callback_for_termination_flag(self):
 
@@ -273,12 +273,185 @@ class XMPPInputStreamReader:
         ret = 0
 
         try:
-            self._xml_parser.feed(bytes_text)
+            self._xml_parser.Parse(bytes_text, False)
         except:
-            logging.debug("{} :: _feed {}".format(type(self).__name__, str(bytes_text, encoding = 'utf-8')))
+            logging.exception("{} :: _feed {}".format(type(self).__name__, str(bytes_text, encoding = 'utf-8')))
             ret = 0
         else:
             ret = len(bytes_text)
 
         return ret
+
+
+
+
+class XMPPOutputStreamWriter:
+
+    def __init__(self, write_to):
+        """
+        read_from - xml stream input
+        """
+
+        self._write_to = write_to
+
+        self._clean(init = True)
+
+
+    def _clean(self, init = False):
+
+        if not init:
+            if self.is_working():
+                raise RuntimeError("Working. Cleaning not allowed")
+
+        self._stop_flag = False
+        self._stopping = False
+
+        self._stream_writer_thread = None
+
+        self._output_queue = []
+        return
+
+    def start(self):
+
+        thread_name_in = 'Thread sending data to socket streamer'
+
+        if self.is_working():
+            raise RuntimeError("Already working")
+
+        else:
+            self._stop_flag = False
+
+            if not self._stream_writer_thread:
+                try:
+                    self._stream_writer_thread = threading.Thread(
+                        target = self._output_worker,
+                        name = thread_name_in,
+                        args = tuple(),
+                        kwargs = dict()
+                        )
+                except:
+                    logging.exception("Error on starting {}".format(thread_name_in))
+                else:
+                    self._stream_writer_thread.start()
+
+        return
+
+
+    def stop(self):
+
+        if not self._stopping:
+            self._stopping = True
+            self._stop_flag = True
+
+            self._wait()
+
+            self._stopping = False
+
+        return
+
+    def is_working(self):
+
+        return bool(self._stream_writer_thread)
+
+
+    def _wait(self):
+
+        while True:
+            if not self.is_working():
+                break
+
+            time.sleep(0.5)
+
+        return
+
+    def send(self, obj):
+
+        if self._stop_flag:
+            raise RuntimeError("Stopping. No appending allowed")
+
+        self._output_queue.append(obj)
+
+        return
+
+    def _output_worker(self):
+
+        while True:
+            if len(self._output_queue) > 0:
+
+                while len(self._output_queue) > 0:
+                    self._send_object(self._output_queue[0])
+                    del self._output_queue[0]
+
+            else:
+                if self._stop_flag:
+                    break
+                time.sleep(0.5)
+
+        self._stream_writer_thread = None
+
+        return
+
+    def _send_object(self, obj):
+
+        snd_obj = None
+
+        if isinstance(obj, bytes):
+            snd_obj = obj
+        elif isinstance(obj, str):
+            snd_obj = bytes(obj, encoding = 'utf-8')
+        elif isinstance(obj, xml.etree.ElementTree.Element):
+            snd_obj = bytes(
+                xml.etree.ElementTree.tostring(
+                    obj,
+                    encoding = 'utf-8'
+                    ),
+                encoding = 'utf-8'
+                )
+        else:
+            raise Exception("Wrong obj type. Can be bytes, str or xml.etree.ElementTree.Element")
+
+
+        self._write_to.write(snd_obj)
+
+
+class Stanza:
+
+    def __init__(self):
+        pass
+
+
+class XMPPInputStreamHub:
+
+    def __init__(self):
+
+        self.waiters = {}
+
+    def dispatch(self, obj):
+
+        waiters = list(self.waiters.keys())
+        waiters.sort()
+
+        for i in waiters:
+
+            t = threading.Thread(
+                target = self._waiter_thread,
+                args = tuple(self.waiters[i]['reactor'], obj),
+                kwargs = dict()
+                )
+
+            t.start()
+
+    def _waiter_thread(self, call, obj):
+
+        call(obj)
+
+    def set_waiter(self, name, reactor):
+
+        self.waiters[name] = reactor
+
+    def del_waiter(self, name):
+
+        if name in self.waiters:
+            del self.waiters[name]
+
 

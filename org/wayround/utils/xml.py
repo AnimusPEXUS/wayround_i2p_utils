@@ -14,6 +14,85 @@ import org.wayround.utils.dict
 import org.wayround.utils.error
 import org.wayround.utils.text
 
+def expat_parser_connect_target(parser, target):
+
+    parser.StartElementHandler = target.start
+    parser.EndElementHandler = target.end
+    parser.CharacterDataHandler = target.data
+    parser.CommentHandler = target.comment
+
+class DictTreeBuilder:
+
+    def __init__(self):
+        self._clean(init = True)
+
+    def _clean(self, init = False):
+
+        self._tree = None
+        self._element_trac = []
+
+
+    def start(self, name, attrs):
+
+        new_elem = tag(
+            name = name,
+            attributes = attrs,
+            closed = False,
+            module = None,
+            uid = None,
+            required_css = None,
+            required_js = None,
+            content = [],
+            new_line_before_start = False,
+            new_line_before_content = False,
+            new_line_after_content = False,
+            new_line_after_end = False
+            )
+
+        if len(self._element_trac) == 0:
+            self._tree = new_elem
+        else:
+            self._element_trac[-1]['content'].append(new_elem)
+
+        self._element_trac.append(new_elem)
+
+        return
+
+    def end(self, name):
+
+        if len(self._element_trac) == 0:
+            raise RuntimeError("Error in tree building: end before start")
+
+        del self._element_trac[-1]
+
+        return
+
+
+    def data(self, text):
+
+        if len(self._element_trac) == 0:
+            raise RuntimeError("Error in tree building: data before start")
+
+        self._element_trac[-1]['content'].append(char(text))
+
+        return
+
+    def comment(self, text):
+
+        if len(self._element_trac) == 0:
+            raise RuntimeError("Error in tree building: data before start")
+
+        self._element_trac[-1]['content'].append(comment(text))
+
+        return
+
+    def close(self):
+
+        return [self._tree]
+
+
+
+
 class _ExpatTagEndFinder:
 
     def __init__(self, parser):
@@ -44,21 +123,19 @@ class _ExpatTagEndFinder:
 
 def find_next_tag_end(text):
 
-    if not isinstance(text, bytes):
-        raise TypeError("text parameter must be bytes")
 
-#    if not isinstance(text, (bytes, str)):
-#        raise TypeError("text parameter must be bytes or str")
+    if not isinstance(text, (bytes, str)):
+        raise TypeError("text parameter must be bytes or str")
 
     encoding = 'ISO-8859-1'
     gt = b'>'
 
-#    if isinstance(text, bytes):
-#        encoding = 'ISO-8859-1'
-#        gt = b'>'
-#    else:
-#        encoding = 'UTF-8'
-#        gt = '>'
+    if isinstance(text, bytes):
+        encoding = 'ISO-8859-1'
+        gt = b'>'
+    else:
+        encoding = 'UTF-8'
+        gt = '>'
 
     ret = -1
 
@@ -549,6 +626,16 @@ def render_attributes(indict, path = [], tagname = '', xml_indent_size = 2):
 
     return ret
 
+def dict_tree_to_xml_render(tree):
+    b = DictTreeToXMLRenderer(2, True, True)
+
+    b.set_tree(tree)
+
+    ret = b.render()
+
+    b.print_log()
+
+    return ret
 
 class DictatorshipUnitTooDeep(Exception): pass
 class MissingDictatorshipUnitAttribute(Exception): pass
@@ -623,7 +710,7 @@ class DictTreeToXMLRenderer:
 
         if self.check_range(indict) != 0:
             self.do_log(
-                "_lineup_tree wrong input data at path {}".format(
+                "_lineup_tree wrong input data at path `{}'".format(
                     '/'.join(path)
                     )
                 )
@@ -1262,3 +1349,5 @@ def test2():
     print(repr(b.units))
     b.print_log()
     print(ret)
+
+

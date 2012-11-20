@@ -502,8 +502,8 @@ class SocketStreamer:
                 apply_output_seek = False,
                 flush_on_input_eof = True,
                 on_exit_callback = self._on_out_thread_exit,
-                callback_for_termination_flag = self._callback_for_termination_flag,
-                flush_after_every_write = True
+                callback_for_termination_flag = self._callback_for_termination_flag
+#                flush_after_every_write = True
                 )
 
             self._in_thread.start()
