@@ -116,7 +116,8 @@ class XMPPInputStreamReaderTarget:
         logging.debug("{} :: end `{}'".format(type(self).__name__, name))
         logging.debug("{} :: end len(trac) == `{}'".format(type(self).__name__, len(self._depth_tracker)))
 
-        self._tree_builder.end(name)
+        if len(self._depth_tracker) > 1:
+            self._tree_builder.end(name)
 
         del self._depth_tracker[-1]
 
@@ -127,6 +128,11 @@ class XMPPInputStreamReaderTarget:
 
             if self._on_element_readed:
                 self._on_element_readed(element)
+
+        if len(self._depth_tracker) == 0:
+
+            if name == 'stream:stream':
+                self.close()
 
         return
 
@@ -184,7 +190,9 @@ class XMPPInputStreamReader:
 
         self._stop_flag = False
 
-        self._stream_writer_thread = None
+        self._stream_reader_thread = None
+
+        self._stopping = False
         return
 
     def start(self):
@@ -198,52 +206,60 @@ class XMPPInputStreamReader:
         else:
             self._stop_flag = False
 
-            if not self._stream_writer_thread:
+            if not self._stream_reader_thread:
                 try:
-                    self._stream_writer_thread = org.wayround.utils.stream.cat(
+                    self._stream_reader_thread = org.wayround.utils.stream.cat(
                         stdin = self._read_from,
                         stdout = self,
-                        threaded = True,
-                        write_method_name = '_feed',
-                        close_output_on_eof = False,
-                        thread_name = thread_name_in,
                         bs = (2 * 1024 ** 2),
+                        threaded = True,
+                        thread_name = thread_name_in,
+                        verbose = True,
                         convert_to_str = False,
                         read_method_name = 'read',
+                        write_method_name = '_feed',
                         exit_on_input_eof = True,
-                        waiting_for_input = False,
-                        descriptor_to_wait_for_input = None,
+                        flush_after_every_write = False,
+                        flush_on_input_eof = False,
+                        close_output_on_eof = False,
+                        waiting_for_input = True,
                         waiting_for_output = False,
+                        descriptor_to_wait_for_input = self._read_from.fileno(),
                         descriptor_to_wait_for_output = None,
                         apply_input_seek = False,
                         apply_output_seek = False,
-                        flush_on_input_eof = False,
                         standard_write_method_result = True,
-                        on_exit_callback = self._on_stream_reader_thread_exit,
                         callback_for_termination_flag = self._callback_for_termination_flag,
-                        verbose = True
+                        on_exit_callback = self._on_stream_reader_thread_exit
                         )
                 except:
                     logging.exception("Error on starting {}".format(thread_name_in))
                 else:
-                    self._stream_writer_thread.start()
+                    self._stream_reader_thread.start()
 
         return
 
 
     def stop(self):
 
-        self._stop_flag = True
+        if not self._stopping:
+            self._stopping = True
 
-        self._wait()
+            self._stop_flag = True
+
+            self._wait()
+
+            self._clean()
+
+            self._stopping = False
 
         return
 
     def is_working(self):
 
-        return (
-            bool(self._stream_writer_thread)
-            )
+        logging.debug("self._stream_reader_thread == {}".format(self._stream_reader_thread))
+
+        return bool(self._stream_reader_thread)
 
     def _wait(self):
 
@@ -256,7 +272,7 @@ class XMPPInputStreamReader:
         return
 
     def _on_stream_reader_thread_exit(self):
-        self._stream_writer_thread = None
+        self._stream_reader_thread = None
 
     def _callback_for_termination_flag(self):
 
@@ -341,9 +357,12 @@ class XMPPOutputStreamWriter:
 
         if not self._stopping:
             self._stopping = True
+
             self._stop_flag = True
 
             self._wait()
+
+            self._clean()
 
             self._stopping = False
 
@@ -413,6 +432,8 @@ class XMPPOutputStreamWriter:
 
         self._write_to.write(snd_obj)
 
+        return
+
 
 class Stanza:
 
@@ -426,6 +447,8 @@ class XMPPInputStreamHub:
 
         self.waiters = {}
 
+        return
+
     def dispatch(self, obj):
 
         waiters = list(self.waiters.keys())
@@ -435,23 +458,29 @@ class XMPPInputStreamHub:
 
             t = threading.Thread(
                 target = self._waiter_thread,
-                args = tuple(self.waiters[i]['reactor'], obj),
+                args = (self.waiters[i], obj,),
                 kwargs = dict()
                 )
 
             t.start()
 
+        return
+
     def _waiter_thread(self, call, obj):
 
         call(obj)
 
+        return
+
     def set_waiter(self, name, reactor):
 
         self.waiters[name] = reactor
+
+        return
 
     def del_waiter(self, name):
 
         if name in self.waiters:
             del self.waiters[name]
 
-
+        return
