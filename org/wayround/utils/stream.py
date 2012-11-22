@@ -339,7 +339,7 @@ def cat(
                     raise CatTerminationFlagFound()
 
         except CatTerminationFlagFound:
-            logging.exception("Termination flag cought")
+            logging.debug("Termination flag caught")
         except:
             raise
 

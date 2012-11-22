@@ -216,7 +216,5 @@ self._output_stream_writer.is_working() == {}
 
     def _on_element_readed(self, obj):
 
-        logging.debug("Dispatchung object: {}".format(obj))
-
         self._hub.dispatch(obj)
 

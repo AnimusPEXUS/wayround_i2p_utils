@@ -143,11 +143,7 @@ class XMPPInputStreamReaderTarget:
         if len(self._depth_tracker) == 0:
 
             if name == 'stream:stream':
-                threading.Thread(
-                    target = self.close,
-                    name = 'Stream Closed Thread'
-                    ).start()
-
+                self.close()
 
         return
 

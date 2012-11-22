@@ -4,7 +4,7 @@ import logging
 
 import org.wayround.utils.xmpp.client
 
-logging.basicConfig(level = 'DEBUG', format = "%(levelname)s :: %(threadName)s :: %(message)s")
+#logging.basicConfig(level = 'DEBUG', format = "%(levelname)s :: %(threadName)s :: %(message)s")
 
 sbc = org.wayround.utils.xmpp.client.SampleBotClient(
     host = 'wayround.org',
