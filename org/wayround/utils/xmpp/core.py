@@ -188,11 +188,11 @@ class XMPPInputStreamReader:
             if self.is_working():
                 raise RuntimeError("Working. Cleaning not allowed")
 
-        self._stop_flag = False
-
         self._stream_reader_thread = None
 
         self._stopping = False
+
+        self._termination_event = None
         return
 
     def start(self):
@@ -207,6 +207,9 @@ class XMPPInputStreamReader:
             self._stop_flag = False
 
             if not self._stream_reader_thread:
+
+                self._termination_event = threading.Event()
+
                 try:
                     self._stream_reader_thread = org.wayround.utils.stream.cat(
                         stdin = self._read_from,
@@ -229,7 +232,7 @@ class XMPPInputStreamReader:
                         apply_input_seek = False,
                         apply_output_seek = False,
                         standard_write_method_result = True,
-                        callback_for_termination_flag = self._callback_for_termination_flag,
+                        termination_event = self._termination_event,
                         on_exit_callback = self._on_stream_reader_thread_exit
                         )
                 except:
@@ -242,10 +245,10 @@ class XMPPInputStreamReader:
 
     def stop(self):
 
-        if not self._stopping:
+        if not self._stopping and self.is_working():
             self._stopping = True
 
-            self._stop_flag = True
+            self._termination_event.set()
 
             self._wait()
 
@@ -273,10 +276,6 @@ class XMPPInputStreamReader:
 
     def _on_stream_reader_thread_exit(self):
         self._stream_reader_thread = None
-
-    def _callback_for_termination_flag(self):
-
-        return self._stop_flag
 
 
     def _feed(self, bytes_text):

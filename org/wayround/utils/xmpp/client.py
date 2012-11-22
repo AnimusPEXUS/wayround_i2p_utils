@@ -131,9 +131,15 @@ class SampleBotClient:
 
             self.wait()
 
+            logging.debug("Cleaning client instance")
+
+            self._sock.shutdown(socket.SHUT_RDWR)
+            self._sock.close()
+
             self._clean()
 
             self._stopping = False
+
 
         return
 
