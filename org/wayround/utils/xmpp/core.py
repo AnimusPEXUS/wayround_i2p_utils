@@ -93,11 +93,18 @@ class XMPPInputStreamReaderTarget:
 
             if name == 'stream:stream':
                 if self._on_stream_start:
-                    self._on_stream_start(attributes)
+                    threading.Thread(
+                        target = self._on_stream_start,
+                        args = (attributes,),
+                        name = "Stream Start Thread"
+                        ).start()
 
             else:
                 if self._on_stream_start_error:
-                    self._on_stream_start_error()
+                    threading.Thread(
+                        target = self._on_stream_start_error,
+                        name = "Stream Start Error Thread"
+                        ).start()
 
         else:
 
@@ -127,12 +134,20 @@ class XMPPInputStreamReaderTarget:
             self._tree_builder = None
 
             if self._on_element_readed:
-                self._on_element_readed(element)
+                threading.Thread(
+                    target = self._on_element_readed,
+                    args = (element,),
+                    name = 'Element Readed Thread'
+                    ).start()
 
         if len(self._depth_tracker) == 0:
 
             if name == 'stream:stream':
-                self.close()
+                threading.Thread(
+                    target = self.close,
+                    name = 'Stream Closed Thread'
+                    ).start()
+
 
         return
 
@@ -157,7 +172,10 @@ class XMPPInputStreamReaderTarget:
         logging.debug("{} :: close".format(type(self).__name__))
 
         if self._on_stream_end:
-            self._on_stream_end()
+            threading.Thread(
+                target = self._on_stream_end,
+                name = "Stream Ended Thread"
+                ).start()
 
         return
 
@@ -259,8 +277,6 @@ class XMPPInputStreamReader:
         return
 
     def is_working(self):
-
-        logging.debug("self._stream_reader_thread == {}".format(self._stream_reader_thread))
 
         return bool(self._stream_reader_thread)
 

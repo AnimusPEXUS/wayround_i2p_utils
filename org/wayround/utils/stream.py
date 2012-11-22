@@ -192,7 +192,11 @@ def cat(
                     buff = eval("stdin.{}(bs)".format(read_method_name))
                 except:
                     if on_input_read_error:
-                        on_input_read_error()
+                        threading.Thread(
+                            target = on_input_read_error,
+                            name = "{} Input Read Error Thread".format(thread_name)
+                            ).start()
+
                     break
 
 
@@ -264,7 +268,11 @@ def cat(
                                     )
                                 )
                             if on_output_write_error:
-                                on_output_write_error()
+                                threading.Thread(
+                                    target = on_output_write_error,
+                                    name = "`{}' Output Error Thread".format(thread_name)
+                                    ).start()
+
                             raise
 
                         if termination_event and termination_event.is_set():
@@ -282,7 +290,10 @@ def cat(
                                 )
                             if this_time_written == 0:
                                 if on_output_write_error:
-                                    on_output_write_error()
+                                    threading.Thread(
+                                        target = on_output_write_error,
+                                        name = "`{}' Output Error Thread".format(thread_name)
+                                        ).start()
                                 break
                             else:
                                 written_total += this_time_written
@@ -363,7 +374,11 @@ def cat(
     )
 
         if on_exit_callback:
-            on_exit_callback()
+            threading.Thread(
+                target = on_exit_callback,
+                name = "{} Exited Callback Thread".format(thread_name)
+                ).start()
+
         return
 
 
@@ -599,9 +614,6 @@ class SocketStreamer:
 
     def is_working(self):
 
-        logging.debug("self._in_thread == {}".format(self._in_thread))
-        logging.debug("self._out_thread == {}".format(self._out_thread))
-
         return (
             bool(self._in_thread)
             or bool(self._out_thread)
@@ -628,5 +640,9 @@ class SocketStreamer:
 
     def _stream_stopped(self):
         if self._on_connection_stopped:
-            self._on_connection_stopped()
+            threading.Thread(
+                target = self._on_connection_stopped,
+                name = "Connection Stopped Thread"
+                ).start()
+
 
