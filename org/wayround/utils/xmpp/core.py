@@ -42,6 +42,11 @@ def start_stream(
 def stop_stream():
     return '</stream:stream>'
 
+def starttls():
+    return """\
+<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
+"""
+
 def check_stream_handler_correctness(handler):
 
     ret = 0
@@ -88,6 +93,9 @@ class XMPPInputStreamReaderTarget:
     def start(self, name, attributes):
 
         logging.debug("{} :: start tag: `{}'; attrs: {}".format(type(self).__name__, name, attributes))
+
+        if name == 'stream:stream':
+            self._depth_tracker = []
 
         if len(self._depth_tracker) == 0:
 

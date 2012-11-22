@@ -226,7 +226,7 @@ def cat(
                             )
                         )
 
-    #                logging.debug("buff data: {}".format(repr(buff)))
+                    logging.debug("buff data(255 bytes max): {}".format(repr(buff[:255])))
 
                     if convert_to_str != None:
                         buff = str(buff, encoding = convert_to_str)
@@ -477,8 +477,12 @@ class SocketStreamer:
 
         self._stopping = False
 
-        self._in_thread_stop_event = None
-        self._out_thread_stop_event = None
+        if not init:
+            self._in_thread_stop_event.set()
+            self._out_thread_stop_event.set()
+
+        self._in_thread_stop_event = threading.Event()
+        self._out_thread_stop_event = threading.Event()
         return
 
     def _close_pipe_descriptors(self):
@@ -486,15 +490,72 @@ class SocketStreamer:
             if i:
                 i.close()
 
+    def _start_threads(self):
+        self._in_thread = cat(
+            stdin = self._strin,
+            stdout = self._sock,
+            threaded = True,
+            write_method_name = 'send',
+            close_output_on_eof = False,
+            thread_name = 'strin -> _sock',
+            bs = self._socket_transfer_size,
+            convert_to_str = None,
+            read_method_name = 'read',
+            exit_on_input_eof = True,
+            waiting_for_input = True,
+            descriptor_to_wait_for_input = self._strin.fileno(),
+            waiting_for_output = True,
+            descriptor_to_wait_for_output = self._sock.fileno(),
+            apply_input_seek = False,
+            apply_output_seek = False,
+            flush_on_input_eof = False,
+            on_exit_callback = self._on_in_thread_exit,
+            termination_event = self._in_thread_stop_event
+            )
+
+        self._out_thread = cat(
+            stdin = self._sock,
+            stdout = self._strout,
+            threaded = True,
+            write_method_name = 'write',
+            close_output_on_eof = False,
+            thread_name = 'sock -> strout',
+            bs = self._socket_transfer_size,
+            convert_to_str = None,
+            read_method_name = 'recv',
+            exit_on_input_eof = True,
+            waiting_for_input = True,
+            descriptor_to_wait_for_input = self._sock.fileno(),
+            waiting_for_output = True,
+            descriptor_to_wait_for_output = self._strout.fileno(),
+            apply_input_seek = False,
+            apply_output_seek = False,
+            flush_on_input_eof = True,
+            on_exit_callback = self._on_out_thread_exit,
+            termination_event = self._out_thread_stop_event
+            )
+
+        self._in_thread.start()
+        self._out_thread.start()
+
+    def _stop_threads(self):
+        self._in_thread_stop_event.set()
+        self._out_thread_stop_event.set()
+        self._wait()
+        self._in_thread_stop_event.clear()
+        self._out_thread_stop_event.clear()
+
+    def _restart_threads(self):
+        self._stop_threads()
+        self._start_threads()
+
+
     def start(self):
 
         if self.is_working():
             raise RuntimeError("Already working")
 
         else:
-
-            self._in_thread_stop_event = threading.Event()
-            self._out_thread_stop_event = threading.Event()
 
             self._pipe_outside = os.pipe()
             self._pipe_inside = os.pipe()
@@ -506,53 +567,7 @@ class SocketStreamer:
             self._strin = open(self._pipe_inside[0], 'rb', buffering = 0)
             self.strin = open(self._pipe_inside[1], 'wb', buffering = 0)
 
-            self._in_thread = cat(
-                stdin = self._strin,
-                stdout = self._sock,
-                threaded = True,
-                write_method_name = 'send',
-                close_output_on_eof = False,
-                thread_name = 'strin -> _sock',
-                bs = self._socket_transfer_size,
-                convert_to_str = None,
-                read_method_name = 'read',
-                exit_on_input_eof = True,
-                waiting_for_input = True,
-                descriptor_to_wait_for_input = self._strin.fileno(),
-                waiting_for_output = True,
-                descriptor_to_wait_for_output = self._sock.fileno(),
-                apply_input_seek = False,
-                apply_output_seek = False,
-                flush_on_input_eof = False,
-                on_exit_callback = self._on_in_thread_exit,
-                termination_event = self._in_thread_stop_event
-                )
-
-            self._out_thread = cat(
-                stdin = self._sock,
-                stdout = self._strout,
-                threaded = True,
-                write_method_name = 'write',
-                close_output_on_eof = False,
-                thread_name = 'sock -> strout',
-                bs = self._socket_transfer_size,
-                convert_to_str = None,
-                read_method_name = 'recv',
-                exit_on_input_eof = True,
-                waiting_for_input = True,
-                descriptor_to_wait_for_input = self._sock.fileno(),
-                waiting_for_output = True,
-                descriptor_to_wait_for_output = self._strout.fileno(),
-                apply_input_seek = False,
-                apply_output_seek = False,
-                flush_on_input_eof = True,
-                on_exit_callback = self._on_out_thread_exit,
-                termination_event = self._out_thread_stop_event
-#                flush_after_every_write = True
-                )
-
-            self._in_thread.start()
-            self._out_thread.start()
+            self._start_threads()
 
         return
 
@@ -564,8 +579,7 @@ class SocketStreamer:
 
 #            self._close_pipe_descriptors()
 
-            self._in_thread_stop_event.set()
-            self._out_thread_stop_event.set()
+            self._stop_threads()
 
             self._wait()
 
@@ -585,6 +599,8 @@ class SocketStreamer:
         taken from self._sock
         """
 
+        # TODO: exclude sock parameter from arguments
+
         s = None
 
         try:
@@ -596,7 +612,12 @@ class SocketStreamer:
         except:
             raise
         else:
+            logging.info("  peer cert:\n{}".format(repr(s.getpeercert(binary_form = False))))
+            logging.info("     cipher:\n{}".format(repr(s.cipher())))
+            logging.info("compression:\n{}".format(repr(s.compression())))
             self._sock = s
+
+            self._restart_threads()
 
     def stop_ssl(self):
 
@@ -607,6 +628,8 @@ class SocketStreamer:
             raise
         else:
             self._sock = s
+
+            self._restart_threads()
 
     def is_ssl_working(self):
 
@@ -631,12 +654,8 @@ class SocketStreamer:
     def _on_in_thread_exit(self):
         self._in_thread = None
 
-        self.stop()
-
     def _on_out_thread_exit(self):
         self._out_thread = None
-
-        self.stop()
 
     def _stream_stopped(self):
         if self._on_connection_stopped:

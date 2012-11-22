@@ -48,6 +48,11 @@ class SampleBotClient:
 
         self._hub = None
 
+        self.status = 'before start'
+        self.tls_request_result = None
+
+        self._ignore_next_stream_end = False
+
 
     def start(self):
 
@@ -90,6 +95,7 @@ class SampleBotClient:
         self._hub = org.wayround.utils.xmpp.core.XMPPInputStreamHub()
 
         self._hub.set_waiter('features', self._features_waiter)
+        self._hub.set_waiter('tls', self._urn_ietf_params_xml_ns_xmpp_tls_waiter)
 
         for i in [
             self._input_stream_reader.start,
@@ -154,6 +160,29 @@ class SampleBotClient:
 
         return
 
+    def start_xml_parser(self):
+        self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
+        self._input_stream_reader = org.wayround.utils.xmpp.core.XMPPInputStreamReader(
+            self._sock_streamer.strout,
+            self._xml_parser
+            )
+        org.wayround.utils.xml.expat_parser_connect_target(
+            self._xml_parser,
+            self._xml_target
+            )
+        self._input_stream_reader.start()
+
+    def stop_xml_parser(self):
+#        self._ignore_next_stream_end=True
+#        self._xml_parser.Parse(b'</stream:stream>', True)
+        self._input_stream_reader.stop()
+
+    def restart_xml_parser(self):
+        self.stop_xml_parser()
+        self.start_xml_parser()
+
+
+
     def is_working(self):
 
         v1_1 = self._sock_streamer
@@ -193,14 +222,55 @@ self._output_stream_writer.is_working() == {}
 
     def _features_waiter(self, obj):
 
-        print("Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
+        if obj.tag == 'stream:features':
 
-        self._output_stream_writer.send(
-            org.wayround.utils.xmpp.core.stop_stream()
-            )
+            print("Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
+
+            if self.status == 'before start':
+
+                self.status = 'looking for tls'
+
+                if obj.find('starttls') != None:
+
+                    self.status = 'requesting tls'
+
+                    self._output_stream_writer.send(
+                        org.wayround.utils.xmpp.core.starttls()
+                        )
+
+            if self.status == 'requesting tls' and self.tls_request_result == 'proceed':
+                print("TLS Started")
+
+    def _urn_ietf_params_xml_ns_xmpp_tls_waiter(self, obj):
+
+        if obj.get('xmlns', None) == 'urn:ietf:params:xml:ns:xmpp-tls':
+            if self.status == 'requesting tls':
+
+                if obj.tag in ['proceed', 'failure']:
+                    self.tls_request_result = obj.tag
+                else:
+                    logging.error("TLS Request Error")
+                    self.close()
+
+                if self.tls_request_result == 'proceed':
+
+                    self._sock_streamer.start_ssl()
+
+                    self.restart_xml_parser()
+
+                    self._output_stream_writer.send(
+                        org.wayround.utils.xmpp.core.start_stream(
+                            fro = self._user_jid,
+                            to = self._domain
+                            )
+                        )
+                else:
+                    logging.error("TLS Request Failure")
+                    self.close()
+
 
     def _on_connection_stopped(self):
-        print("Stream stopped")
+        print("Connection stopped")
         self.stop()
 
     def _on_stream_start(self, attrs):
@@ -211,8 +281,11 @@ self._output_stream_writer.is_working() == {}
         pass
 
     def _on_stream_end(self):
-        print("Stream stopped")
-        self.stop()
+#        self.restart_xml_parser()
+#
+        if self.status == 'end of life':
+            print("Stream stopped")
+            self.stop()
 
     def _on_element_readed(self, obj):
 
