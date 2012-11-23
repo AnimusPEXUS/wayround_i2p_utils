@@ -428,13 +428,13 @@ class SocketStreamer:
         self,
         sock,
         socket_transfer_size = 4096,
-        on_connection_stopped = None
+        on_connection_event = None
         ):
 
         self._sock = sock
         self._socket_transfer_size = socket_transfer_size
 
-        self._on_connection_stopped = on_connection_stopped
+        self._on_connection_event = on_connection_event
 
         self._clear(init = True)
 
@@ -475,6 +475,9 @@ class SocketStreamer:
         # from socket to strout
         self._out_thread = None
 
+
+        self._output_availability_watcher_thread = None
+        self._stop_flag = False
         self._stopping = False
 
         if not init:
@@ -483,6 +486,9 @@ class SocketStreamer:
 
         self._in_thread_stop_event = threading.Event()
         self._out_thread_stop_event = threading.Event()
+
+        self._output_avalability_indicated = False
+
         return
 
     def _close_pipe_descriptors(self):
@@ -510,6 +516,7 @@ class SocketStreamer:
             apply_output_seek = False,
             flush_on_input_eof = False,
             on_exit_callback = self._on_in_thread_exit,
+            on_output_write_error = self._on_socket_write_error,
             termination_event = self._in_thread_stop_event
             )
 
@@ -532,6 +539,7 @@ class SocketStreamer:
             apply_output_seek = False,
             flush_on_input_eof = True,
             on_exit_callback = self._on_out_thread_exit,
+            on_input_read_error = self._on_socket_read_error,
             termination_event = self._out_thread_stop_event
             )
 
@@ -557,6 +565,8 @@ class SocketStreamer:
 
         else:
 
+            self._stop_flag = False
+
             self._pipe_outside = os.pipe()
             self._pipe_inside = os.pipe()
 
@@ -569,6 +579,13 @@ class SocketStreamer:
 
             self._start_threads()
 
+            self._output_availability_watcher_thread = threading.Thread(
+                target = self._output_availability_watcher,
+                name = "Socket Output Availability Watcher Thread"
+                )
+
+            self._output_availability_watcher_thread.start()
+
         return
 
     def stop(self):
@@ -577,6 +594,7 @@ class SocketStreamer:
 
             self._stopping = True
 
+            self._stop_flag = True
 #            self._close_pipe_descriptors()
 
             self._stop_threads()
@@ -599,7 +617,12 @@ class SocketStreamer:
         taken from self._sock
         """
 
-        # TODO: exclude sock parameter from arguments
+        if len(args) > 0:
+            if issubclass(args[0], socket.socket):
+                del args[0]
+
+        if 'sock' in kwargs:
+            del kwargs['sock']
 
         s = None
 
@@ -612,9 +635,20 @@ class SocketStreamer:
         except:
             raise
         else:
-            logging.info("  peer cert:\n{}".format(repr(s.getpeercert(binary_form = False))))
-            logging.info("     cipher:\n{}".format(repr(s.cipher())))
-            logging.info("compression:\n{}".format(repr(s.compression())))
+            logging.info(
+                """\
+peer cert:
+{}
+cipher:
+{}
+compression:
+{}""".format(
+                    repr(s.getpeercert(binary_form = False)),
+                    repr(s.cipher()),
+                    repr(s.compression())
+                    )
+                )
+
             self._sock = s
 
             self._restart_threads()
@@ -640,6 +674,7 @@ class SocketStreamer:
         return (
             bool(self._in_thread)
             or bool(self._out_thread)
+            or bool(self._output_availability_watcher_thread)
             )
 
     def _wait(self):
@@ -657,11 +692,44 @@ class SocketStreamer:
     def _on_out_thread_exit(self):
         self._out_thread = None
 
-    def _stream_stopped(self):
-        if self._on_connection_stopped:
+    def _on_socket_write_error(self):
+        self._on_socket_error()
+
+    def _on_socket_read_error(self):
+        self._on_socket_error()
+
+    def _on_socket_error(self):
+        self._stop_threads()
+
+        if self._on_connection_event:
             threading.Thread(
-                target = self._on_connection_stopped,
+                target = self._on_connection_event,
+                args = ('stopped',),
                 name = "Connection Stopped Thread"
                 ).start()
 
+    def _output_availability_watcher(self):
 
+        out_poll = select.poll()
+        out_poll.register(self._sock.fileno(), select.POLLOUT)
+
+        ret = 0
+
+        while len(out_poll.poll(500)) == 0:
+
+            if self._stop_flag:
+                ret = 1
+                break
+
+        if ret == 0:
+
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('started',),
+                    name = "Connection Started Thread"
+                    ).start()
+
+        self._output_availability_watcher_thread = None
+
+        return

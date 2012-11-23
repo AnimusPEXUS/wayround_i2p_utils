@@ -69,15 +69,11 @@ class XMPPInputStreamReaderTarget:
 
     def __init__(
         self,
-        on_stream_start = None,
-        on_stream_start_error = None,
-        on_stream_end = None,
+        on_stream_event = None,
         on_element_readed = None
         ):
 
-        self._on_stream_start = on_stream_start
-        self._on_stream_start_error = on_stream_start_error
-        self._on_stream_end = on_stream_end
+        self._on_stream_event = on_stream_event
         self._on_element_readed = on_element_readed
 
         self.clear(init = True)
@@ -100,17 +96,20 @@ class XMPPInputStreamReaderTarget:
         if len(self._depth_tracker) == 0:
 
             if name == 'stream:stream':
-                if self._on_stream_start:
+                if self._on_stream_event:
                     threading.Thread(
-                        target = self._on_stream_start,
-                        args = (attributes,),
+                        target = self._on_stream_event,
+                        args = ('start',),
+                        kwargs = {'attrs': attributes},
                         name = "Stream Start Thread"
                         ).start()
 
             else:
                 if self._on_stream_start_error:
                     threading.Thread(
-                        target = self._on_stream_start_error,
+                        target = self._on_stream_event,
+                        args = ('error',),
+                        kwargs = {'attrs':None},
                         name = "Stream Start Error Thread"
                         ).start()
 
@@ -177,7 +176,9 @@ class XMPPInputStreamReaderTarget:
 
         if self._on_stream_end:
             threading.Thread(
-                target = self._on_stream_end,
+                target = self._on_stream_event,
+                args = ('end',),
+                kwargs = {'attrs':None},
                 name = "Stream Ended Thread"
                 ).start()
 
@@ -460,28 +461,110 @@ class Stanza:
         pass
 
 
-class XMPPInputStreamHub:
+class Hub():
 
     def __init__(self):
 
-        self.waiters = {}
+        self._clean(init = True)
 
-        return
+    def _clean(self, init = False):
 
-    def dispatch(self, obj):
+        self._waiters = {}
 
-        waiters = list(self.waiters.keys())
+    def dispatch(self):
+
+        waiters = list(self._waiters.keys())
         waiters.sort()
 
         for i in waiters:
 
-            t = threading.Thread(
+            threading.Thread(
                 target = self._waiter_thread,
-                args = (self.waiters[i], obj,),
-                kwargs = dict()
-                )
+                name = 'Simple Dispatcher `{}'.format(self._name, i),
+                args = (self._waiters[i],),
+                kwargs = {}
+                ).start()
 
-            t.start()
+    def _waiter_thread(self, call):
+
+        call()
+
+        return
+
+    def set_waiter(self, name, reactor):
+
+        self._waiters[name] = reactor
+
+        return
+
+    def del_waiter(self, name):
+
+        if name in self._waiters:
+            del self._waiters[name]
+
+        return
+
+class ConnectionEventsHub(Hub):
+
+    def dispatch(self, event):
+
+        waiters = list(self._waiters.keys())
+        waiters.sort()
+
+        for i in waiters:
+
+            threading.Thread(
+                target = self._waiter_thread,
+                name = 'Connection Events Dispatch `{}'.format(i),
+                args = (self._waiters[i], event,),
+                kwargs = {}
+                ).start()
+
+    def _waiter_thread(self, call, event):
+
+        call(event)
+
+        return
+
+
+class StreamEventsHub(Hub):
+
+    def dispatch(self, start, attrs = None):
+
+        waiters = list(self._waiters.keys())
+        waiters.sort()
+
+        for i in waiters:
+
+            threading.Thread(
+                target = self._waiter_thread,
+                name = 'Thread Dispatching Stream Events `{}'.format(i),
+                args = (self._waiters[i], start,),
+                kwargs = {'attrs':attrs}
+                ).start()
+
+    def _waiter_thread(self, call, start, attrs = None):
+
+        call(start, attrs)
+
+        return
+
+class StreamObjectsDispatchingHub(Hub):
+
+
+    def dispatch(self, obj):
+
+        waiters = list(self._waiters.keys())
+        waiters.sort()
+
+        for i in waiters:
+
+            threading.Thread(
+                target = self._waiter_thread,
+                name = 'Input Stream Objects Hub `{}'.format(i),
+                args = (self._waiters[i], obj,),
+                kwargs = dict()
+                ).start()
 
         return
 
@@ -491,15 +574,114 @@ class XMPPInputStreamHub:
 
         return
 
-    def set_waiter(self, name, reactor):
 
-        self.waiters[name] = reactor
+class TLSDriver:
+
+    def __init__(self):
+
+        self._clean(init = True)
+
+
+    def set_objects(
+        self,
+        socket_streamer,
+        output_stream_writer,
+        connector,
+        on_finish
+        ):
+
+        self._socket_streamer = socket_streamer
+        self._output_stream_writer = output_stream_writer
+        self._connector = connector
+        self._on_finish = on_finish
+
+    def _clean(self, init = False):
+
+        self._socket_streamer = None
+        self._output_stream_writer = None
+        self._connector = None
+        self._on_finish = None
+
+        self._drive_tls_features = False
+
+        self.status = 'just created'
+
+    def drive(self, obj):
+        if obj.tag == 'stream:features':
+            self.status = 'looking for tls'
+
+            if obj.find('starttls') != None:
+
+                self.status = 'requesting tls'
+
+                self._drive_tls_features = True
+
+                self._output_stream_writer.send(
+                    starttls()
+                    )
+            else:
+
+                if self._on_finish:
+                    threading.Thread(
+                        target = self._on_finish,
+                        name = "TLS Driver Finish Thread",
+                        args = ('tls not suggested',)
+                        ).start()
+
+
+    def _features_waiter(self, obj):
+
+        if self._drive_tls_features and obj.tag == 'stream:features':
+
+            if (
+                self.status == 'requesting tls'
+                and self.tls_request_result == 'proceed'
+                and self._socket_streamer.is_ssl_working()
+                ):
+
+                self._drive_tls_features = False
+
+                self.statu = 'tls started'
+
+                if self._on_finish:
+                    threading.Thread(
+                        target = self._on_finish,
+                        name = "TLS Driver Finish Thread",
+                        args = ('tls started',),
+                        kwargs = {'obj':obj}
+                        ).start()
 
         return
 
-    def del_waiter(self, name):
+    def _urn_ietf_params_xml_ns_xmpp_tls_waiter(self, obj):
 
-        if name in self.waiters:
-            del self.waiters[name]
+        if (
+            self._drive_tls_features and
+            obj.get('xmlns', None) == 'urn:ietf:params:xml:ns:xmpp-tls'
+            ):
+
+            if self.status == 'requesting tls':
+
+                if obj.tag in ['proceed', 'failure']:
+                    self.tls_request_result = obj.tag
+                else:
+                    logging.error("TLS Request Error")
+                    self.close()
+
+                if self.tls_request_result == 'proceed':
+
+                    self._sock_streamer.start_ssl()
+
+                    self._connector._restart_xml_parser()
+
+                    self._output_stream_writer.send(
+                        start_stream(
+                            fro = self._connector._user_jid,
+                            to = self._connector._domain
+                            )
+                        )
+                else:
+                    logging.error("TLS Request Failure")
+                    self.close()
 
         return

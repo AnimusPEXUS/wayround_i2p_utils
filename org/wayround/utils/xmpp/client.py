@@ -4,6 +4,7 @@ Simple Client used while developing xmpp module of org.wayround.utils
 """
 
 import logging
+import select
 import socket
 import threading
 import time
@@ -46,7 +47,7 @@ class SampleBotClient:
         self._output_stream_writer = None
         self._xml_target = None
 
-        self._hub = None
+        self._input_stream_hub = None
 
         self.status = 'before start'
         self.tls_request_result = None
@@ -59,32 +60,60 @@ class SampleBotClient:
         if self.is_working():
             raise RuntimeError("Already working")
 
-        self._sock = socket.create_connection((self._host, self._port))
+        ######### HUBS
+
+        self._connection_events_hub = org.wayround.utils.xmpp.core.ConnectionEventsHub()
+        self._connection_events_hub.set_waiter('primary', self._on_connection_event)
+
+        self._stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
+
+        self._input_stream_hub = org.wayround.utils.xmpp.core.StreamObjectsDispatchingHub()
+        self._input_stream_hub.set_waiter('features', self._features_waiter)
+        self._input_stream_hub.set_waiter('tls', self._urn_ietf_params_xml_ns_xmpp_tls_waiter)
+
+        ######### SOCKET
+
+        self._sock = socket.create_connection(
+            (
+             self._host,
+             self._port
+             )
+            )
+
+        ######### STREAMS
 
         self._sock_streamer = org.wayround.utils.stream.SocketStreamer(
             self._sock,
             socket_transfer_size = 4096,
-            on_connection_stopped = self._on_connection_stopped
+            on_connection_event = self._connection_events_hub.dispatch
             )
 
         self._sock_streamer.start()
 
-        self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
-
-        self._input_stream_reader = org.wayround.utils.xmpp.core.XMPPInputStreamReader(
-            self._sock_streamer.strout,
-            self._xml_parser
-            )
 
         self._output_stream_writer = org.wayround.utils.xmpp.core.XMPPOutputStreamWriter(
             self._sock_streamer.strin
             )
 
+        self._output_stream_writer.start()
+
+        ######### DRIVERS
+
+        self._tls_driver = org.wayround.utils.xmpp.core.TLSDriver(
+            )
+
+        self._tls_driver.set_objects(
+            self._sock_streamer,
+            self._output_stream_writer,
+            self,
+            on_finish = self._on_tls_negotiated
+            )
+
+        ######### XML TARGET
+
         self._xml_target = org.wayround.utils.xmpp.core.XMPPInputStreamReaderTarget(
-            on_stream_start = self._on_stream_start,
-            on_stream_start_error = self._on_stream_start_error,
-            on_stream_end = self._on_stream_end,
-            on_element_readed = self._on_element_readed
+            on_stream_event = self._on_stream_event,
+            on_element_readed = self._input_stream_hub.dispatch
             )
 
         org.wayround.utils.xml.expat_parser_connect_target(
@@ -92,19 +121,16 @@ class SampleBotClient:
             self._xml_target
             )
 
-        self._hub = org.wayround.utils.xmpp.core.XMPPInputStreamHub()
 
-        self._hub.set_waiter('features', self._features_waiter)
-        self._hub.set_waiter('tls', self._urn_ietf_params_xml_ns_xmpp_tls_waiter)
+        ######### START XML PARSER AND XML INPUT FEEDER FOR IT
 
-        for i in [
-            self._input_stream_reader.start,
-            self._output_stream_writer.start,
-            ]:
+        self._start_xml_parser()
 
-            threading.Thread(
-                target = i
-                ).start()
+
+
+        ######## WAIT SOCKET OUTPUT AVAILABILITY AND START OUR OUTPUT STREAM
+
+        p = select.Poll()
 
         self._output_stream_writer.send(
             org.wayround.utils.xmpp.core.start_stream(
@@ -125,15 +151,9 @@ class SampleBotClient:
 
             self._sock_streamer.stop()
 
-            for i in [
-                self._input_stream_reader.stop,
-                self._output_stream_writer.stop
-                ]:
+            self._stop_xml_parser()
 
-                threading.Thread(
-                    target = i
-                    ).start()
-
+            self._output_stream_writer.stop()
 
             self.wait()
 
@@ -160,7 +180,7 @@ class SampleBotClient:
 
         return
 
-    def start_xml_parser(self):
+    def _start_xml_parser(self):
         self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
         self._input_stream_reader = org.wayround.utils.xmpp.core.XMPPInputStreamReader(
             self._sock_streamer.strout,
@@ -172,14 +192,14 @@ class SampleBotClient:
             )
         self._input_stream_reader.start()
 
-    def stop_xml_parser(self):
+    def _stop_xml_parser(self):
 #        self._ignore_next_stream_end=True
 #        self._xml_parser.Parse(b'</stream:stream>', True)
         self._input_stream_reader.stop()
 
-    def restart_xml_parser(self):
-        self.stop_xml_parser()
-        self.start_xml_parser()
+    def _restart_xml_parser(self):
+        self._stop_xml_parser()
+        self._start_xml_parser()
 
 
 
@@ -226,20 +246,8 @@ self._output_stream_writer.is_working() == {}
 
             print("Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
 
-            if self.status == 'before start':
+            self._
 
-                self.status = 'looking for tls'
-
-                if obj.find('starttls') != None:
-
-                    self.status = 'requesting tls'
-
-                    self._output_stream_writer.send(
-                        org.wayround.utils.xmpp.core.starttls()
-                        )
-
-            if self.status == 'requesting tls' and self.tls_request_result == 'proceed':
-                print("TLS Started")
 
     def _urn_ietf_params_xml_ns_xmpp_tls_waiter(self, obj):
 
@@ -256,7 +264,7 @@ self._output_stream_writer.is_working() == {}
 
                     self._sock_streamer.start_ssl()
 
-                    self.restart_xml_parser()
+                    self._restart_xml_parser()
 
                     self._output_stream_writer.send(
                         org.wayround.utils.xmpp.core.start_stream(
@@ -269,11 +277,15 @@ self._output_stream_writer.is_working() == {}
                     self.close()
 
 
-    def _on_connection_stopped(self):
-        print("Connection stopped")
-        self.stop()
+    def _on_connection_event(self, event):
 
-    def _on_stream_start(self, attrs):
+        if event == 'started':
+            print("Connection started")
+
+        elif event == 'stopped':
+            print("Connection stopped")
+
+    def _on_stream_event(self, attrs):
 
         print("Stream started")
 
@@ -281,13 +293,12 @@ self._output_stream_writer.is_working() == {}
         pass
 
     def _on_stream_end(self):
-#        self.restart_xml_parser()
+#        self._restart_xml_parser()
 #
         if self.status == 'end of life':
             print("Stream stopped")
             self.stop()
 
-    def _on_element_readed(self, obj):
+    def _on_tls_negotiated(self, obj):
 
-        self._hub.dispatch(obj)
-
+        pass
