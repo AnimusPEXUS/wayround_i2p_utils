@@ -704,7 +704,7 @@ compression:
         if self._on_connection_event:
             threading.Thread(
                 target = self._on_connection_event,
-                args = ('stopped',),
+                args = ('stop',),
                 name = "Connection Stopped Thread"
                 ).start()
 
@@ -726,7 +726,7 @@ compression:
             if self._on_connection_event:
                 threading.Thread(
                     target = self._on_connection_event,
-                    args = ('started',),
+                    args = ('start',),
                     name = "Connection Started Thread"
                     ).start()
 
