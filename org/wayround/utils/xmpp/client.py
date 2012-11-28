@@ -81,7 +81,7 @@ class SampleBotClient:
             self._output_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
 
             self._connection_events_hub.set_waiter(
-                'main', self._on_connection_waiter
+                'main', self._on_connection_event
                 )
 
             self._input_stream_events_hub.set_waiter(
@@ -91,8 +91,6 @@ class SampleBotClient:
             self._input_stream_objects_hub.set_waiter(
                 'main', self._on_stream_object
                 )
-
-
 
             ######### SOCKET
 
@@ -135,23 +133,33 @@ class SampleBotClient:
     def stop(self):
 
 
-        if not self._stopping and not self._starting and self.stat() == 'working':
+        if not self._stopping and not self._starting:
             self._stopping = True
 
             self._stop_flag = True
 
-            self._output_machine.stop()
+            stop_list = [
+                self._stop_input_machine,
+                self._stop_output_machine
+                ]
 
-            self._sock_streamer.stop()
+            if self._sock_streamer:
+                stop_list.append(self._sock_streamer.stop)
 
-            self._stop_input_xml_parser()
+            for i in stop_list:
+                threading.Thread(
+                    target = i,
+                    name = "Stopping Thread ({})".format(i)
+                    ).start()
 
-            self.wait()
+
+            self.wait('stopped')
 
             logging.debug("Cleaning client instance")
 
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
+            if self._sock:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
 
             self._clear()
 
@@ -192,12 +200,14 @@ class SampleBotClient:
             v3 = self._output_machine.stat()
 
 
-        logging.debug("""
-self._sock_streamer.stat() == {}
-self._input_machine.stat() == {}
-self._output_machine.stat() == {}
-""".format(v1, v2, v3)
-            )
+#        logging.debug("""
+#self._sock_streamer.stat() == {}
+#self._input_machine.stat() == {}
+#self._output_machine.stat() == {}
+#""".format(v1, v2, v3)
+#            )
+
+        logging.debug("{}, {}, {}".format(v1, v2, v3))
 
         if v1 == v2 == v3 == 'working':
             ret = 'working'
@@ -228,7 +238,8 @@ self._output_machine.stat() == {}
         self._input_machine.start()
 
     def _stop_input_machine(self):
-        self._input_machine.stop()
+        if self._input_machine:
+            self._input_machine.stop()
 
     def _restart_input_machine(self):
         self._stop_input_machine()
@@ -247,7 +258,8 @@ self._output_machine.stat() == {}
         self._output_machine.start()
 
     def _stop_output_machine(self):
-        self._output_machine.stop()
+        if self._output_machine:
+            self._output_machine.stop()
 
     def _restart_output_machine(self):
         self._stop_output_machine()
@@ -260,7 +272,7 @@ self._output_machine.stat() == {}
 
             print("Second Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
 
-    def _on_connection_waiter(self, event):
+    def _on_connection_event(self, event):
 
         if event == 'start':
             print("Connection started")
@@ -268,6 +280,8 @@ self._output_machine.stat() == {}
             self._connection = True
 
             self.wait('working')
+
+            logging.debug("ended waiting for nonnection")
 
 #            self._tls_driver.set_objects(
 #                self._sock_streamer,

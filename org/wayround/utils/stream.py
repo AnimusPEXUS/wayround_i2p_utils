@@ -480,6 +480,7 @@ class SocketStreamer:
         self._stop_flag = False
         self._stopping = False
         self._starting = False
+        self._stopping_threads = False
 
         if not init:
             self._in_thread_stop_event.set()
@@ -553,24 +554,31 @@ class SocketStreamer:
         self._stat = 'soft started threads'
 
     def _stop_threads(self, by_error = False):
-        self._stat = 'soft stopping threads'
 
-        self._in_thread_stop_event.set()
-        self._out_thread_stop_event.set()
+        if not self._stopping_threads:
 
-        self.wait('stopped')
+            self._stopping_threads = True
 
-        self._in_thread_stop_event.clear()
-        self._out_thread_stop_event.clear()
-        self._stat = 'soft stopped threads'
+            self._stat = 'soft stopping threads'
+            self._in_thread_stop_event.set()
+            self._out_thread_stop_event.set()
 
-        if not by_error:
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('stop',),
-                    name = "Connection Stopped Thread"
-                    ).start()
+            self.wait('stopped')
+
+            self._in_thread_stop_event.clear()
+            self._out_thread_stop_event.clear()
+            self._stat = 'soft stopped threads'
+
+            self._stopping_threads = False
+
+
+            if not by_error:
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('stop',),
+                        name = "Connection Stopped Thread"
+                        ).start()
 
     def _restart_threads(self):
         self._stat = 'soft restarting threads'
@@ -615,7 +623,7 @@ class SocketStreamer:
 
     def stop(self):
 
-        if not self._stopping and not self.starting and self.start() == 'working':
+        if not self._stopping and not self._starting and not self.stat() == 'stopped':
 
             self._stat = 'hard stopping'
 
@@ -706,6 +714,8 @@ compression:
         v2 = self._out_thread
         v3 = self._output_availability_watcher_thread
 
+#        logging.debug("{}, {}, {}".format(v1, v2, v3))
+
         if (
             bool(v1)
             and bool(v2)
@@ -735,7 +745,6 @@ compression:
             s = self.stat()
             if s == what:
                 break
-            logging.debug("waiting for `{}' and now is `{}'".format(what, s))
             time.sleep(0.1)
 
         return
@@ -770,15 +779,15 @@ compression:
         out_poll = select.poll()
         out_poll.register(self._sock.fileno(), select.POLLOUT)
 
-        ret = 0
+        stopped_by_flag = 0
 
         while len(out_poll.poll(100)) == 0:
 
             if self._stop_flag:
-                ret = 1
+                stopped_by_flag = 1
                 break
 
-        if ret == 0:
+        if stopped_by_flag == 0:
 
             if self._on_connection_event:
                 threading.Thread(

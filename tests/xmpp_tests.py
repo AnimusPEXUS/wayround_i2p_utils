@@ -1,6 +1,6 @@
 
 import logging
-#import signal
+import signal
 
 import org.wayround.utils.xmpp.core
 import org.wayround.utils.xmpp.client
@@ -22,8 +22,17 @@ sbc = org.wayround.utils.xmpp.client.SampleBotClient(
     )
 
 sbc.start()
-sbc.wait('stopped')
 
-#signal.pause()
+try:
+    signal.pause()
+except:
+    pass
+
+sbc.stop()
+
+try:
+    sbc.wait('stopped')
+except:
+    pass
 
 exit(0)

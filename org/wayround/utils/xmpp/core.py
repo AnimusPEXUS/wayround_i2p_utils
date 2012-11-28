@@ -316,7 +316,7 @@ class XMPPInputStreamReader:
 
     def stop(self):
 
-        if not self._stopping and not self.starting and self.start() == 'working':
+        if not self._stopping and not self._starting:
             self._stat = 'hard stopping'
             self._stopping = True
 
@@ -462,13 +462,13 @@ class XMPPOutputStreamWriter:
 
     def stop(self):
 
-        if not self._starting and not self._stopping and self.stat() == 'started':
+        if not self._starting and not self._stopping:
             self._stopping = True
             self._stat = 'hard stopping'
 
             self._stop_flag = True
 
-            self.wait('stopping')
+            self.wait('stopped')
 
             self._clear()
 
@@ -705,7 +705,7 @@ class XMPPStreamMachine:
 
         if not init:
             if not self.stat() == 'stopped':
-                raise RuntimeError("Already Working")
+                raise RuntimeError("Working - Clearing Restricted")
 
         self._stopping = False
         self._starting = False
@@ -735,9 +735,6 @@ class XMPPStreamMachine:
 
     def start(self):
 
-        if self.stat() == 'working':
-            raise Exception("Working already")
-
         if not self._starting and not self._stopping and self.stat() == 'stopped':
 
             self._starting = True
@@ -762,11 +759,13 @@ class XMPPStreamMachine:
 
     def stop(self):
 
-        if not self._stopping and not self._starting and self.stat() == 'working':
+        if not self._stopping and not self._starting:
 
             self._stopping = True
 
             self._stream_worker.stop()
+
+            self.wait('stopped')
             self._clear()
 
             self._stopping = False
