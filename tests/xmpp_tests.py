@@ -22,7 +22,7 @@ sbc = org.wayround.utils.xmpp.client.SampleBotClient(
     )
 
 sbc.start()
-sbc.wait()
+sbc.wait('stopped')
 
 #signal.pause()
 

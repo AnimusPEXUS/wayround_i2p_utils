@@ -445,8 +445,8 @@ class SocketStreamer:
     def _clear(self , init = False):
 
         if not init:
-            if self.is_working():
-                raise RuntimeError("{} is working".format(type(self).__name__))
+            if not self.stat() == 'stopped':
+                raise RuntimeError("{} is not stopped".format(type(self).__name__))
 
 
         if not init:
@@ -479,6 +479,7 @@ class SocketStreamer:
         self._output_availability_watcher_thread = None
         self._stop_flag = False
         self._stopping = False
+        self._starting = False
 
         if not init:
             self._in_thread_stop_event.set()
@@ -489,6 +490,8 @@ class SocketStreamer:
 
         self._output_avalability_indicated = False
 
+        self._stat = 'stopped'
+
         return
 
     def _close_pipe_descriptors(self):
@@ -497,6 +500,8 @@ class SocketStreamer:
                 i.close()
 
     def _start_threads(self):
+        self._stat = 'soft starting threads'
+
         self._in_thread = cat(
             stdin = self._strin,
             stdout = self._sock,
@@ -526,7 +531,7 @@ class SocketStreamer:
             threaded = True,
             write_method_name = 'write',
             close_output_on_eof = False,
-            thread_name = 'sock -> strout',
+            thread_name = '_sock -> strout',
             bs = self._socket_transfer_size,
             convert_to_str = None,
             read_method_name = 'recv',
@@ -545,26 +550,41 @@ class SocketStreamer:
 
         self._in_thread.start()
         self._out_thread.start()
+        self._stat = 'soft started threads'
 
-    def _stop_threads(self):
+    def _stop_threads(self, by_error = False):
+        self._stat = 'soft stopping threads'
+
         self._in_thread_stop_event.set()
         self._out_thread_stop_event.set()
-        self._wait()
+
+        self.wait('stopped')
+
         self._in_thread_stop_event.clear()
         self._out_thread_stop_event.clear()
+        self._stat = 'soft stopped threads'
+
+        if not by_error:
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('stop',),
+                    name = "Connection Stopped Thread"
+                    ).start()
 
     def _restart_threads(self):
+        self._stat = 'soft restarting threads'
         self._stop_threads()
         self._start_threads()
+        self._stat = 'soft restarted threads'
 
 
     def start(self):
 
-        if self.is_working():
-            raise RuntimeError("Already working")
+        if not self._starting and not self._stopping and self.stat() == 'stopped':
 
-        else:
-
+            self._stat = 'hard starting'
+            self._starting = True
             self._stop_flag = False
 
             self._pipe_outside = os.pipe()
@@ -586,11 +606,18 @@ class SocketStreamer:
 
             self._output_availability_watcher_thread.start()
 
+            self.wait('working')
+
+            self._starting = False
+            self._stat = 'hard started'
+
         return
 
     def stop(self):
 
-        if not self._stopping and self.is_working():
+        if not self._stopping and not self.starting and self.start() == 'working':
+
+            self._stat = 'hard stopping'
 
             self._stopping = True
 
@@ -599,7 +626,7 @@ class SocketStreamer:
 
             self._stop_threads()
 
-            self._wait()
+            self.wait('stopped')
 
             if self.is_ssl_working():
                 self.stop_ssl()
@@ -607,6 +634,8 @@ class SocketStreamer:
             self._clear()
 
             self._stopping = False
+
+            self._stat = 'hard stopped'
 
         return
 
@@ -669,28 +698,55 @@ compression:
 
         return isinstance(self._sock, ssl.SSLSocket)
 
-    def is_working(self):
+    def stat(self):
 
-        return (
-            bool(self._in_thread)
-            or bool(self._out_thread)
-            or bool(self._output_availability_watcher_thread)
-            )
+        ret = 'unknown'
 
-    def _wait(self):
+        v1 = self._in_thread
+        v2 = self._out_thread
+        v3 = self._output_availability_watcher_thread
+
+        if (
+            bool(v1)
+            and bool(v2)
+            ):
+            ret = 'working'
+
+        elif (
+            not bool(v1)
+            and not bool(v2)
+            and not bool(v3)
+            ):
+            ret = 'stopped'
+
+        else:
+            ret = self._stat
+
+        return ret
+
+    def wait(self, what = 'stopped'):
+
+        allowed_what = ['stopped', 'working']
+
+        if not what in allowed_what:
+            raise ValueError("`what' must be in {}".format(allowed_what))
 
         while True:
-            time.sleep(1.0)
-            if not self.is_working():
+            s = self.stat()
+            if s == what:
                 break
+            logging.debug("waiting for `{}' and now is `{}'".format(what, s))
+            time.sleep(0.1)
 
         return
 
     def _on_in_thread_exit(self):
         self._in_thread = None
+        self._stop_threads()
 
     def _on_out_thread_exit(self):
         self._out_thread = None
+        self._stop_threads()
 
     def _on_socket_write_error(self):
         self._on_socket_error()
@@ -699,14 +755,15 @@ compression:
         self._on_socket_error()
 
     def _on_socket_error(self):
-        self._stop_threads()
 
         if self._on_connection_event:
             threading.Thread(
                 target = self._on_connection_event,
-                args = ('stop',),
-                name = "Connection Stopped Thread"
+                args = ('error',),
+                name = "Connection Error Thread"
                 ).start()
+
+        self._stop_threads(by_error = True)
 
     def _output_availability_watcher(self):
 
@@ -715,7 +772,7 @@ compression:
 
         ret = 0
 
-        while len(out_poll.poll(500)) == 0:
+        while len(out_poll.poll(100)) == 0:
 
             if self._stop_flag:
                 ret = 1

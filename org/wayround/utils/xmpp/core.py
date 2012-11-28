@@ -242,20 +242,25 @@ class XMPPInputStreamReader:
 
         self._xml_parser = xml_parser
 
-        self._clean(init = True)
+        self._clear(init = True)
+
+        self._stat = 'stopped'
 
 
-    def _clean(self, init = False):
+    def _clear(self, init = False):
 
         if not init:
-            if self.is_working():
+            if not self.stat() == 'stopped':
                 raise RuntimeError("Working. Cleaning not allowed")
 
         self._stream_reader_thread = None
 
+        self._starting = False
         self._stopping = False
 
         self._termination_event = None
+
+        self._stat = 'stopped'
         return
 
     def start(self):
@@ -263,11 +268,10 @@ class XMPPInputStreamReader:
 
         thread_name_in = 'Thread feeding data to XML parser'
 
-        if self.is_working():
-            raise RuntimeError("Already working")
+        if not self._starting and not self._stopping and self.stat() == 'stopped':
 
-        else:
-            self._stop_flag = False
+            self._stat = 'hard starting'
+            self._starting = True
 
             if not self._stream_reader_thread:
 
@@ -303,35 +307,57 @@ class XMPPInputStreamReader:
                 else:
                     self._stream_reader_thread.start()
 
+            self.wait('working')
+            self._stat = 'hard started'
+            self._starting = False
+
         return
 
 
     def stop(self):
 
-        if not self._stopping and self.is_working():
+        if not self._stopping and not self.starting and self.start() == 'working':
+            self._stat = 'hard stopping'
             self._stopping = True
 
             self._termination_event.set()
 
-            self._wait()
+            self.wait('stopped')
 
-            self._clean()
+            self._clear()
 
             self._stopping = False
+            self._stat = 'hard stopped'
 
         return
 
-    def is_working(self):
+    def stat(self):
 
-        return bool(self._stream_reader_thread)
+        ret = None
 
-    def _wait(self):
+        if bool(self._stream_reader_thread):
+            ret = 'working'
+
+        elif not bool(self._stream_reader_thread):
+            ret = 'stopped'
+
+        else:
+            ret = self._stat
+
+        return ret
+
+
+    def wait(self, what = 'stopped'):
+
+        allowed_what = ['stopped', 'working']
+
+        if not what in allowed_what:
+            raise ValueError("`what' must be in {}".format(allowed_what))
 
         while True:
-            if not self.is_working():
+            time.sleep(0.1)
+            if self.stat() == what:
                 break
-
-            time.sleep(0.5)
 
         return
 
@@ -384,30 +410,34 @@ class XMPPOutputStreamWriter:
 
         self._xml_parser = xml_parser
 
-        self._clean(init = True)
+        self._clear(init = True)
 
-    def _clean(self, init = False):
+    def _clear(self, init = False):
 
         if not init:
-            if self.is_working():
+            if not self.stat() == 'stopped':
                 raise RuntimeError("Working. Cleaning not allowed")
 
         self._stop_flag = False
+
+        self._starting = False
         self._stopping = False
 
         self._stream_writer_thread = None
 
         self._output_queue = []
+
+        self._stat = 'stopped'
         return
 
     def start(self):
 
-        thread_name_in = 'Thread sending data to socket streamer'
+        if not self._starting and not self._stopping and self.stat() == 'stopped':
 
-        if self.is_working():
-            raise RuntimeError("Already working")
+            thread_name_in = 'Thread sending data to socket streamer'
 
-        else:
+            self._stat = 'hard starting'
+            self._starting = True
             self._stop_flag = False
 
             if not self._stream_writer_thread:
@@ -423,36 +453,57 @@ class XMPPOutputStreamWriter:
                 else:
                     self._stream_writer_thread.start()
 
+            self.wait('working')
+            self._stat = 'hard started'
+            self._starting = False
+
         return
 
 
     def stop(self):
 
-        if not self._stopping:
+        if not self._starting and not self._stopping and self.stat() == 'started':
             self._stopping = True
+            self._stat = 'hard stopping'
 
             self._stop_flag = True
 
-            self._wait()
+            self.wait('stopping')
 
-            self._clean()
+            self._clear()
 
             self._stopping = False
+            self._stat = 'hard stopped'
 
         return
 
-    def is_working(self):
+    def stat(self):
 
-        return bool(self._stream_writer_thread)
+        ret = 'unknown'
+
+        if bool(self._stream_writer_thread):
+            ret = 'working'
+
+        elif not bool(self._stream_writer_thread):
+            ret = 'stopped'
+
+        else:
+            ret = self._stat
+
+        return ret
 
 
-    def _wait(self):
+    def wait(self, what = 'stopped'):
+
+        allowed_what = ['stopped', 'working']
+
+        if not what in allowed_what:
+            raise ValueError("`what' must be in {}".format(allowed_what))
 
         while True:
-            if not self.is_working():
+            time.sleep(0.1)
+            if self.stat() == what:
                 break
-
-            time.sleep(0.5)
 
         return
 
@@ -477,7 +528,7 @@ class XMPPOutputStreamWriter:
             else:
                 if self._stop_flag:
                     break
-                time.sleep(0.5)
+                time.sleep(0.1)
 
         self._stream_writer_thread = None
 
@@ -519,15 +570,15 @@ class Hub():
 
     def __init__(self):
 
-        self._clean(init = True)
+        self._clear(init = True)
 
-    def _clean(self, init = False):
+    def _clear(self, init = False):
 
         self._waiters = {}
 
     def clean(self):
 
-        self._clean()
+        self._clear()
 
     def dispatch(self):
 
@@ -648,19 +699,24 @@ class XMPPStreamMachine:
 
     def __init__(self):
 
-        self._clean(init = True)
+        self._clear(init = True)
 
-    def _clean(self, init = False):
+    def _clear(self, init = False):
 
         if not init:
-            if self.is_working():
+            if not self.stat() == 'stopped':
                 raise RuntimeError("Already Working")
 
         self._stopping = False
+        self._starting = False
 
         self._xml_target = None
         self._xml_parser = None
         self._stream_worker = None
+
+        self._sock_streamer = None
+        self._stream_events_dispatcher = None
+        self._stream_objects_dispatcher = None
 
     def set_objects(
         self,
@@ -669,13 +725,9 @@ class XMPPStreamMachine:
         stream_objects_dispatcher
         ):
 
-        self.stop()
-
         self._sock_streamer = sock_streamer
         self._stream_events_dispatcher = stream_events_dispatcher
         self._stream_objects_dispatcher = stream_objects_dispatcher
-
-        self.start()
 
     def start_stream_worker(self):
 
@@ -683,42 +735,63 @@ class XMPPStreamMachine:
 
     def start(self):
 
-        if self.is_working():
-            raise RuntimeError("Already Working")
+        if self.stat() == 'working':
+            raise Exception("Working already")
 
-        self._xml_target = XMPPStreamParserTarget(
-            on_stream_event = self._stream_events_dispatcher,
-            on_element_readed = self._stream_objects_dispatcher
-            )
+        if not self._starting and not self._stopping and self.stat() == 'stopped':
 
-        self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
+            self._starting = True
 
-        self.start_stream_worker()
+            self._xml_target = XMPPStreamParserTarget(
+                on_stream_event = self._stream_events_dispatcher,
+                on_element_readed = self._stream_objects_dispatcher
+                )
 
-        org.wayround.utils.xml.expat_parser_connect_target(
-            self._xml_parser,
-            self._xml_target
-            )
+            self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
 
-        self._stream_worker.start()
+            self.start_stream_worker()
+
+            org.wayround.utils.xml.expat_parser_connect_target(
+                self._xml_parser,
+                self._xml_target
+                )
+
+            self._stream_worker.start()
+
+            self._starting = False
 
     def stop(self):
 
-        if not self._stopping and self.is_working():
+        if not self._stopping and not self._starting and self.stat() == 'working':
 
             self._stopping = True
 
             self._stream_worker.stop()
-            self._clean()
+            self._clear()
 
             self._stopping = False
 
-    def is_working(self):
-        return bool(self._stream_worker and self._stream_worker.is_working())
+    def wait(self, what = 'stopped'):
+
+        if self._stream_worker:
+            self._stream_worker.wait(what = 'stopped')
+
+    def stat(self):
+
+        ret = None
+
+        if self._stream_worker:
+            ret = self._stream_worker.stat()
+
+        if ret == None:
+            ret = 'stopped'
+
+        return ret
 
     def restart(self):
         self.stop()
         self.start()
+
 
 
 
@@ -754,7 +827,7 @@ class TLSDriver:
 
     def __init__(self):
 
-        self._clean(init = True)
+        self._clear(init = True)
 
 
     def set_objects(
@@ -780,7 +853,7 @@ class TLSDriver:
         self._jid = jid
         self._on_finish = on_finish
 
-    def _clean(self, init = False):
+    def _clear(self, init = False):
 
         self._sock_streamer = None
         self._output_machine = None
@@ -926,3 +999,5 @@ class TLSDriver:
                 to = self._connector._domain
                 )
             )
+
+
