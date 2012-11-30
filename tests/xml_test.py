@@ -1,36 +1,44 @@
 
 
-import org.wayround.utils.xml
+import xml.parsers.expat
 
-class Test:
-
-
-    def StartElementHandler(self, name, attributes):
-        print("start {}, {}".format(name, attributes))
-
-    def EndElementHandler(self, name):
-        print("end {}".format(name))
+def StartElementHandler(name, attributes):
+    print("start {}, {}".format(name, attributes))
 
 
 
-sample_xmpp = """
-<presence>
-   <show/>
-   </presence>
 
-   <message to='foo'>
-      <body/>
-    </message>
-    <iq to='bar'
-        type='get'>
-      <query/>
-    </iq>
-    """
+sample_xmpp1 = b"""\
+<stream:stream
+       from='juliet@im.example.com'
+       to='im.example.com'
+       version='1.0'
+       xml:lang='en'
+       xmlns='jabber:client'
+       xmlns:stream='http://etherx.jabber.org/streams'>
+     <message>
+       <body>foo</body>
+     </message>
+   </stream:stream>
+"""
 
-xml.parsers.expat
+sample_xmpp2 = b"""\
+<stream
+       from='juliet@im.example.com'
+       to='im.example.com'
+       version='1.0'
+       xml:lang='en'
+       xmlns='http://etherx.jabber.org/streams'>
+     <message xmlns='jabber:client'>
+       <body>foo</body>
+     </message>
+   </stream>
+"""
 
-t = Test(encoding = 'UTF-8')
-t.Parse(bytes(sample_xmpp, encoding = 'utf-8'))
-#a = lxml.etree.fromstring(
+sample_xmpp = sample_xmpp2
 
-#    )
+p = xml.parsers.expat.ParserCreate('UTF-8', ' ')
+
+p.StartElementHandler = StartElementHandler
+
+p.Parse(sample_xmpp)

@@ -8,8 +8,8 @@ import select
 import socket
 import threading
 import time
-import xml.etree.ElementTree
-import xml.parsers.expat
+
+import lxml.etree
 
 import org.wayround.utils.stream
 import org.wayround.utils.xml
@@ -37,6 +37,7 @@ class SampleBotClient:
         self._stop_flag = False
         self._starting = False
         self._stopping = False
+        self._stram_stop_sent = False
 
         self._sock = None
         self._sock_streamer = None
@@ -55,10 +56,18 @@ class SampleBotClient:
 
         self._tls_driver = None
 
+        self._tls_status = None
+
+        self._tls_driven = False
+
         self._connection = False
+        self._stream = False
+
 
         self._input_machine = None
         self._output_machine = None
+
+        self._stage = 'initial'
 
 
     def start(self):
@@ -76,21 +85,11 @@ class SampleBotClient:
             self._connection_events_hub = org.wayround.utils.xmpp.core.ConnectionEventsHub()
 
             self._input_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
-            self._input_stream_objects_hub = org.wayround.utils.xmpp.core.StreamObjectsDispatchingHub()
+            self._input_stream_objects_hub = org.wayround.utils.xmpp.core.StreamObjectsHub()
 
             self._output_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
 
-            self._connection_events_hub.set_waiter(
-                'main', self._on_connection_event
-                )
-
-            self._input_stream_events_hub.set_waiter(
-                'main', self._on_stream_event
-                )
-
-            self._input_stream_objects_hub.set_waiter(
-                'main', self._on_stream_object
-                )
+            self.reset_hubs()
 
             ######### SOCKET
 
@@ -100,6 +99,9 @@ class SampleBotClient:
                  self._connection_info.port
                  )
                 )
+
+            logging.debug('sock is {}'.format(self._sock))
+
 
             ######### STREAMS
 
@@ -132,11 +134,18 @@ class SampleBotClient:
 
     def stop(self):
 
-
         if not self._stopping and not self._starting:
             self._stopping = True
 
-            self._stop_flag = True
+            logging.debug("Starting shutdown sequence")
+            self._shutdown(_forced = True)
+            self.stop_violent(_forced = True)
+
+    def stop_violent(self, _forced = False):
+
+
+        if (not self._stopping and not self._starting) or _forced:
+            self._stopping = True
 
             stop_list = [
                 self._stop_input_machine,
@@ -152,12 +161,11 @@ class SampleBotClient:
                     name = "Stopping Thread ({})".format(i)
                     ).start()
 
-
-            self.wait('stopped')
-
             logging.debug("Cleaning client instance")
 
-            if self._sock:
+            logging.debug('sock is {}'.format(self._sock))
+
+            if self._connection:
                 self._sock.shutdown(socket.SHUT_RDWR)
                 self._sock.close()
 
@@ -165,8 +173,36 @@ class SampleBotClient:
 
             self._stopping = False
 
-
         return
+
+    def _shutdown(self, timeout_sec = 5.0, _forced = False):
+
+        time_waited = 0.0
+
+        if (not self._stopping and not self._starting) or _forced:
+
+            self._stop_flag = True
+
+            logging.debug("Stopping client correctly")
+            self._stram_stop_sent = True
+
+            if self._connection and not self._stram_stop_sent:
+                logging.debug("Sending end of stream")
+                self._output_machine.send(
+                    org.wayround.utils.xmpp.core.stop_stream()
+                    )
+
+            while True:
+                if self.stat() == 'stopped':
+                    break
+
+                logging.debug("Timeout in {:3.2f} sec".format(timeout_sec - time_waited))
+                if time_waited >= timeout_sec:
+                    break
+
+                time.sleep(1.0)
+                time_waited += 1.0
+
 
     def wait(self, what = 'stopped'):
 
@@ -211,6 +247,7 @@ class SampleBotClient:
 
         if v1 == v2 == v3 == 'working':
             ret = 'working'
+
         elif v1 == v2 == v3 == 'stopped':
             ret = 'stopped'
 
@@ -218,14 +255,6 @@ class SampleBotClient:
             ret = 'stopped'
 
         return ret
-
-    def start_stream_stop(self):
-
-        if self._connection:
-            self._output_machine.send(
-                org.wayround.utils.xmpp.core.stop_stream()
-                )
-
 
     def _start_input_machine(self):
 
@@ -266,116 +295,183 @@ class SampleBotClient:
         self._start_output_machine()
 
 
-    def _features_waiter_second(self, obj):
+    def reset_hubs(self):
 
-        if obj.tag == 'stream:features':
+        self._connection_events_hub.clear()
 
-            print("Second Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
+        self._input_stream_events_hub.clear()
+        self._input_stream_objects_hub.clear()
 
-    def _on_connection_event(self, event):
+        self._output_stream_events_hub.clear()
 
-        if event == 'start':
-            print("Connection started")
+        self._connection_events_hub.set_waiter(
+            'main', self._on_connection_event
+            )
 
-            self._connection = True
+        self._input_stream_events_hub.set_waiter(
+            'main', self._on_stream_event
+            )
 
-            self.wait('working')
-
-            logging.debug("ended waiting for nonnection")
-
-#            self._tls_driver.set_objects(
-#                self._sock_streamer,
-#                self._input_machine,
-#                self._output_machine,
-#                self._input_stream_events_hub,
-#                self._input_stream_objects_hub,
-#                self._output_stream_events_hub,
-#                self._connection_info,
-#                self._jid,
-#                on_finish = self._tls_driver_finish_waiter
-#                )
-#
-#            self._output_machine.send(
-#                org.wayround.utils.xmpp.core.start_stream(
-#                    fro = self._jid.full(),
-#                    to = self._connection_info.host
-#                    )
-#                )
+        self._input_stream_objects_hub.set_waiter(
+            'main', self._on_stream_object
+            )
 
 
-        elif event == 'stop':
-            print("Connection stopped")
-            self._connection = False
-            self.stop()
 
-        elif event == 'error':
-            print("Connection error")
+    def _on_connection_event(self, event, sock):
+
+        if not self._tls_driven:
+
+            logging.debug("_on_connection_event `{}', `{}'".format(event, sock))
+
+            if event == 'start':
+                print("Connection started")
+
+                self._connection = True
+
+                self.wait('working')
+
+                logging.debug("Ended waiting for connection. Opening output stream")
+
+
+                self._output_machine.send(
+                    org.wayround.utils.xmpp.core.start_stream(
+                        fro = self._jid.bare(),
+                        to = self._connection_info.host
+                        ),
+                    True
+                    )
+
+                logging.debug("Stream opening tag was started")
+
+            elif event == 'stop':
+                print("Connection stopped")
+                self._connection = False
+                self.stop()
+
+            elif event == 'error':
+                print("Connection error")
+                self._connection = False
+                self.stop()
 
 
     def _on_stream_event(self, event, attrs = None):
 
-        print("Stream event {} : {}".format(event, attrs))
+        if not self._tls_driven:
 
-        if event == 'start':
-            pass
+            logging.debug("Stream event `{}' : `{}'".format(event, attrs))
 
-        elif event == 'stop':
-            self.start_stream_stop()
-            self.stop()
+            if event == 'start':
 
-        elif event == 'error':
-            pass
+                self._stream = True
+
+
+            elif event == 'stop':
+                self._stream = False
+                self.stop()
+
+            elif event == 'error':
+                self._stream = False
+                self.stop()
 
     def _on_stream_object(self, obj):
 
-        if obj.tag == 'stream:features':
+        if not self._tls_driven:
 
-            self._last_features = obj
+            logging.debug("_on_stream_object (first 255 bytes):`{}'".format(repr(lxml.etree.tostring(obj)[:255])))
+
+            if obj.tag == '{http://etherx.jabber.org/streams}features':
+
+                self._last_features = obj
+
+                if self._stage == 'initial':
+                    self._features_waiter(obj, 'tls')
+
+                if self._stage == 'tls':
+                    self._features_waiter(obj, 'auth')
+
+                if self._stage == 'auth':
+                    self._features_waiter(obj, 'other')
 
 
-    def _features_waiter_first(self, obj):
+    def _features_waiter(self, obj, stage = 'other'):
 
-        if obj.tag == 'stream:features':
+        logging.debug("_features_waiter :: `{}' `{}'".format(obj, stage))
 
-            print("First Features received:\n{}".format(xml.etree.ElementTree.tostring(obj)))
-            print("Driving to TLS")
+        if not self._tls_driven:
 
-            self._input_stream_objects_hub.set_waiter(
-                'features', self._features_waiter_second
-                )
+            allowed = ['initial', 'tls', 'auth', 'other']
 
-            self._tls_driver.drive(obj)
+            if not stage in allowed:
+                raise ValueError("`stage' must be in {}".format(allowed))
+
+            if stage == 'tls':
+
+                self._stage = 'tls'
+
+                self._tls_driven = True
+
+                self._tls_driver.set_objects(
+                    self._sock_streamer,
+                    self._input_machine,
+                    self._output_machine,
+                    self._connection_events_hub,
+                    self._input_stream_events_hub,
+                    self._input_stream_objects_hub,
+                    self._output_stream_events_hub,
+                    self._connection_info,
+                    self._jid,
+                    on_finish = self._tls_driver_finish_waiter
+                    )
+
+                threading.Thread(
+                    name = "TLS Driver Thread",
+                    target = self._tls_driver.drive,
+                    args = (obj,)
+                    ).start()
+
+            if stage == 'auth':
+                logging.debug("Auth need to be implemented")
 
 
     def _tls_driver_finish_waiter(self, result):
 
+        logging.debug("_tls_driver_finish_waiter :: {}".format(result))
+
         if result == 'no tls':
+            self._tls_driven = False
             logging.error("Peer not supports TLS. exiting...")
             self.stop()
 
         elif result == 'response error':
+            self._tls_driven = False
             logging.error("Some Error")
             self.stop()
 
         elif result == 'failure':
+            self._tls_driven = False
             logging.error("TLS request failure")
             self.stop()
 
         elif result == 'proceed':
+            # wait for success and then _tls_driven=False
             threading.Thread(
                 target = self._tls_driver.proceed,
                 name = "Thread Proceeding STARTTLS negotiations"
                 ).start()
 
         elif result == 'stream error':
+            self._tls_driven = False
             logging.error("Stream Error while STARTTLS negotiations")
             self.stop()
 
         elif result == 'stream stopped':
+            self._tls_driven = False
             logging.error("Peer closed stream while STARTTLS negotiations")
             self.stop()
 
         elif result == 'success':
+            self._tls_driven = False
             pass
 
         else:

@@ -1,10 +1,10 @@
 
+import copy
 import logging
 import threading
 import time
-import xml.etree.ElementTree
-import xml.parsers.expat
 
+import lxml.etree
 import mako.template
 
 import org.wayround.utils.stream
@@ -22,15 +22,10 @@ def start_stream(
 
     return mako.template.Template(
         """\
-<?xml version="1.0"?>
-<stream:stream
-    from="${ fro | x }"
-    to="${ to | x }"
-    version="${ version | x }"
-    xml:lang="${ xml_lang | x }"
-    xmlns="${ xmlns | x }"
-    xmlns:stream="${ xmlns_stream | x }">
-""").render(
+<?xml version="1.0"?>\
+<stream:stream from="${ fro | x }" to="${ to | x }" version="${ version | x }" \
+xml:lang="${ xml_lang | x }" xmlns="${ xmlns | x }" \
+xmlns:stream="${ xmlns_stream | x }">""").render(
             fro = fro,
             to = to,
             version = version,
@@ -43,9 +38,7 @@ def stop_stream():
     return '</stream:stream>'
 
 def starttls():
-    return """\
-<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
-"""
+    return '<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
 
 def check_stream_handler_correctness(handler):
 
@@ -93,14 +86,17 @@ class C2SConnectionInfo:
         host = 'localhost',
         port = 5222,
         password = 'secret',
-        user_jid = None,
+        jid = None,
         priority = 'default'
         ):
+
+        if host == None and isinstance(jid, JID):
+            host = jid.domain
 
         self.host = host
         self.port = port
         self.password = password
-        self.user_jid = user_jid
+        self.user_jid = jid
         self.priority = priority
 
 
@@ -124,18 +120,27 @@ class XMPPStreamParserTarget:
         self._tree_builder_start_depth = None
 
         self._depth_tracker = []
+        self._stream_element = None
 
 
     def start(self, name, attributes):
 
         logging.debug("{} :: start tag: `{}'; attrs: {}".format(type(self).__name__, name, attributes))
 
-        if name == 'stream:stream':
+        if name == '{http://etherx.jabber.org/streams}stream':
             self._depth_tracker = []
+            self._stream_element = lxml.etree.Element(name, attrib = attributes)
+#            logging.debug(
+#                "stream tag start:\n{}\nNSMAP:\n{}".format(
+#                    lxml.etree.tostring(self._stream_element),
+#                    self._stream_element.nsmap
+#                    )
+#                )
+
 
         if len(self._depth_tracker) == 0:
 
-            if name == 'stream:stream':
+            if name == '{http://etherx.jabber.org/streams}stream':
                 if self._on_stream_event:
                     threading.Thread(
                         target = self._on_stream_event,
@@ -157,9 +162,12 @@ class XMPPStreamParserTarget:
 
             if not self._tree_builder:
 
-                self._tree_builder = xml.etree.ElementTree.TreeBuilder()
+                self._tree_builder = lxml.etree.TreeBuilder()
 
-            self._tree_builder.start(name, attributes)
+            if len(self._depth_tracker) == 1:
+                self._tree_builder.start(name, attributes, nsmap = self._stream_element.nsmap)
+            else:
+                self._tree_builder.start(name, attributes)
 
         self._depth_tracker.append(name)
 
@@ -168,7 +176,7 @@ class XMPPStreamParserTarget:
     def end(self, name):
 
         logging.debug("{} :: end `{}'".format(type(self).__name__, name))
-        logging.debug("{} :: end len(trac) == `{}'".format(type(self).__name__, len(self._depth_tracker)))
+#        logging.debug("{} :: end len(trac) == `{}'".format(type(self).__name__, len(self._depth_tracker)))
 
         if len(self._depth_tracker) > 1:
             self._tree_builder.end(name)
@@ -178,7 +186,16 @@ class XMPPStreamParserTarget:
         if len(self._depth_tracker) == 1:
 
             element = self._tree_builder.close()
+
             self._tree_builder = None
+
+#            logging.debug(
+#                "Element ({}) ready to be passed to waiter:\n{}\nNSMAP:\n{}".format(
+#                    element.tag,
+#                    lxml.etree.tostring(element),
+#                    element.nsmap
+#                    )
+#                )
 
             if self._on_element_readed:
                 threading.Thread(
@@ -189,7 +206,7 @@ class XMPPStreamParserTarget:
 
         if len(self._depth_tracker) == 0:
 
-            if name == 'stream:stream':
+            if name == '{http://etherx.jabber.org/streams}stream':
                 self.close()
 
         return
@@ -198,7 +215,8 @@ class XMPPStreamParserTarget:
 
         logging.debug("{} :: data `{}'".format(type(self).__name__, data))
 
-        self._tree_builder.data(data)
+        if self._tree_builder:
+            self._tree_builder.data(data)
 
         return
 
@@ -206,7 +224,8 @@ class XMPPStreamParserTarget:
 
         logging.debug("{} :: comment `{}'".format(type(self).__name__, text))
 
-        self._tree_builder.comment(text)
+        if self._tree_builder:
+            self._tree_builder.comment(text)
 
         return
 
@@ -214,7 +233,7 @@ class XMPPStreamParserTarget:
 
         logging.debug("{} :: close".format(type(self).__name__))
 
-        if self._on_stream_end:
+        if self._on_stream_event:
             threading.Thread(
                 target = self._on_stream_event,
                 args = ('stop',),
@@ -379,7 +398,8 @@ class XMPPInputStreamReader:
         ret = 0
 
         try:
-            self._xml_parser.Parse(bytes_text, False)
+#            self._xml_parser.Parse(bytes_text, False)
+            self._xml_parser.feed(bytes_text)
         except:
             logging.exception(
                 "{} :: _feed {}".format(
@@ -507,12 +527,22 @@ class XMPPOutputStreamWriter:
 
         return
 
-    def send(self, obj):
+    def send(self, obj, wait = False):
 
         if self._stop_flag:
-            raise RuntimeError("Stopping. No appending allowed")
+            raise RuntimeError("Stopping. Sending not allowed")
 
         self._output_queue.append(obj)
+
+        while True:
+
+            if self._stop_flag:
+                break
+
+            if not obj in self._output_queue:
+                break
+
+            time.sleep(0.1)
 
         return
 
@@ -542,23 +572,29 @@ class XMPPOutputStreamWriter:
             snd_obj = obj
         elif isinstance(obj, str):
             snd_obj = bytes(obj, encoding = 'utf-8')
-        elif isinstance(obj, xml.etree.ElementTree.Element):
+        elif isinstance(obj, lxml.etree.Element):
             snd_obj = bytes(
-                xml.etree.ElementTree.tostring(
+                lxml.etree.tostring(
                     obj,
                     encoding = 'utf-8'
                     ),
                 encoding = 'utf-8'
                 )
         else:
-            raise Exception("Wrong obj type. Can be bytes, str or xml.etree.ElementTree.Element")
+            raise Exception("Wrong obj type. Can be bytes, str or lxml.etree.Element")
 
 
         self._write_to.write(snd_obj)
 
+#        threading.Thread(
+#            target = self._xml_parser.Parse,
+#            args = (snd_obj, False,),
+#            name = "Output XMPP Stream Parser"
+#            ).start()
+
         threading.Thread(
-            target = self._xml_parser.Parse,
-            args = (snd_obj, False,),
+            target = self._xml_parser.feed,
+            args = (snd_obj,),
             name = "Output XMPP Stream Parser"
             ).start()
 
@@ -574,35 +610,39 @@ class Hub():
 
     def _clear(self, init = False):
 
-        self._waiters = {}
+        self.waiters = {}
 
-    def clean(self):
+    def clear(self):
 
         self._clear()
 
-    def dispatch(self):
+    def _dispatch(self, *args, **kwargs):
 
-        waiters = list(self._waiters.keys())
-        waiters.sort()
+        w = copy.copy(self.waiters)
+        w_l = list(w.keys())
+        w_l.sort()
 
-        for i in waiters:
+        for i in w_l:
 
             threading.Thread(
                 target = self._waiter_thread,
-                name = 'Simple Dispatcher `{}'.format(self._name, i),
-                args = (self._waiters[i],),
-                kwargs = {}
+                name = "`{}' dispatcher to `{}'".format(
+                    type(self).__name__,
+                    i
+                    ),
+                args = (w[i], args, kwargs,),
+                kwargs = dict()
                 ).start()
 
-    def _waiter_thread(self, call):
+    def _waiter_thread(self, call, args, kwargs):
 
-        call()
+        call(*args, **kwargs)
 
         return
 
     def set_waiter(self, name, reactor):
 
-        self._waiters[name] = reactor
+        self.waiters[name] = reactor
 
         return
 
@@ -610,88 +650,38 @@ class Hub():
 
         ret = None
 
-        if name in self._waiters:
-            ret = self._waiters[name]
+        if name in self.waiters:
+            ret = self.waiters[name]
 
         return ret
 
     def del_waiter(self, name):
 
-        if name in self._waiters:
-            del self._waiters[name]
+        if name in self.waiters:
+            del self.waiters[name]
 
         return
 
 class ConnectionEventsHub(Hub):
 
-    def dispatch(self, event):
+    def dispatch(self, event, sock):
 
-        waiters = list(self._waiters.keys())
-        waiters.sort()
-
-        for i in waiters:
-
-            threading.Thread(
-                target = self._waiter_thread,
-                name = 'Connection Events Dispatch `{}'.format(i),
-                args = (self._waiters[i], event,),
-                kwargs = {}
-                ).start()
-
-    def _waiter_thread(self, call, event):
-
-        call(event)
-
-        return
+        self._dispatch(event, sock)
 
 
 class StreamEventsHub(Hub):
 
     def dispatch(self, event, attrs = None):
 
-        waiters = list(self._waiters.keys())
-        waiters.sort()
-
-        for i in waiters:
-
-            threading.Thread(
-                target = self._waiter_thread,
-                name = 'Thread Dispatching Stream Events `{}'.format(i),
-                args = (self._waiters[i], event,),
-                kwargs = {'attrs':attrs}
-                ).start()
-
-    def _waiter_thread(self, call, event, attrs = None):
-
-        call(event, attrs)
-
-        return
+        self._dispatch(event, attrs)
 
 
-class StreamObjectsDispatchingHub(Hub):
+class StreamObjectsHub(Hub):
 
 
     def dispatch(self, obj):
 
-        waiters = list(self._waiters.keys())
-        waiters.sort()
-
-        for i in waiters:
-
-            threading.Thread(
-                target = self._waiter_thread,
-                name = 'Input Stream Objects Hub `{}'.format(i),
-                args = (self._waiters[i], obj,),
-                kwargs = dict()
-                ).start()
-
-        return
-
-    def _waiter_thread(self, call, obj):
-
-        call(obj)
-
-        return
+        self._dispatch(obj)
 
 
 
@@ -744,14 +734,21 @@ class XMPPStreamMachine:
                 on_element_readed = self._stream_objects_dispatcher
                 )
 
-            self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8')
+            self._xml_parser = lxml.etree.XMLParser(
+                target = self._xml_target,
+#                ns_clean = True
+#                compact = False,
+#                resolve_entities = False
+                )
+
+#            self._xml_parser = xml.parsers.expat.ParserCreate('UTF-8', ' ')
 
             self.start_stream_worker()
 
-            org.wayround.utils.xml.expat_parser_connect_target(
-                self._xml_parser,
-                self._xml_target
-                )
+#            org.wayround.utils.xml.expat_parser_connect_target(
+#                self._xml_parser,
+#                self._xml_target
+#                )
 
             self._stream_worker.start()
 
@@ -773,7 +770,7 @@ class XMPPStreamMachine:
     def wait(self, what = 'stopped'):
 
         if self._stream_worker:
-            self._stream_worker.wait(what = 'stopped')
+            self._stream_worker.wait(what = what)
 
     def stat(self):
 
@@ -791,6 +788,22 @@ class XMPPStreamMachine:
         self.stop()
         self.start()
 
+    def restart_with_new_objects(
+        self,
+        sock_streamer,
+        stream_events_dispatcher,
+        stream_objects_dispatcher
+        ):
+
+        self.stop()
+
+        self.set_objects(
+            sock_streamer,
+            stream_events_dispatcher,
+            stream_objects_dispatcher
+            )
+
+        self.start()
 
 
 
@@ -813,11 +826,12 @@ class XMPPOutputStreamWriterMachine(XMPPStreamMachine):
             self._xml_parser
             )
 
-    def send(self, obj):
+    def send(self, obj, wait = False):
         threading.Thread(
+            name = "Send Object To Output Queue Thread",
             target = self._stream_worker.send,
             args = (obj,),
-            name = "Send Object To Output Queue Thread"
+            kwargs = dict(wait = wait)
             ).start()
 
 
@@ -831,9 +845,10 @@ class TLSDriver:
 
     def set_objects(
         self,
-        sockstreamer,
+        sock_streamer,
         input_machine,
         output_machine,
+        connection_events_hub,
         input_stream_events_hub,
         input_stream_objects_hub,
         output_stream_events_hub,
@@ -842,9 +857,10 @@ class TLSDriver:
         on_finish
         ):
 
-        self._sock_streamer = sockstreamer
+        self._sock_streamer = sock_streamer
         self._input_machine = input_machine
         self._output_machine = output_machine
+        self._connection_events_hub = connection_events_hub
         self._input_stream_events_hub = input_stream_events_hub
         self._input_stream_objects_hub = input_stream_objects_hub
         self._output_stream_events_hub = output_stream_events_hub
@@ -869,9 +885,15 @@ class TLSDriver:
 
     def _start(self):
 
+        logging.debug("TLS Driver work started")
+
         if not self._drive_tls_features:
 
             self._drive_tls_features = True
+
+            self._connection_events_hub.set_waiter(
+                'tls_driver', self._connection_events_waiter
+                )
 
             self._input_stream_events_hub.set_waiter(
                 'tls_driver', self._input_stream_events_waiter
@@ -881,32 +903,47 @@ class TLSDriver:
                 'tls_driver', self._stream_objects_waiter
                 )
 
+#            print(
+#                "{}\n{}\n{}\n".format(
+#                    repr(self._connection_events_hub.waiters),
+#                    repr(self._input_stream_events_hub.waiters),
+#                    repr(self._input_stream_objects_hub.waiters)
+#                    )
+#                )
+
     def _stop(self):
 
         if self._drive_tls_features:
 
             self._drive_tls_features = False
 
+            self._connection_events_hub.del_waiter('tls_driver')
+
             self._input_stream_events_hub.del_waiter('tls_driver')
 
             self._input_stream_objects_hub.del_waiter('tls_driver')
 
+    def stop(self):
+        self._stop()
+
     def drive(self, obj):
 
-        if obj.tag == 'stream:features':
+        if obj.tag == '{http://etherx.jabber.org/streams}features':
             self.status = 'looking for tls'
 
-            if obj.find('starttls') != None:
+            if obj.find('{urn:ietf:params:xml:ns:xmpp-tls}starttls') != None:
 
                 self.status = 'requesting tls'
 
                 self._start()
 
+                logging.debug("Sending STARTTLS request")
                 self._output_machine.send(
                     starttls()
                     )
             else:
 
+                logging.debug("TLS not proposed")
                 if self._on_finish:
                     threading.Thread(
                         target = self._on_finish,
@@ -916,9 +953,45 @@ class TLSDriver:
 
                 self._stop()
 
+    def _connection_events_waiter(self, event, sock):
+
+        logging.debug("_connection_events_waiter :: `{}' `{}'".format(event, sock))
+
+        if event == 'ssl wrapped':
+
+            logging.debug("Socket streamer threads restarted")
+            logging.debug("Restarting Machines")
+            self._input_machine.restart_with_new_objects(
+                self._sock_streamer,
+                self._input_stream_events_hub.dispatch,
+                self._input_stream_objects_hub.dispatch
+                )
+
+            self._output_machine.restart_with_new_objects(
+                self._sock_streamer,
+                self._output_stream_events_hub.dispatch,
+                None
+                )
+
+            logging.debug("Waiting machines restart")
+            self._input_machine.wait('working')
+            self._output_machine.wait('working')
+            logging.debug("Machines restarted")
+
+            self._output_machine.send(
+                start_stream(
+                    fro = self._jid.bare(),
+                    to = self._connection_info.host
+                    )
+                )
+
+
+
     def _input_stream_events_waiter(self, event, attrs = None):
 
         self._stop()
+
+        logging.debug("_input_stream_events_waiter :: `{}', `{}'".format(event, attrs))
 
         if event == 'start':
             if self._on_finish:
@@ -947,17 +1020,19 @@ class TLSDriver:
 
     def _stream_objects_waiter(self, obj):
 
-        if (
-            self._drive_tls_features and
-            obj.get('xmlns', None) == 'urn:ietf:params:xml:ns:xmpp-tls'
-            ):
+        logging.debug("_stream_objects_waiter :: `{}'".format(obj))
+
+        if self._drive_tls_features:
 
             if self.status == 'requesting tls':
 
-                if obj.tag in ['proceed', 'failure']:
+                if obj.tag in [
+                        '{urn:ietf:params:xml:ns:xmpp-tls}proceed',
+                        '{urn:ietf:params:xml:ns:xmpp-tls}failure'
+                        ]:
                     self.tls_request_result = obj.tag
 
-                    if self.tls_request_result == 'proceed':
+                    if self.tls_request_result == '{urn:ietf:params:xml:ns:xmpp-tls}proceed':
 
                         if self._on_finish:
                             threading.Thread(
@@ -988,15 +1063,5 @@ class TLSDriver:
 
     def proceed(self):
         self._sock_streamer.start_ssl()
-
-        self._input_machine.restart()
-        self._output_machine.restart()
-
-        self._output_machine.send(
-            start_stream(
-                fro = self._connector._user_jid,
-                to = self._connector._domain
-                )
-            )
 
 

@@ -146,7 +146,7 @@ def cat(
                         logging.debug("rewaiting input")
 
                     logging.debug(
-                        "got input from descriptor {}".format(
+                        "input descriptor {} ready".format(
                             descriptor_to_wait_for_input
                             )
                         )
@@ -168,7 +168,7 @@ def cat(
                         logging.debug("rewaiting output")
 
                     logging.debug(
-                        "got output to descriptor {}".format(
+                        "output descriptor {} ready".format(
                             descriptor_to_wait_for_output
                             )
                         )
@@ -180,7 +180,7 @@ def cat(
                 buff = None
 
                 logging.debug(
-                    "Reading {} bytes from stdin.{}".format(
+                    "Reading {} bytes using stdin.{}".format(
                         bs,
                         read_method_name
                         )
@@ -576,7 +576,7 @@ class SocketStreamer:
                 if self._on_connection_event:
                     threading.Thread(
                         target = self._on_connection_event,
-                        args = ('stop',),
+                        args = ('stop', self._sock,),
                         name = "Connection Stopped Thread"
                         ).start()
 
@@ -585,6 +585,14 @@ class SocketStreamer:
         self._stop_threads()
         self._start_threads()
         self._stat = 'soft restarted threads'
+
+        if self._on_connection_event:
+            threading.Thread(
+                target = self._on_connection_event,
+                args = ('restart', self._sock,),
+                name = "Connection Restarted Thread"
+                ).start()
+
 
 
     def start(self):
@@ -663,6 +671,10 @@ class SocketStreamer:
 
         s = None
 
+        self._stop_threads()
+
+        logging.debug('before wrap sock is {}'.format(self._sock))
+
         try:
             s = ssl.wrap_socket(
                 self._sock,
@@ -670,7 +682,12 @@ class SocketStreamer:
                 **kwargs
                 )
         except:
-            raise
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('ssl wrap error', self._sock,),
+                    name = "Connection SSL Wrap Error Thread"
+                    ).start()
         else:
             logging.info(
                 """\
@@ -688,19 +705,47 @@ compression:
 
             self._sock = s
 
-            self._restart_threads()
+            logging.debug('after wrap sock is {}'.format(self._sock))
+
+            self._start_threads()
+
+
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('ssl wrapped', self._sock,),
+                    name = "Connection SSL Wrapped Thread"
+                    ).start()
+
 
     def stop_ssl(self):
+
+        self._stop_threads()
+
+        logging.debug('before unwrap sock is {}'.format(self._sock))
 
         s = None
         try:
             s = self._sock.unwrap()
         except:
-            raise
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('ssl unwrap error',),
+                    name = "Connection SSL Unwrap self._sock,ap Error Thread"
+                    ).start()
+
         else:
             self._sock = s
 
-            self._restart_threads()
+            logging.debug('after unwrap sock is {}'.format(self._sock))
+
+            if self._on_connection_event:
+                threading.Thread(
+                    target = self._on_connection_event,
+                    args = ('ssl unwrapped', self._sock,),
+                    name = "Connection SSL Unwrapped Thread"
+                    ).start()
 
     def is_ssl_working(self):
 
@@ -768,7 +813,7 @@ compression:
         if self._on_connection_event:
             threading.Thread(
                 target = self._on_connection_event,
-                args = ('error',),
+                args = ('error', self._sock,),
                 name = "Connection Error Thread"
                 ).start()
 
@@ -792,7 +837,7 @@ compression:
             if self._on_connection_event:
                 threading.Thread(
                     target = self._on_connection_event,
-                    args = ('start',),
+                    args = ('start', self._sock,),
                     name = "Connection Started Thread"
                     ).start()
 

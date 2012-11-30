@@ -1,18 +1,23 @@
 
 import logging
 import signal
+import lxml.etree
+
 
 import org.wayround.utils.xmpp.core
 import org.wayround.utils.xmpp.client
 
+lxml.etree.register_namespace('stream', 'http://etherx.jabber.org/streams')
 logging.basicConfig(level = 'DEBUG', format = "%(levelname)s :: %(threadName)s :: %(message)s")
 
-jid = org.wayround.utils.xmpp.core.JID()
+jid = org.wayround.utils.xmpp.core.JID(
+    user = 'test', domain = 'wayround.org'
+    )
 
 cinfo = org.wayround.utils.xmpp.core.C2SConnectionInfo(
     host = 'wayround.org',
     port = 5222,
-    user_jid = jid,
+    jid = jid,
     password = 'Az9bblTgiCQZ9yUAK/WGp9cz4F8='
     )
 
