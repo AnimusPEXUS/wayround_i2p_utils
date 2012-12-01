@@ -835,13 +835,22 @@ class XMPPOutputStreamWriterMachine(XMPPStreamMachine):
             ).start()
 
 
+class Driver:
+    """
+    Interface for writing future drivers
 
-class TLSDriver:
+    The only one method which will be used by external entities will be `drive'
+    which must wait until all operations done and must return result.
+    """
+
+    def drive(self, obj):
+
+        return 'success'
+
+class STARTTLSClientDriver(Driver):
 
     def __init__(self):
-
         self._clear(init = True)
-
 
     def set_objects(
         self,
@@ -853,8 +862,7 @@ class TLSDriver:
         input_stream_objects_hub,
         output_stream_events_hub,
         connection_info,
-        jid,
-        on_finish
+        jid
         ):
 
         self._sock_streamer = sock_streamer
@@ -866,7 +874,6 @@ class TLSDriver:
         self._output_stream_events_hub = output_stream_events_hub
         self._connection_info = connection_info
         self._jid = jid
-        self._on_finish = on_finish
 
     def _clear(self, init = False):
 
@@ -879,17 +886,20 @@ class TLSDriver:
         self._input_stream_objects_hub = None
         self._output_stream_events_hub = None
 
-        self._drive_tls_features = False
+        self._driving = False
 
         self.status = 'just created'
 
+        self._result = None
+
     def _start(self):
 
-        logging.debug("TLS Driver work started")
 
-        if not self._drive_tls_features:
+        if not self._driving:
 
-            self._drive_tls_features = True
+            self._driving = True
+
+            logging.debug("TLS Driver work started")
 
             self._connection_events_hub.set_waiter(
                 'tls_driver', self._connection_events_waiter
@@ -913,9 +923,9 @@ class TLSDriver:
 
     def _stop(self):
 
-        if self._drive_tls_features:
+        if self._driving:
 
-            self._drive_tls_features = False
+            self._driving = False
 
             self._connection_events_hub.del_waiter('tls_driver')
 
@@ -941,88 +951,85 @@ class TLSDriver:
                 self._output_machine.send(
                     starttls()
                     )
+
+                while True:
+
+                    if not self._driving:
+                        break
+
+                    time.sleep(0.1)
+
             else:
 
                 logging.debug("TLS not proposed")
-                if self._on_finish:
-                    threading.Thread(
-                        target = self._on_finish,
-                        name = "TLS Driver Finish Thread",
-                        args = ('no tls',)
-                        ).start()
 
-                self._stop()
+                self._result = 'no tls'
+
+        ret = self._result
+
+        return ret
 
     def _connection_events_waiter(self, event, sock):
 
-        logging.debug("_connection_events_waiter :: `{}' `{}'".format(event, sock))
+        if self._driving:
 
-        if event == 'ssl wrapped':
+            logging.debug("_connection_events_waiter :: `{}' `{}'".format(event, sock))
 
-            logging.debug("Socket streamer threads restarted")
-            logging.debug("Restarting Machines")
-            self._input_machine.restart_with_new_objects(
-                self._sock_streamer,
-                self._input_stream_events_hub.dispatch,
-                self._input_stream_objects_hub.dispatch
-                )
+            if event == 'ssl wrapped':
 
-            self._output_machine.restart_with_new_objects(
-                self._sock_streamer,
-                self._output_stream_events_hub.dispatch,
-                None
-                )
-
-            logging.debug("Waiting machines restart")
-            self._input_machine.wait('working')
-            self._output_machine.wait('working')
-            logging.debug("Machines restarted")
-
-            self._output_machine.send(
-                start_stream(
-                    fro = self._jid.bare(),
-                    to = self._connection_info.host
+                logging.debug("Socket streamer threads restarted")
+                logging.debug("Restarting Machines")
+                self._input_machine.restart_with_new_objects(
+                    self._sock_streamer,
+                    self._input_stream_events_hub.dispatch,
+                    self._input_stream_objects_hub.dispatch
                     )
-                )
 
+                self._output_machine.restart_with_new_objects(
+                    self._sock_streamer,
+                    self._output_stream_events_hub.dispatch,
+                    None
+                    )
+
+                logging.debug("Waiting machines restart")
+                self._input_machine.wait('working')
+                self._output_machine.wait('working')
+                logging.debug("Machines restarted")
+
+                self._output_machine.send(
+                    start_stream(
+                        fro = self._jid.bare(),
+                        to = self._connection_info.host
+                        )
+                    )
 
 
     def _input_stream_events_waiter(self, event, attrs = None):
 
-        self._stop()
+        if self._driving:
 
-        logging.debug("_input_stream_events_waiter :: `{}', `{}'".format(event, attrs))
+            logging.debug("_input_stream_events_waiter :: `{}', `{}'".format(event, attrs))
 
-        if event == 'start':
-            if self._on_finish:
-                threading.Thread(
-                    target = self._on_finish,
-                    name = "TLS Driver Finish Thread (success)",
-                    args = ('success',)
-                    ).start()
+            if event == 'start':
 
-        elif event == 'stop':
-            if self._on_finish:
-                threading.Thread(
-                    target = self._on_finish,
-                    name = "TLS Driver Finish Thread (stream stopped)",
-                    args = ('stream stopped',)
-                    ).start()
+                self._result = 'success'
 
-        elif event == 'error':
-            if self._on_finish:
-                threading.Thread(
-                    target = self._on_finish,
-                    name = "TLS Driver Finish Thread (stream error)",
-                    args = ('stream error',)
-                    ).start()
+            elif event == 'stop':
+
+                self._result = 'stream stopped'
+
+            elif event == 'error':
+
+                self._result = 'stream error'
+
+            self._stop()
 
 
     def _stream_objects_waiter(self, obj):
 
-        logging.debug("_stream_objects_waiter :: `{}'".format(obj))
+        if self._driving:
 
-        if self._drive_tls_features:
+            logging.debug("_stream_objects_waiter :: `{}'".format(obj))
 
             if self.status == 'requesting tls':
 
@@ -1034,34 +1041,42 @@ class TLSDriver:
 
                     if self.tls_request_result == '{urn:ietf:params:xml:ns:xmpp-tls}proceed':
 
-                        if self._on_finish:
-                            threading.Thread(
-                                target = self._on_finish,
-                                name = "TLS Driver Finish Thread (proceed)",
-                                args = ('proceed',)
-                                ).start()
+                        self._sock_streamer.start_ssl()
 
                     else:
+
+                        self._result = 'failure'
+
                         self._stop()
-                        if self._on_finish:
-                            threading.Thread(
-                                target = self._on_finish,
-                                name = "TLS Driver Finish Thread (failure)",
-                                args = ('failure',)
-                                ).start()
 
                 else:
+
+                    self._result = 'response error'
+
                     self._stop()
-                    if self._on_finish:
-                        threading.Thread(
-                            target = self._on_finish,
-                            name = "TLS Driver Finish Thread (response error)",
-                            args = ('response error',)
-                            ).start()
+
+            else:
+                self._result = 'programming error'
+
+                self._stop()
+
 
         return
 
-    def proceed(self):
-        self._sock_streamer.start_ssl()
+class Monitor:
 
+    def connection(self, event, sock):
 
+        logging.debug("connection: {} {}".format(event, sock))
+
+    def stream_in(self, event, attrs):
+
+        logging.debug("stream_in: {} {}".format(event, attrs))
+
+    def stream_out(self, event, attrs):
+
+        logging.debug("stream_out: {} {}".format(event, attrs))
+
+    def object(self, obj):
+
+        logging.debug("object: {}".format(obj))

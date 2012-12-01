@@ -476,11 +476,13 @@ class SocketStreamer:
         self._out_thread = None
 
 
-        self._output_availability_watcher_thread = None
+        self._connection_stop_signalled = False
+        self._starting = False
         self._stop_flag = False
         self._stopping = False
-        self._starting = False
         self._stopping_threads = False
+
+        self._output_availability_watcher_thread = None
 
         if not init:
             self._in_thread_stop_event.set()
@@ -573,12 +575,15 @@ class SocketStreamer:
 
 
             if not by_error:
-                if self._on_connection_event:
-                    threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('stop', self._sock,),
-                        name = "Connection Stopped Thread"
-                        ).start()
+                if not self._connection_stop_signalled:
+                    self._connection_stop_signalled = True
+                    if self._on_connection_event:
+                        threading.Thread(
+                            target = self._on_connection_event,
+                            args = ('stop', self._sock,),
+                            name = "Connection Stopped Thread"
+                            ).start()
+
 
     def _restart_threads(self):
         self._stat = 'soft restarting threads'
@@ -682,6 +687,7 @@ class SocketStreamer:
                 **kwargs
                 )
         except:
+            logging.exception("ssl wrap error")
             if self._on_connection_event:
                 threading.Thread(
                     target = self._on_connection_event,
@@ -728,11 +734,12 @@ compression:
         try:
             s = self._sock.unwrap()
         except:
+            logging.exception("ssl unwrap error")
             if self._on_connection_event:
                 threading.Thread(
                     target = self._on_connection_event,
-                    args = ('ssl unwrap error',),
-                    name = "Connection SSL Unwrap self._sock,ap Error Thread"
+                    args = ('ssl unwrap error', self._sock,),
+                    name = "Connection SSL Unwrap Error Thread"
                     ).start()
 
         else:
