@@ -17,9 +17,9 @@ import org.wayround.utils.xmpp.core
 
 class SampleC2SClient:
 
-    def __init__(self, sock, connection_info, jid):
+    def __init__(self, socket, connection_info, jid):
 
-        self._sock = sock
+        self.socket = socket
         self._connection_info = connection_info
         self._jid = jid
 
@@ -31,7 +31,8 @@ class SampleC2SClient:
             if not self.stat() == 'stopped':
                 raise RuntimeError("Working. Cleaning restricted")
 
-        self._connection = False
+        self.connection = False
+
         self._driven = False
         self._starting = False
         self._stop_flag = False
@@ -40,17 +41,17 @@ class SampleC2SClient:
         self._stream_out = False
         self._stream_stop_sent = False
 
-        self._sock_streamer = None
+        self.sock_streamer = None
 
-        self._input_machine = None
-        self._output_machine = None
+        self.input_machine = None
+        self.output_machine = None
 
-        self._connection_events_hub = None
-        self._input_stream_events_hub = None
-        self._input_stream_objects_hub = None
-        self._output_stream_events_hub = None
+        self.connection_events_hub = None
+        self.input_stream_events_hub = None
+        self.input_stream_objects_hub = None
+        self.output_stream_events_hub = None
 
-        self._tls_driver = None
+        self.tls_driver = None
 
         self._tls_result = None
 
@@ -65,50 +66,50 @@ class SampleC2SClient:
 
             ######### DRIVERS
 
-            self._tls_driver = org.wayround.utils.xmpp.core.STARTTLSClientDriver()
+            self.tls_driver = org.wayround.utils.xmpp.core.STARTTLSClientDriver()
 
             self._m = org.wayround.utils.xmpp.core.Monitor()
 
             ######### HUBS
 
-            self._connection_events_hub = org.wayround.utils.xmpp.core.ConnectionEventsHub()
+            self.connection_events_hub = org.wayround.utils.xmpp.core.ConnectionEventsHub()
 
-            self._input_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
-            self._input_stream_objects_hub = org.wayround.utils.xmpp.core.StreamObjectsHub()
+            self.input_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
+            self.input_stream_objects_hub = org.wayround.utils.xmpp.core.StreamObjectsHub()
 
-            self._output_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
+            self.output_stream_events_hub = org.wayround.utils.xmpp.core.StreamEventsHub()
 
             self.reset_hubs()
 
             ######### SOCKET
 
 
-            logging.debug('sock is {}'.format(self._sock))
+            logging.debug('sock is {}'.format(self.socket))
 
 
             ######### STREAMS
 
-            self._sock_streamer = org.wayround.utils.stream.SocketStreamer(
-                self._sock,
+            self.sock_streamer = org.wayround.utils.stream.SocketStreamer(
+                self.socket,
                 socket_transfer_size = 4096,
-                on_connection_event = self._connection_events_hub.dispatch
+                on_connection_event = self.connection_events_hub.dispatch
                 )
 
             threading.Thread(
                 name = "Socket Streamer Starting Thread",
-                target = self._sock_streamer.start
+                target = self.sock_streamer.start
                 ).start()
 
             ######### MACHINES
 
             threading.Thread(
                 target = self._start_input_machine,
-                name = "Input Machine Start Thread"
+                name = "Input Machine Starting Thread"
                 ).start()
 
             threading.Thread(
                 target = self._start_output_machine,
-                name = "Output Machine Start Thread"
+                name = "Output Machine Starting Thread"
                 ).start()
 
 
@@ -125,6 +126,8 @@ class SampleC2SClient:
             self._shutdown(_forced = True)
             self.stop_violent(_forced = True)
 
+        return
+
     def stop_violent(self, _forced = False):
 
 
@@ -136,8 +139,8 @@ class SampleC2SClient:
                 self._stop_output_machine
                 ]
 
-            if self._sock_streamer:
-                stop_list.append(self._sock_streamer.stop)
+            if self.sock_streamer:
+                stop_list.append(self.sock_streamer.stop)
 
             for i in stop_list:
                 threading.Thread(
@@ -149,11 +152,11 @@ class SampleC2SClient:
 
             logging.debug("Cleaning client instance")
 
-            logging.debug('sock is {}'.format(self._sock))
-
             self._clear()
 
             self._stopping = False
+
+            logging.debug('sock is {}'.format(self.socket))
 
         return
 
@@ -167,9 +170,9 @@ class SampleC2SClient:
 
             logging.debug("Stopping client correctly")
 
-            if self._connection and not self._stream_stop_sent:
+            if self.connection and not self._stream_stop_sent:
                 logging.debug("Sending end of stream")
-                self._output_machine.send(
+                self.output_machine.send(
                     org.wayround.utils.xmpp.core.stop_stream()
                     )
                 self._stream_stop_sent = True
@@ -209,20 +212,20 @@ class SampleC2SClient:
         v2 = None
         v3 = None
 
-        if self._sock_streamer:
-            v1 = self._sock_streamer.stat()
+        if self.sock_streamer:
+            v1 = self.sock_streamer.stat()
 
-        if self._input_machine:
-            v2 = self._input_machine.stat()
+        if self.input_machine:
+            v2 = self.input_machine.stat()
 
-        if self._output_machine:
-            v3 = self._output_machine.stat()
+        if self.output_machine:
+            v3 = self.output_machine.stat()
 
 
 #        logging.debug("""
-#self._sock_streamer.stat() == {}
-#self._input_machine.stat() == {}
-#self._output_machine.stat() == {}
+#self.sock_streamer.stat() == {}
+#self.input_machine.stat() == {}
+#self.output_machine.stat() == {}
 #""".format(v1, v2, v3)
 #            )
 
@@ -241,17 +244,17 @@ class SampleC2SClient:
 
     def _start_input_machine(self):
 
-        self._input_machine = org.wayround.utils.xmpp.core.XMPPInputStreamReaderMachine()
-        self._input_machine.set_objects(
-            self._sock_streamer,
-            stream_events_dispatcher = self._input_stream_events_hub.dispatch,
-            stream_objects_dispatcher = self._input_stream_objects_hub.dispatch
+        self.input_machine = org.wayround.utils.xmpp.core.XMPPInputStreamReaderMachine()
+        self.input_machine.set_objects(
+            self.sock_streamer,
+            stream_events_dispatcher = self.input_stream_events_hub.dispatch,
+            stream_objects_dispatcher = self.input_stream_objects_hub.dispatch
             )
-        self._input_machine.start()
+        self.input_machine.start()
 
     def _stop_input_machine(self):
-        if self._input_machine:
-            self._input_machine.stop()
+        if self.input_machine:
+            self.input_machine.stop()
 
     def _restart_input_machine(self):
         self._stop_input_machine()
@@ -261,17 +264,17 @@ class SampleC2SClient:
 
     def _start_output_machine(self):
 
-        self._output_machine = org.wayround.utils.xmpp.core.XMPPOutputStreamWriterMachine()
-        self._output_machine.set_objects(
-            self._sock_streamer,
-            stream_events_dispatcher = self._output_stream_events_hub.dispatch,
+        self.output_machine = org.wayround.utils.xmpp.core.XMPPOutputStreamWriterMachine()
+        self.output_machine.set_objects(
+            self.sock_streamer,
+            stream_events_dispatcher = self.output_stream_events_hub.dispatch,
             stream_objects_dispatcher = None
             )
-        self._output_machine.start()
+        self.output_machine.start()
 
     def _stop_output_machine(self):
-        if self._output_machine:
-            self._output_machine.stop()
+        if self.output_machine:
+            self.output_machine.stop()
 
     def _restart_output_machine(self):
         self._stop_output_machine()
@@ -280,41 +283,43 @@ class SampleC2SClient:
 
     def reset_hubs(self):
 
-        self._connection_events_hub.clear()
-        self._input_stream_events_hub.clear()
-        self._input_stream_objects_hub.clear()
-        self._output_stream_events_hub.clear()
+        self.connection_events_hub.clear()
+        self.input_stream_events_hub.clear()
+        self.input_stream_objects_hub.clear()
+        self.output_stream_events_hub.clear()
 
-        self._connection_events_hub.set_waiter(
+        self.connection_events_hub.set_waiter(
             'main', self._on_connection_event,
             )
-        self._connection_events_hub.set_waiter(
+        self.connection_events_hub.set_waiter(
             'm', self._m.connection
             )
 
-        self._input_stream_events_hub.set_waiter(
+        self.input_stream_events_hub.set_waiter(
             'main', self._on_stream_in_event,
             )
-        self._input_stream_events_hub.set_waiter(
+        self.input_stream_events_hub.set_waiter(
             'm', self._m.stream_in
             )
 
-        self._input_stream_objects_hub.set_waiter(
+        self.input_stream_objects_hub.set_waiter(
             'main', self._on_stream_object,
             )
-        self._input_stream_objects_hub.set_waiter(
+        self.input_stream_objects_hub.set_waiter(
             'm', self._m.object
             )
 
-        self._output_stream_events_hub.set_waiter(
+        self.output_stream_events_hub.set_waiter(
             'main', self._on_stream_out_event,
             )
-        self._output_stream_events_hub.set_waiter(
+        self.output_stream_events_hub.set_waiter(
             'm', self._m.stream_out
             )
 
 
     def _on_connection_event(self, event, sock):
+
+        self.socket = sock
 
         if not self._driven:
 
@@ -323,14 +328,14 @@ class SampleC2SClient:
             if event == 'start':
                 print("Connection started")
 
-                self._connection = True
+                self.connection = True
 
                 self.wait('working')
 
                 logging.debug("Ended waiting for connection. Opening output stream")
 
 
-                self._output_machine.send(
+                self.output_machine.send(
                     org.wayround.utils.xmpp.core.start_stream(
                         fro = self._jid.bare(),
                         to = self._connection_info.host
@@ -341,12 +346,12 @@ class SampleC2SClient:
 
             elif event == 'stop':
                 print("Connection stopped")
-                self._connection = False
+                self.connection = False
                 self.stop()
 
             elif event == 'error':
                 print("Connection error")
-                self._connection = False
+                self.connection = False
                 self.stop()
 
 
@@ -407,19 +412,19 @@ class SampleC2SClient:
 
                 self._features_iteration = 'tls'
 
-                self._tls_driver.set_objects(
-                    self._sock_streamer,
-                    self._input_machine,
-                    self._output_machine,
-                    self._connection_events_hub,
-                    self._input_stream_events_hub,
-                    self._input_stream_objects_hub,
-                    self._output_stream_events_hub,
+                self.tls_driver.set_objects(
+                    self.sock_streamer,
+                    self.input_machine,
+                    self.output_machine,
+                    self.connection_events_hub,
+                    self.input_stream_events_hub,
+                    self.input_stream_objects_hub,
+                    self.output_stream_events_hub,
                     self._connection_info,
                     self._jid
                     )
 
-                self._tls_result = self._tls_driver.drive(self._last_features)
+                self._tls_result = self.tls_driver.drive(self._last_features)
                 if self._tls_result != 'success':
                     logging.error("TLS Failed")
                     self.stop()
@@ -431,4 +436,5 @@ class SampleC2SClient:
 
                 self._features_iteration = 'auth'
                 logging.info("Auth to be implemented")
+                self.stop()
 

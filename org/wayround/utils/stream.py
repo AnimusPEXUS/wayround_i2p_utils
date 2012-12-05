@@ -7,6 +7,9 @@ import ssl
 import threading
 import time
 
+import org.wayround.utils.file
+
+
 
 class CatTerminationFlagFound(Exception): pass
 
@@ -431,12 +434,14 @@ class SocketStreamer:
         on_connection_event = None
         ):
 
-        self._sock = sock
+        self.socket = sock
         self._socket_transfer_size = socket_transfer_size
 
         self._on_connection_event = on_connection_event
 
         self._clear(init = True)
+
+        self.connection = False
 
     def __del__(self):
 
@@ -476,11 +481,14 @@ class SocketStreamer:
         self._out_thread = None
 
 
+        self._connection_error_signalled = False
         self._connection_stop_signalled = False
         self._starting = False
+        self._starting_threads = False
         self._stop_flag = False
         self._stopping = False
         self._stopping_threads = False
+        self._wrapping = False
 
         self._output_availability_watcher_thread = None
 
@@ -495,6 +503,10 @@ class SocketStreamer:
 
         self._stat = 'stopped'
 
+        self.connection = False
+
+        self._socket_status_printer = None
+
         return
 
     def _close_pipe_descriptors(self):
@@ -503,61 +515,70 @@ class SocketStreamer:
                 i.close()
 
     def _start_threads(self):
-        self._stat = 'soft starting threads'
 
-        self._in_thread = cat(
-            stdin = self._strin,
-            stdout = self._sock,
-            threaded = True,
-            write_method_name = 'send',
-            close_output_on_eof = False,
-            thread_name = 'strin -> _sock',
-            bs = self._socket_transfer_size,
-            convert_to_str = None,
-            read_method_name = 'read',
-            exit_on_input_eof = True,
-            waiting_for_input = True,
-            descriptor_to_wait_for_input = self._strin.fileno(),
-            waiting_for_output = True,
-            descriptor_to_wait_for_output = self._sock.fileno(),
-            apply_input_seek = False,
-            apply_output_seek = False,
-            flush_on_input_eof = False,
-            on_exit_callback = self._on_in_thread_exit,
-            on_output_write_error = self._on_socket_write_error,
-            termination_event = self._in_thread_stop_event
-            )
+        if not self._starting_threads and not self._stopping_threads:
 
-        self._out_thread = cat(
-            stdin = self._sock,
-            stdout = self._strout,
-            threaded = True,
-            write_method_name = 'write',
-            close_output_on_eof = False,
-            thread_name = '_sock -> strout',
-            bs = self._socket_transfer_size,
-            convert_to_str = None,
-            read_method_name = 'recv',
-            exit_on_input_eof = True,
-            waiting_for_input = True,
-            descriptor_to_wait_for_input = self._sock.fileno(),
-            waiting_for_output = True,
-            descriptor_to_wait_for_output = self._strout.fileno(),
-            apply_input_seek = False,
-            apply_output_seek = False,
-            flush_on_input_eof = True,
-            on_exit_callback = self._on_out_thread_exit,
-            on_input_read_error = self._on_socket_read_error,
-            termination_event = self._out_thread_stop_event
-            )
+            self._starting_threads = True
 
-        self._in_thread.start()
-        self._out_thread.start()
-        self._stat = 'soft started threads'
+            self._stat = 'soft starting threads'
 
-    def _stop_threads(self, by_error = False):
+            self._in_thread = cat(
+                stdin = self._strin,
+                stdout = self.socket,
+                threaded = True,
+                write_method_name = 'send',
+                close_output_on_eof = False,
+                thread_name = 'strin -> socket',
+                bs = self._socket_transfer_size,
+                convert_to_str = None,
+                read_method_name = 'read',
+                exit_on_input_eof = True,
+                waiting_for_input = True,
+                descriptor_to_wait_for_input = self._strin.fileno(),
+                waiting_for_output = True,
+                descriptor_to_wait_for_output = self.socket.fileno(),
+                apply_input_seek = False,
+                apply_output_seek = False,
+                flush_on_input_eof = False,
+                on_exit_callback = self._on_in_thread_exit,
+                on_output_write_error = self._on_socket_write_error,
+                termination_event = self._in_thread_stop_event
+                )
 
-        if not self._stopping_threads:
+            self._out_thread = cat(
+                stdin = self.socket,
+                stdout = self._strout,
+                threaded = True,
+                write_method_name = 'write',
+                close_output_on_eof = False,
+                thread_name = 'socket -> strout',
+                bs = self._socket_transfer_size,
+                convert_to_str = None,
+                read_method_name = 'recv',
+                exit_on_input_eof = True,
+                waiting_for_input = True,
+                descriptor_to_wait_for_input = self.socket.fileno(),
+                waiting_for_output = True,
+                descriptor_to_wait_for_output = self._strout.fileno(),
+                apply_input_seek = False,
+                apply_output_seek = False,
+                flush_on_input_eof = True,
+                on_exit_callback = self._on_out_thread_exit,
+                on_input_read_error = self._on_socket_read_error,
+                termination_event = self._out_thread_stop_event
+                )
+
+            self._in_thread.start()
+            self._out_thread.start()
+            self._stat = 'soft started threads'
+
+            self._starting_threads = False
+
+        return
+
+    def _stop_threads(self):
+
+        if not self._starting_threads and not self._stopping_threads:
 
             self._stopping_threads = True
 
@@ -574,15 +595,27 @@ class SocketStreamer:
             self._stopping_threads = False
 
 
-            if not by_error:
-                if not self._connection_stop_signalled:
-                    self._connection_stop_signalled = True
-                    if self._on_connection_event:
-                        threading.Thread(
-                            target = self._on_connection_event,
-                            args = ('stop', self._sock,),
-                            name = "Connection Stopped Thread"
-                            ).start()
+    def _send_connection_stopped_event(self):
+        if not self._wrapping:
+            if not self._connection_stop_signalled:
+                self._connection_stop_signalled = True
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('stop', self.socket,),
+                        name = "Connection Stopped Thread"
+                        ).start()
+
+    def _send_connection_error_event(self):
+        if not self._wrapping:
+            if not self._connection_error_signalled:
+                self._connection_error_signalled = True
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('error', self.socket,),
+                        name = "Connection Error Thread"
+                        ).start()
 
 
     def _restart_threads(self):
@@ -594,7 +627,7 @@ class SocketStreamer:
         if self._on_connection_event:
             threading.Thread(
                 target = self._on_connection_event,
-                args = ('restart', self._sock,),
+                args = ('restart', self.socket,),
                 name = "Connection Restarted Thread"
                 ).start()
 
@@ -604,9 +637,13 @@ class SocketStreamer:
 
         if not self._starting and not self._stopping and self.stat() == 'stopped':
 
-            self._stat = 'hard starting'
             self._starting = True
+            self._stat = 'hard starting'
             self._stop_flag = False
+
+            self._socket_status_printer = org.wayround.utils.file.FDStatusWatcher(
+                on_status_changed = org.wayround.utils.file.print_status_change
+                )
 
             self._pipe_outside = os.pipe()
             self._pipe_inside = os.pipe()
@@ -629,6 +666,9 @@ class SocketStreamer:
 
             self.wait('working')
 
+            self._socket_status_printer.set_fd(self.socket.fileno())
+#            self._socket_status_printer.start()
+
             self._starting = False
             self._stat = 'hard started'
 
@@ -649,8 +689,10 @@ class SocketStreamer:
 
             self.wait('stopped')
 
-            if self.is_ssl_working():
-                self.stop_ssl()
+            self._unwrap_procedure()
+
+            self._socket_status_printer.stop()
+            self._socket_status_printer.wait('stopped')
 
             self._clear()
 
@@ -663,100 +705,139 @@ class SocketStreamer:
     def start_ssl(self, *args, **kwargs):
         """
         All parameters, same as for ssl.wrap_socket(). Exception is parameter
-        _sock, which
-        taken from self._sock
+        socket, which
+        taken from self.socket
         """
 
-        if len(args) > 0:
-            if issubclass(args[0], socket.socket):
-                del args[0]
+        if not self._wrapping \
+            and not self._stopping \
+            and not self._starting \
+            and not self.is_ssl_working():
 
-        if 'sock' in kwargs:
-            del kwargs['sock']
+            self._wrapping = True
 
-        s = None
+            if len(args) > 0:
+                if issubclass(args[0], socket.socket):
+                    del args[0]
 
-        self._stop_threads()
+            if 'sock' in kwargs:
+                del kwargs['sock']
 
-        logging.debug('before wrap sock is {}'.format(self._sock))
+            s = None
 
-        try:
-            s = ssl.wrap_socket(
-                self._sock,
-                *args,
-                **kwargs
-                )
-        except:
-            logging.exception("ssl wrap error")
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('ssl wrap error', self._sock,),
-                    name = "Connection SSL Wrap Error Thread"
-                    ).start()
-        else:
-            logging.info(
-                """\
+            self._stop_threads()
+
+            logging.debug('before wrap sock is {}'.format(self.socket))
+
+            try:
+                s = ssl.wrap_socket(
+                    self.socket,
+                    *args,
+                    **kwargs
+                    )
+            except:
+                logging.exception("ssl wrap error")
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('ssl wrap error', self.socket,),
+                        name = "Connection SSL Wrap Error Thread"
+                        ).start()
+            else:
+                logging.info(
+                    """
 peer cert:
 {}
 cipher:
 {}
 compression:
 {}""".format(
-                    repr(s.getpeercert(binary_form = False)),
-                    repr(s.cipher()),
-                    repr(s.compression())
+                        repr(s.getpeercert(binary_form = False)),
+                        repr(s.cipher()),
+                        repr(s.compression())
+                        )
                     )
-                )
 
-            self._sock = s
+                self.socket = s
 
-            logging.debug('after wrap sock is {}'.format(self._sock))
+                self._socket_status_printer.set_fd(self.socket.fileno())
 
-            self._start_threads()
+                logging.debug('after wrap sock is {}'.format(self.socket))
+
+                self._start_threads()
 
 
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('ssl wrapped', self._sock,),
-                    name = "Connection SSL Wrapped Thread"
-                    ).start()
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('ssl wrapped', self.socket,),
+                        name = "Connection SSL Wrapped Thread"
+                        ).start()
 
+            self._wrapping = False
 
     def stop_ssl(self):
 
-        self._stop_threads()
+        if not self._wrapping and not self._stopping and not self._starting:
 
-        logging.debug('before unwrap sock is {}'.format(self._sock))
+            if not self.connection:
 
-        s = None
-        try:
-            s = self._sock.unwrap()
-        except:
-            logging.exception("ssl unwrap error")
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('ssl unwrap error', self._sock,),
-                    name = "Connection SSL Unwrap Error Thread"
-                    ).start()
+                logging.debug("Connection already gone. Unwrapping is pointless (and erroneous)")
+                if self._on_connection_event:
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('ssl unwrapless', self.socket,),
+                        name = "Connection SSL Unwrapped Thread"
+                        ).start()
 
+            else:
+
+                self._wrapping = True
+
+                logging.debug('before unwrap sock is {}'.format(self.socket))
+
+                self._stop_threads()
+
+                s = None
+                try:
+                    s = self.socket.unwrap()
+                except:
+                    logging.exception("ssl unwrap error")
+                    if self._on_connection_event:
+                        threading.Thread(
+                            target = self._on_connection_event,
+                            args = ('ssl unwrap error', self.socket,),
+                            name = "Connection SSL Unwrap Error Thread"
+                            ).start()
+
+                else:
+                    self.socket = s
+
+                    self._socket_status_printer.set_fd(self.socket.fileno())
+
+                    self._start_threads()
+
+                    logging.debug('after unwrap sock is {}'.format(self.socket))
+
+                    if self._on_connection_event:
+                        threading.Thread(
+                            target = self._on_connection_event,
+                            args = ('ssl unwrapped', self.socket,),
+                            name = "Connection SSL Unwrapped Thread"
+                            ).start()
+
+            self._wrapping = False
+
+    def _unwrap_procedure(self):
+        if self.is_ssl_working():
+            self.stop_ssl()
         else:
-            self._sock = s
+            logging.debug("Socket not wrapped - unwrapping not needed")
 
-            logging.debug('after unwrap sock is {}'.format(self._sock))
-
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('ssl unwrapped', self._sock,),
-                    name = "Connection SSL Unwrapped Thread"
-                    ).start()
 
     def is_ssl_working(self):
 
-        return isinstance(self._sock, ssl.SSLSocket)
+        return isinstance(self.socket, ssl.SSLSocket)
 
     def stat(self):
 
@@ -801,35 +882,44 @@ compression:
 
         return
 
+
     def _on_in_thread_exit(self):
         self._in_thread = None
-        self._stop_threads()
+        self._on_in_out_thread_exit()
 
     def _on_out_thread_exit(self):
         self._out_thread = None
+        self._on_in_out_thread_exit()
+
+    def _on_in_out_thread_exit(self):
+
+        if not self._wrapping:
+            self.connection = False
+            self.socket.close()
+            self._unwrap_procedure()
+            self._send_connection_stopped_event()
+
         self._stop_threads()
 
+
     def _on_socket_write_error(self):
-        self._on_socket_error()
+        self._on_read_write_error()
 
     def _on_socket_read_error(self):
-        self._on_socket_error()
+        self._on_read_write_error()
 
-    def _on_socket_error(self):
+    def _on_read_write_error(self):
+        self.connection = False
 
-        if self._on_connection_event:
-            threading.Thread(
-                target = self._on_connection_event,
-                args = ('error', self._sock,),
-                name = "Connection Error Thread"
-                ).start()
+        self._stop_threads()
 
-        self._stop_threads(by_error = True)
+        self._send_connection_error_event()
+
 
     def _output_availability_watcher(self):
 
         out_poll = select.poll()
-        out_poll.register(self._sock.fileno(), select.POLLOUT)
+        out_poll.register(self.socket.fileno(), select.POLLOUT)
 
         stopped_by_flag = 0
 
@@ -841,12 +931,16 @@ compression:
 
         if stopped_by_flag == 0:
 
-            if self._on_connection_event:
-                threading.Thread(
-                    target = self._on_connection_event,
-                    args = ('start', self._sock,),
-                    name = "Connection Started Thread"
-                    ).start()
+            if not self._wrapping:
+
+                if self._on_connection_event:
+                    self.connection = True
+
+                    threading.Thread(
+                        target = self._on_connection_event,
+                        args = ('start', self.socket,),
+                        name = "Connection Started Thread"
+                        ).start()
 
         self._output_availability_watcher_thread = None
 

@@ -2,17 +2,37 @@
 import fnmatch
 import logging
 import os
+import select
 import shutil
 import sys
+import threading
+import time
 
 
 import org.wayround.utils.path
 import org.wayround.utils.terminal
 import org.wayround.utils.text
 
+POLL_CONSTS = {}
 
-def _copytree(src_dir, dst_dir, overwrite_files=False, copy_links=False,
-              stop_on_overwrite_error=True):
+_l = dir(select)
+for _i in [
+    'POLLIN',
+    'POLLPRI',
+    'POLLOUT',
+    'POLLERR',
+    'POLLHUP',
+    'POLLNVAL'
+    ]:
+    POLL_CONSTS[_i] = eval('select.{}'.format(_i))
+
+del _i
+del _l
+
+
+
+def _copytree(src_dir, dst_dir, overwrite_files = False, copy_links = False,
+              stop_on_overwrite_error = True):
 
     ret = 0
 
@@ -43,7 +63,7 @@ def _copytree(src_dir, dst_dir, overwrite_files=False, copy_links=False,
                     or (os.path.islink(full_src_file) and copy_links):
                     if os.path.isdir(full_src_file) and not os.path.islink(full_src_file):
                         if _copytree(full_src_file, full_dst_file,
-                              overwrite_files=overwrite_files
+                              overwrite_files = overwrite_files
                               ) != 0:
                             ret = 5
                     else:
@@ -70,9 +90,9 @@ def _copytree(src_dir, dst_dir, overwrite_files=False, copy_links=False,
 
 def copytree(src_dir,
              dst_dir,
-             overwrite_files=False,
-             clear_before_copy=False,
-             dst_must_be_empty=True):
+             overwrite_files = False,
+             clear_before_copy = False,
+             dst_must_be_empty = True):
 
     src_dir = org.wayround.utils.path.abspath(src_dir)
     dst_dir = org.wayround.utils.path.abspath(dst_dir)
@@ -96,7 +116,7 @@ def copytree(src_dir,
             logging.error("Error creating dir `{}'".format(dst_dir))
             ret = 2
         else:
-            if _copytree(src_dir, dst_dir, overwrite_files=overwrite_files) != 0:
+            if _copytree(src_dir, dst_dir, overwrite_files = overwrite_files) != 0:
                 logging.error("Some errors occurred while copying `{}' to `{}'".format(src_dir, dst_dir))
                 ret = 3
 
@@ -211,13 +231,13 @@ def inderictory_copy_file(directory, file1, file2):
 
 def files_recurcive_list(
     dirname,
-    onerror=None,
-    followlinks=False
+    onerror = None,
+    followlinks = False
     ):
 
     lst = []
 
-    for dir, dirs, files in os.walk(dirname, onerror=onerror, followlinks=followlinks):
+    for dir, dirs, files in os.walk(dirname, onerror = onerror, followlinks = followlinks):
 
         for f in files:
 
@@ -236,7 +256,7 @@ def progress_write_finish():
     sys.stdout.flush()
     return
 
-def progress_write(line_to_write, new_line=False):
+def progress_write(line_to_write, new_line = False):
 
     new_line_str = ''
 
@@ -384,7 +404,7 @@ def dereference_files_in_dir(dirname):
 
     return ret
 
-def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
+def files_by_mask_copy_to_dir(in_dir, out_dir, mask = '*.h'):
 
     in_dir = org.wayround.utils.path.abspath(in_dir)
     out_dir = org.wayround.utils.path.abspath(out_dir)
@@ -401,7 +421,7 @@ def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
                     shutil.copy2(
                         dirpath + os.path.sep + i,
                         out_dir + os.path.sep + i,
-                        follow_symlinks=True
+                        follow_symlinks = True
                         )
 
     except:
@@ -409,3 +429,198 @@ def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
         ret = 1
 
     return ret
+
+
+
+
+class FDStatusWatcher:
+
+    def __init__(self, on_status_changed = None):
+
+        self._clear(init = True)
+
+        self._on_status_changed = on_status_changed
+
+    def __del__(self):
+        self.stop()
+
+    def _clear(self, init = False):
+
+        if not init:
+            if self.stat() != 'stopped':
+                raise RuntimeError("Working. Cleaning restricted")
+
+        if not init:
+            if self._fd and self._poll:
+                self._poll.unregister(self._fd)
+
+        self._poll = None
+
+        self._fd = None
+
+        self._watching_thread = None
+
+        self._stop_flag = False
+
+        self.fd_status = None
+
+        self._starting = False
+        self._stopping = False
+
+    def set_fd(self, fd):
+
+        if not isinstance(fd, int):
+            raise TypeError("`fd' must be instance of int")
+
+        logging.debug(
+            "Switching monitoring to new fd {}, previaus was {}".format(
+                fd, self._fd
+                )
+            )
+
+        worked = False
+        if self.stat() == 'working':
+            worked = True
+
+            self.stop()
+
+        self._fd = fd
+
+        if worked:
+            self.start()
+
+    def get_fd(self):
+
+        return self._fd
+
+    def stop(self):
+
+        if not self._starting and not self._stopping:
+
+            self._stopping = True
+            self._stop_flag = True
+            self.wait('stopped')
+            self._clear()
+            self._stopping = False
+
+    def start(self):
+
+        threading.Thread(
+            name = "Thread Starting Socket Watcher",
+            target = self._start
+            ).start()
+
+    def _start(self):
+
+        if not isinstance(self._fd, int):
+            raise TypeError("file descriptor must be given before start")
+
+        if not self._starting and not self._stopping and self.stat() == 'stopped':
+
+            self._starting = True
+
+            self._poll = select.poll()
+            self._poll.register(
+                self._fd,
+                select.POLLIN | select.POLLPRI | select.POLLOUT |
+                select.POLLERR | select.POLLHUP | select.POLLNVAL
+                )
+
+            self._watching_thread = threading.Thread(
+                name = "Thread watching FD {}".format(self._fd),
+                target = self._watching_method
+                )
+
+            self._watching_thread.start()
+
+            self._starting = False
+
+    def stat(self):
+
+        ret = 'stopped'
+
+        if bool(self._watching_thread):
+            ret = 'working'
+        else:
+            ret = 'stopped'
+
+        return ret
+
+    def wait(self, what = 'stopped'):
+
+        allowed_what = ['stopped', 'working']
+
+        if not what in allowed_what:
+            raise ValueError("`what' must be in {}".format(allowed_what))
+
+        while True:
+            time.sleep(0.1)
+            if self.stat() == what:
+                break
+
+        return
+
+    def _watching_method(self):
+
+        while True:
+
+            if self._stop_flag:
+                break
+
+            new_stat_lst = self._poll.poll(100)
+
+            if len(new_stat_lst) > 0:
+
+                new_stat_event = new_stat_lst[0][1]
+
+                if new_stat_event != self.fd_status:
+                    threading.Thread(
+                        name = "FD {} status changed to [{}]".format(
+                            self._fd,
+                            '|'.join(poll_stat_namer(new_stat_event))
+                            ),
+                        target = self._on_status_changed,
+                        args = (self._fd, poll_stat_namer(new_stat_event),)
+                        ).start()
+
+                self.fd_status = new_stat_event
+
+        self._watching_thread = None
+
+
+
+def poll_stat_namer(event):
+
+    if not isinstance(event, int):
+        raise TypeError("`event' must be int, but it is `{}'".format(event))
+
+    devided = poll_stat_devider(event)
+    names = set()
+
+    for i in POLL_CONSTS.keys():
+
+        for j in devided:
+
+            if POLL_CONSTS[i] == j:
+                names.add(i)
+
+    return list(names)
+
+def poll_stat_devider(event):
+
+    if not isinstance(event, int):
+        raise TypeError("`event' must be int, but it is `{}'".format(event))
+
+    devided = []
+
+    for i in POLL_CONSTS:
+
+        int_val = eval("select.{}".format(i))
+
+        if int_val & event != 0:
+            devided.append(int_val)
+
+    return devided
+
+def print_status_change(sock, stats):
+    logging.info("Socket {} status changed to {}".format(sock, stats))

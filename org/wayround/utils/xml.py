@@ -90,14 +90,6 @@ class DictTreeBuilder:
 
         return [self._tree]
 
-#def _elementTreeToDictTree(et, working_dict, leaf, path):
-#
-#def elementTreeToDictTree(et):
-#
-#    d = {}
-
-
-
 
 
 class _ExpatTagEndFinder:

@@ -3,21 +3,25 @@ import logging
 import lxml.etree
 import signal
 import socket
+import time
 
 
 import org.wayround.utils.xmpp.core
 import org.wayround.utils.xmpp.client
-
-# TODO: Try to remove
-lxml.etree.register_namespace('stream', 'http://etherx.jabber.org/streams')
+import org.wayround.utils.file
 
 logging.basicConfig(level = 'DEBUG', format = "%(levelname)s :: %(threadName)s :: %(message)s")
 
+fdstw = org.wayround.utils.file.FDStatusWatcher(
+    on_status_changed = org.wayround.utils.file.print_status_change
+)
+
 jid = org.wayround.utils.xmpp.core.JID(
-    user = 'test', domain = 'wayround.org'
+    user = 'test',
+    domain = 'wayround.org'
     )
 
-cinfo = org.wayround.utils.xmpp.core.C2SConnectionInfo(
+connection_info = org.wayround.utils.xmpp.core.C2SConnectionInfo(
     host = 'wayround.org',
     port = 5222,
     jid = jid,
@@ -26,33 +30,37 @@ cinfo = org.wayround.utils.xmpp.core.C2SConnectionInfo(
 
 sock = socket.create_connection(
     (
-     cinfo.host,
-     cinfo.port
+     connection_info.host,
+     connection_info.port
      )
     )
 
-sbc = org.wayround.utils.xmpp.client.SampleC2SClient(
+logging.debug("Starting socket watcher")
+fdstw.set_fd(sock.fileno())
+fdstw.start()
+
+client = org.wayround.utils.xmpp.client.SampleC2SClient(
     sock,
-    cinfo,
+    connection_info,
     jid
     )
 
-sbc.start()
+client.start()
 
-#try:
-#    signal.pause()
-#except:
-#    pass
-#
-#sbc.stop()
-while True:
-    if sock._closed:
-        break
+try:
+    client.wait('stopped')
+except:
+    logging.exception("Error")
 
-logging.debug("Socket have been closed right now")
 
-sbc.wait('stopped')
 
-logging.debug("Reached the end. socket is {}".format(sock))
+client.stop()
 
+if client.sock_streamer.connection:
+    client.sock_streamer.socket.shutdown(socket.SHUT_RDWR)
+    client.sock_streamer.socket.close()
+logging.debug("Reached the end. socket is {} {}".format(client.socket, client.socket._closed))
+
+time.sleep(2)
+fdstw.stop()
 exit(0)
