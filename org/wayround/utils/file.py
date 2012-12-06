@@ -31,8 +31,13 @@ del _l
 
 
 
-def _copytree(src_dir, dst_dir, overwrite_files = False, copy_links = False,
-              stop_on_overwrite_error = True):
+def _copytree(
+    src_dir,
+    dst_dir,
+    overwrite_files = False,
+    copy_links = False,
+    stop_on_overwrite_error = True
+    ):
 
     ret = 0
 
@@ -76,7 +81,7 @@ def _copytree(src_dir, dst_dir, overwrite_files = False, copy_links = False,
                                 else:
                                     logging.warning("Can't overwrite dir `{}' with file. -- skipping".format(full_dst_file))
                             else:
-                                logging.info("installing `{}'".format(full_dst_file))
+                                logging.info("copying `{}'".format(os.path.relpath(full_dst_file)))
                                 try:
                                     shutil.copy2(full_src_file, full_dst_file)
                                 except:
@@ -88,11 +93,13 @@ def _copytree(src_dir, dst_dir, overwrite_files = False, copy_links = False,
 
     return ret
 
-def copytree(src_dir,
-             dst_dir,
-             overwrite_files = False,
-             clear_before_copy = False,
-             dst_must_be_empty = True):
+def copytree(
+    src_dir,
+    dst_dir,
+    overwrite_files = False,
+    clear_before_copy = False,
+    dst_must_be_empty = True
+    ):
 
     src_dir = org.wayround.utils.path.abspath(src_dir)
     dst_dir = org.wayround.utils.path.abspath(dst_dir)
@@ -100,6 +107,9 @@ def copytree(src_dir,
     ret = 0
 
     logging.info("Copying `{}' to `{}'".format(src_dir, dst_dir))
+
+    if not os.path.exists(dst_dir):
+        os.makedirs(dst_dir, exist_ok = True)
 
     if dst_must_be_empty:
         if isdirempty(dst_dir):
