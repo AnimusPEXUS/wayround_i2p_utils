@@ -21,8 +21,8 @@ def _extract_zip(file_name, output_dir):
 
     try:
         proc = org.wayround.utils.exec.simple_exec(
-            'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr,
-            options=['-qq', file_name, '-d', output_dir],
+            'unzip', stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = sys.stderr,
+            options = ['-qq', file_name, '-d', output_dir],
             )
     except:
         logging.exception("unzip start error")
@@ -40,10 +40,10 @@ def _extract_tar_7z(file_name, output_dir):
     try:
         proc_7z = org.wayround.utils.exec.simple_exec(
             '7z',
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=None,
-            options=['x', '-so', file_name],
+            stdin = subprocess.PIPE,
+            stdout = subprocess.PIPE,
+            stderr = None,
+            options = ['x', '-so', file_name],
             )
     except:
         logging.exception("7z start error")
@@ -54,10 +54,10 @@ def _extract_tar_7z(file_name, output_dir):
         try:
             proc_tar = org.wayround.utils.exec.simple_exec(
                 'tar',
-                stdin=proc_7z.stdout,
-                stdout=subprocess.PIPE,
-                stderr=None,
-                options=[
+                stdin = proc_7z.stdout,
+                stdout = subprocess.PIPE,
+                stderr = None,
+                options = [
                     '--no-same-owner',
                     '--no-same-permissions',
                     '-xlRC' ,
@@ -88,8 +88,8 @@ def _extract_tar_arch(file_name, output_dir, compressor):
         file_name,
         output_dir,
         compressor,
-        verbose_tar=True,
-        verbose_compressor=True
+        verbose_tar = True,
+        verbose_compressor = True
         )
 
     return ret
@@ -142,13 +142,13 @@ def extract(file_name, output_dir):
 
 def canonical_compressor(
     compressor,
-    stdin=None,
-    stdout=None,
-    stderr=None,
-    verbose=False,
-    options=[],
-    bufsize=(2 * 1024 ** 2),
-    close_output_on_eof=False
+    stdin = None,
+    stdout = None,
+    stderr = None,
+    verbose = False,
+    options = [],
+    bufsize = (2 * 1024 ** 2),
+    close_output_on_eof = False
     ):
 
     """
@@ -169,13 +169,13 @@ def canonical_compressor(
 
     ret = org.wayround.utils.exec.process_stream(
         compressor,
-        stdin=stdin,
-        stdout=stdout,
-        stderr=stderr,
-        options=options,
-        verbose=verbose,
-        cat_bufsize=bufsize,
-        close_output_on_eof=close_output_on_eof
+        stdin = stdin,
+        stdout = stdout,
+        stderr = stderr,
+        options = options,
+        verbose = verbose,
+        cat_bufsize = bufsize,
+        close_output_on_eof = close_output_on_eof
         )
 
     return ret
@@ -184,9 +184,9 @@ def canonical_compressor(
 def archive_tar_canonical(
     dirname, output_filename,
     compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    bufsize=(2 * 1024 ** 2)
+    verbose_tar = False,
+    verbose_compressor = False,
+    bufsize = (2 * 1024 ** 2)
     ):
 
     ret = 0
@@ -203,7 +203,7 @@ def archive_tar_canonical(
                 compressor,
                 verbose_tar,
                 verbose_compressor,
-                bufsize=bufsize
+                bufsize = bufsize
                 )
         finally:
             fobj.close()
@@ -214,9 +214,9 @@ def archive_tar_canonical_fobj(
     dirname,
     output_fobj,
     compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    bufsize=(2 * 1024 ** 2)
+    verbose_tar = False,
+    verbose_compressor = False,
+    bufsize = (2 * 1024 ** 2)
     ):
 
     ret = 0
@@ -240,12 +240,12 @@ def archive_tar_canonical_fobj(
         try:
             tarproc = org.wayround.utils.exec.simple_exec(
                 'tar',
-                options=options,
-                stdin=None,
-                stdout=subprocess.PIPE,
-                cwd=dirname,
-                bufsize=bufsize,
-                stderr=stderr
+                options = options,
+                stdin = None,
+                stdout = subprocess.PIPE,
+                cwd = dirname,
+                bufsize = bufsize,
+                stderr = stderr
                 )
         except:
             logging.exception("tar start error")
@@ -264,12 +264,12 @@ def archive_tar_canonical_fobj(
 
                 if canonical_compressor(
                     compressor,
-                    options=options,
-                    stdin=tarproc.stdout,
-                    stdout=output_fobj,
-                    stderr=stderr,
-                    verbose=verbose_compressor,
-                    close_output_on_eof=True
+                    options = options,
+                    stdin = tarproc.stdout,
+                    stdout = output_fobj,
+                    stderr = stderr,
+                    verbose = verbose_compressor,
+                    close_output_on_eof = True
                     ) != 0:
                     ret = 3
                 tarproc.wait()
@@ -284,8 +284,8 @@ def extract_tar_canonical(
     input_filename,
     dirname,
     compressor,
-    verbose_tar=False,
-    verbose_compressor=False
+    verbose_tar = False,
+    verbose_compressor = False
     ):
 
     if not compressor in CANONICAL_COMPRESSORS:
@@ -315,9 +315,9 @@ def extract_tar_canonical_fobj(
     input_fobj,
     dirname,
     compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    add_tar_options=[]
+    verbose_tar = False,
+    verbose_compressor = False,
+    add_tar_options = []
     ):
 
     if not compressor in CANONICAL_COMPRESSORS:
@@ -346,12 +346,12 @@ def extract_tar_canonical_fobj(
         try:
             tarproc = org.wayround.utils.exec.simple_exec(
                 "tar",
-                options=options,
-                stdin=subprocess.PIPE,
-                stdout=sys.stdout,
-                cwd=dirname,
-                bufsize=0,
-                stderr=sys.stdout
+                options = options,
+                stdin = subprocess.PIPE,
+                stdout = sys.stdout,
+                cwd = dirname,
+                bufsize = 0,
+                stderr = sys.stdout
                 )
         except:
             logging.exception("tar error detected")
@@ -368,11 +368,11 @@ def extract_tar_canonical_fobj(
 
                 if canonical_compressor(
                     compressor,
-                    stdin=input_fobj,
-                    stdout=tarproc.stdin,
-                    options=options,
-                    stderr=sys.stderr,
-                    close_output_on_eof=True
+                    stdin = input_fobj,
+                    stdout = tarproc.stdin,
+                    options = options,
+                    stderr = sys.stderr,
+                    close_output_on_eof = True
                     ) != 0:
 
                     ret = 3
@@ -389,7 +389,7 @@ def extract_tar_canonical_fobj(
 def pack_dir_contents_tar(
     dirname,
     output_filename,
-    verbose_tar=False
+    verbose_tar = False
     ):
 
     ret = 0
@@ -421,12 +421,12 @@ def pack_dir_contents_tar(
 
                 tarproc = org.wayround.utils.exec.simple_exec(
                     "tar",
-                    options=options,
-                    stdin=None,
-                    stdout=outf,
-                    cwd=dirname,
-                    bufsize=2 * 1024 ** 2,
-                    stderr=stderr
+                    options = options,
+                    stdin = None,
+                    stdout = outf,
+                    cwd = dirname,
+                    bufsize = 2 * 1024 ** 2,
+                    stderr = stderr
                     )
 
                 tarproc.wait()
@@ -508,7 +508,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
     return ret
 
 
-def xzcat(stdin, convert_to_str=None):
+def xzcat(stdin, convert_to_str = None):
 
     ret = 0
 
@@ -516,11 +516,11 @@ def xzcat(stdin, convert_to_str=None):
     try:
         comprproc = org.wayround.utils.exec.simple_exec(
             'xz',
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            options=['-d'],
-            bufsize=0,
-            stderr=sys.stderr
+            stdin = subprocess.PIPE,
+            stdout = subprocess.PIPE,
+            options = ['-d'],
+            bufsize = 0,
+            stderr = sys.stderr
             )
     except:
         ret = 1
@@ -531,17 +531,17 @@ def xzcat(stdin, convert_to_str=None):
             cat_p1 = org.wayround.utils.stream.cat(
                 stdin,
                 comprproc.stdin,
-                threaded=True,
-                close_output_on_eof=True
+                threaded = True,
+                close_output_on_eof = True
                 )
             cat_p1.start()
 
             cat_p2 = org.wayround.utils.stream.cat(
                 comprproc.stdout,
                 outstr,
-                threaded=True,
-                close_output_on_eof=False,
-                convert_to_str=convert_to_str
+                threaded = True,
+                close_output_on_eof = False,
+                convert_to_str = convert_to_str
                 )
             cat_p2.start()
 
@@ -566,8 +566,9 @@ def extract_low(
     tmpdir,
     tarball,
     outdir,
-    unwrap_dir=False,
-    rename_dir=False
+    unwrap_dir = False,
+    rename_dir = False,
+    more_when_one_extracted_ok = False
     ):
 
     ret = 0
@@ -592,27 +593,29 @@ def extract_low(
 
         extracted_dir = os.listdir(tmpdir)
 
-        if len(extracted_dir) > 1:
+        if len(extracted_dir) > 1 and not more_when_one_extracted_ok:
             log.error("too many extracted files")
             ret = 4
         else:
 
-            extracted_dir = tmpdir + os.path.sep + extracted_dir[0]
+            for i in extracted_dir:
 
-            if unwrap_dir:
+                i2 = tmpdir + os.path.sep + i
 
-                extracted_dir_files = os.listdir(extracted_dir)
-                for i in extracted_dir_files:
-                    shutil.move(extracted_dir + os.path.sep + i, outdir)
-                shutil.rmtree(extracted_dir)
+                if unwrap_dir:
 
-            else:
-                if rename_dir:
-                    n = outdir + os.path.sep + str(rename_dir)
-                    log.info("moving extracted dir as `{}'".format(n))
-                    shutil.move(extracted_dir, n)
+                    i2_files = os.listdir(i2)
+                    for i in i2_files:
+                        shutil.move(i2 + os.path.sep + i, outdir)
+                    shutil.rmtree(i2)
+
                 else:
-                    log.info("moving extracted dir to `{}'".format(outdir))
-                    shutil.move(extracted_dir, outdir)
+                    if rename_dir:
+                        n = outdir + os.path.sep + str(rename_dir)
+                        log.info("moving extracted dir as `{}'".format(n))
+                        shutil.move(i2, n)
+                    else:
+                        log.info("moving extracted dir to `{}'".format(outdir))
+                        shutil.move(i2, outdir)
 
     return ret

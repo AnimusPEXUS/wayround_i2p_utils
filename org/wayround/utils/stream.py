@@ -3,13 +3,10 @@ import logging
 import os
 import select
 import socket
-import ssl
 import threading
 import time
 
 import org.wayround.utils.file
-
-
 
 class CatTerminationFlagFound(Exception): pass
 
@@ -708,6 +705,9 @@ class SocketStreamer:
         socket, which
         taken from self.socket
         """
+
+        import ssl
+
 
         if not self._wrapping \
             and not self._stopping \
