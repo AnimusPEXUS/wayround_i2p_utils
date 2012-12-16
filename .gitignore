@@ -8,3 +8,4 @@
 MANIFEST
 org/__init__.py
 org/wayround/__init__.py
+.externalToolBuilders
