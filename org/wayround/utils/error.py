@@ -1,15 +1,15 @@
 
+import readline
+import sys
 import traceback
-
-# Do not use this module. use logging.exception
-# Better use this module only with this package's log module
+import pprint
 
 def return_exception_info(e, tb=False):
     txt = """
 EXCEPTION: {type}
     VALUE: {val}
 """.format(
-        type=repr(e[0]),
+        type=repr(e[0].__name__),
         val=repr(e[1])
         )
 
@@ -30,3 +30,26 @@ def print_exception_info(e):
     txt = return_exception_info(e)
     print(txt)
     return
+
+def control(g=None, l=None, prompt='-> '):
+    bk = False
+
+    while not bk:
+
+        try:
+            cmd = input(prompt)
+            try:
+                e = eval(cmd, g, l)
+                if isinstance(e, dict):
+                    pprint.pprint(e, indent=2)
+                else:
+                    print(repr(e))
+            except SyntaxError:
+                exec(cmd, g, l)
+
+        except EOFError:
+            bk = True
+        except:
+            print(return_exception_info(sys.exc_info(), tb=True))
+
+    print('')
