@@ -67,7 +67,7 @@ cdef extern from "elf.h":
         Elf64_Half    e_shnum        
         Elf64_Half    e_shstrndx    
         
-    
+            
     cdef enum:    
         EI_MAG0   =     0    
         ELFMAG0   =   0x7f  
@@ -87,7 +87,7 @@ cdef extern from "elf.h":
     cdef char ELFMAG3 =     'F'   
         
     cdef char ELFMAG =   {ELFMAG0,EI_MAG1,EI_MAG2,EI_MAG3}
-
+    
     cdef enum:    
         SELFMAG    =    4
         
