@@ -7,10 +7,9 @@ from Cython.Distutils import build_ext
 setup(
     name = 'org_wayround_utils',
     version = '0.4',
-    description = 'Various service modules required by wayround.org projects',
+    description = 'Various service modules',
     long_description = """\
 This package contains various useful modules functions and classes.
-It is heavily used by My projects, aipsetup for instance.
 
 """,
 
@@ -28,6 +27,10 @@ It is heavily used by My projects, aipsetup for instance.
         'Development Status :: 1 - Planning'
         ],
     ext_modules = [
+#        Extension(
+#            "org.wayround.utils.format.elf_h",
+#            ["org/wayround/utils/format/elf_h.pyx"]
+#            ),
         Extension(
             "org.wayround.utils.format.elf",
             ["org/wayround/utils/format/elf.pyx"]

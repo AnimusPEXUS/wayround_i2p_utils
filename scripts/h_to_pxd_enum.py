@@ -43,7 +43,8 @@ else:
                 typ = 'int'
                 if (value.startswith("'") and value.endswith("'")) or \
                     (value.startswith('"') and value.endswith('"')):
-                    typ = 'string'
+                    if len(value) > 3:
+                        typ = 'string'
 
 
                 registry.append(
@@ -66,45 +67,8 @@ else:
             spc2 = len(i['value'])
 
     writting = None
+
     for i in registry:
-
-        if i['type'] != writting:
-            pxd_f.write('\n')
-
-        if i['type'] == 'int':
-            if writting != 'int':
-                pxd_f.write('cdef extern from "{}.h":\n    cdef enum:\n'.format(h_name))
-
-            writting = 'int'
-
-            n_l = len(i['name'])
-            v_l = len(i['value'])
-
-            comment = i['comment']
-            if comment == None:
-                comment = ''
-
-            comment = comment.replace('*/', '')
-
-            pxd_f.write(
-                "        {name}{spc1} = {value}{spc2} # {comment}\n".format(
-                    name=i['name'],
-                    value=i['value'],
-                    comment=comment,
-                    spc1=(' ' * spc1)[n_l:],
-                    spc2=(' ' * spc2)[v_l:]
-                    )
-                )
-
-#            pxd_f.write(
-#                "{name}        {spc1} = {value}{spc2} # {comment}\n".format(
-#                    name=i['name'],
-#                    value=i['value'],
-#                    comment=comment,
-#                    spc1=(' ' * spc1)[n_l:],
-#                    spc2=(' ' * spc2)[v_l:]
-#                    )
-#                )
 
         if i['type'] == 'string':
 
@@ -130,7 +94,7 @@ else:
 #                )
 
             pxd_f.write(
-                "{name}        {spc1} = {value}{spc2} # {comment}\n".format(
+                "#{name}       {spc1} = {value}{spc2} # {comment}\n".format(
                     name=i['name'],
                     value=i['value'],
                     comment=comment,
@@ -139,6 +103,47 @@ else:
                     )
                 )
 
+
+
+    for i in registry:
+
+        if i['type'] == 'int':
+
+            if i['type'] != writting:
+                pxd_f.write('\n')
+
+            if writting != 'int':
+                pxd_f.write('cdef extern from "{}.h":\n    cdef enum:\n'.format(h_name))
+
+            writting = 'int'
+
+            n_l = len(i['name'])
+#            v_l = len(i['value'])
+            v_l = 0
+
+            comment = i['comment']
+            if comment == None:
+                comment = ''
+
+            comment = comment.replace('*/', '')
+
+            pxd_f.write(
+                "        {name}{spc1} # {comment}\n".format(
+                    name=i['name'],
+                    comment=comment,
+                    spc1=(' ' * spc1)[n_l:]
+                    )
+                )
+
+#            pxd_f.write(
+#                "{name}        {spc1} = {value}{spc2} # {comment}\n".format(
+#                    name=i['name'],
+#                    value=i['value'],
+#                    comment=comment,
+#                    spc1=(' ' * spc1)[n_l:],
+#                    spc2=(' ' * spc2)[v_l:]
+#                    )
+#                )
 
 
 

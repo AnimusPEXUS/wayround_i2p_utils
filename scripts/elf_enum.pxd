@@ -1,3 +1,7 @@
+#ELFMAG                                   = "\177ELF"             # 
+#ELF_NOTE_SOLARIS                         = "SUNW Solaris"        # 
+#ELF_NOTE_GNU                             = "GNU"                 # 
+
 cdef extern from "elf.h":
     cdef enum:
         _ELF_H                            # 
@@ -1117,34 +1121,34 @@ cdef extern from "elf.h":
         R_PPC_SECTOFF_LO                  # 
         R_PPC_SECTOFF_HI                  # 
         R_PPC_SECTOFF_HA                  # 
-        R_PPC_TLS                         #  none    (sym+add)@tls 
-        R_PPC_DTPMOD32                    #  word32    (sym+add)@dtpmod 
-        R_PPC_TPREL16                     #  half16*    (sym+add)@tprel 
-        R_PPC_TPREL16_LO                  #  half16    (sym+add)@tprel@l 
-        R_PPC_TPREL16_HI                  #  half16    (sym+add)@tprel@h 
-        R_PPC_TPREL16_HA                  #  half16    (sym+add)@tprel@ha 
-        R_PPC_TPREL32                     #  word32    (sym+add)@tprel 
-        R_PPC_DTPREL16                    #  half16*    (sym+add)@dtprel 
-        R_PPC_DTPREL16_LO                 #  half16    (sym+add)@dtprel@l 
-        R_PPC_DTPREL16_HI                 #  half16    (sym+add)@dtprel@h 
-        R_PPC_DTPREL16_HA                 #  half16    (sym+add)@dtprel@ha 
-        R_PPC_DTPREL32                    #  word32    (sym+add)@dtprel 
-        R_PPC_GOT_TLSGD16                 #  half16*    (sym+add)@got@tlsgd 
-        R_PPC_GOT_TLSGD16_LO              #  half16    (sym+add)@got@tlsgd@l 
-        R_PPC_GOT_TLSGD16_HI              #  half16    (sym+add)@got@tlsgd@h 
-        R_PPC_GOT_TLSGD16_HA              #  half16    (sym+add)@got@tlsgd@ha 
-        R_PPC_GOT_TLSLD16                 #  half16*    (sym+add)@got@tlsld 
-        R_PPC_GOT_TLSLD16_LO              #  half16    (sym+add)@got@tlsld@l 
-        R_PPC_GOT_TLSLD16_HI              #  half16    (sym+add)@got@tlsld@h 
-        R_PPC_GOT_TLSLD16_HA              #  half16    (sym+add)@got@tlsld@ha 
-        R_PPC_GOT_TPREL16                 #  half16*    (sym+add)@got@tprel 
-        R_PPC_GOT_TPREL16_LO              #  half16    (sym+add)@got@tprel@l 
-        R_PPC_GOT_TPREL16_HI              #  half16    (sym+add)@got@tprel@h 
-        R_PPC_GOT_TPREL16_HA              #  half16    (sym+add)@got@tprel@ha 
-        R_PPC_GOT_DTPREL16                #  half16*    (sym+add)@got@dtprel 
-        R_PPC_GOT_DTPREL16_LO             #  half16*    (sym+add)@got@dtprel@l 
-        R_PPC_GOT_DTPREL16_HI             #  half16*    (sym+add)@got@dtprel@h 
-        R_PPC_GOT_DTPREL16_HA             #  half16*    (sym+add)@got@dtprel@ha 
+        R_PPC_TLS                         #  none	(sym+add)@tls 
+        R_PPC_DTPMOD32                    #  word32	(sym+add)@dtpmod 
+        R_PPC_TPREL16                     #  half16*	(sym+add)@tprel 
+        R_PPC_TPREL16_LO                  #  half16	(sym+add)@tprel@l 
+        R_PPC_TPREL16_HI                  #  half16	(sym+add)@tprel@h 
+        R_PPC_TPREL16_HA                  #  half16	(sym+add)@tprel@ha 
+        R_PPC_TPREL32                     #  word32	(sym+add)@tprel 
+        R_PPC_DTPREL16                    #  half16*	(sym+add)@dtprel 
+        R_PPC_DTPREL16_LO                 #  half16	(sym+add)@dtprel@l 
+        R_PPC_DTPREL16_HI                 #  half16	(sym+add)@dtprel@h 
+        R_PPC_DTPREL16_HA                 #  half16	(sym+add)@dtprel@ha 
+        R_PPC_DTPREL32                    #  word32	(sym+add)@dtprel 
+        R_PPC_GOT_TLSGD16                 #  half16*	(sym+add)@got@tlsgd 
+        R_PPC_GOT_TLSGD16_LO              #  half16	(sym+add)@got@tlsgd@l 
+        R_PPC_GOT_TLSGD16_HI              #  half16	(sym+add)@got@tlsgd@h 
+        R_PPC_GOT_TLSGD16_HA              #  half16	(sym+add)@got@tlsgd@ha 
+        R_PPC_GOT_TLSLD16                 #  half16*	(sym+add)@got@tlsld 
+        R_PPC_GOT_TLSLD16_LO              #  half16	(sym+add)@got@tlsld@l 
+        R_PPC_GOT_TLSLD16_HI              #  half16	(sym+add)@got@tlsld@h 
+        R_PPC_GOT_TLSLD16_HA              #  half16	(sym+add)@got@tlsld@ha 
+        R_PPC_GOT_TPREL16                 #  half16*	(sym+add)@got@tprel 
+        R_PPC_GOT_TPREL16_LO              #  half16	(sym+add)@got@tprel@l 
+        R_PPC_GOT_TPREL16_HI              #  half16	(sym+add)@got@tprel@h 
+        R_PPC_GOT_TPREL16_HA              #  half16	(sym+add)@got@tprel@ha 
+        R_PPC_GOT_DTPREL16                #  half16*	(sym+add)@got@dtprel 
+        R_PPC_GOT_DTPREL16_LO             #  half16*	(sym+add)@got@dtprel@l 
+        R_PPC_GOT_DTPREL16_HI             #  half16*	(sym+add)@got@dtprel@h 
+        R_PPC_GOT_DTPREL16_HA             #  half16*	(sym+add)@got@dtprel@ha 
         R_PPC_EMB_NADDR32                 # 
         R_PPC_EMB_NADDR16                 # 
         R_PPC_EMB_NADDR16_LO              # 
@@ -1239,46 +1243,46 @@ cdef extern from "elf.h":
         R_PPC64_TOC16_LO_DS               #  half16ds  #lo(S + A - .TOC.) >> 2 
         R_PPC64_PLTGOT16_DS               #  half16ds* (M + A) >> 2 
         R_PPC64_PLTGOT16_LO_DS            #  half16ds  #lo(M + A) >> 2 
-        R_PPC64_TLS                       #  none    (sym+add)@tls 
+        R_PPC64_TLS                       #  none	(sym+add)@tls 
         R_PPC64_DTPMOD64                  #  doubleword64 (sym+add)@dtpmod 
-        R_PPC64_TPREL16                   #  half16*    (sym+add)@tprel 
-        R_PPC64_TPREL16_LO                #  half16    (sym+add)@tprel@l 
-        R_PPC64_TPREL16_HI                #  half16    (sym+add)@tprel@h 
-        R_PPC64_TPREL16_HA                #  half16    (sym+add)@tprel@ha 
+        R_PPC64_TPREL16                   #  half16*	(sym+add)@tprel 
+        R_PPC64_TPREL16_LO                #  half16	(sym+add)@tprel@l 
+        R_PPC64_TPREL16_HI                #  half16	(sym+add)@tprel@h 
+        R_PPC64_TPREL16_HA                #  half16	(sym+add)@tprel@ha 
         R_PPC64_TPREL64                   #  doubleword64 (sym+add)@tprel 
-        R_PPC64_DTPREL16                  #  half16*    (sym+add)@dtprel 
-        R_PPC64_DTPREL16_LO               #  half16    (sym+add)@dtprel@l 
-        R_PPC64_DTPREL16_HI               #  half16    (sym+add)@dtprel@h 
-        R_PPC64_DTPREL16_HA               #  half16    (sym+add)@dtprel@ha 
+        R_PPC64_DTPREL16                  #  half16*	(sym+add)@dtprel 
+        R_PPC64_DTPREL16_LO               #  half16	(sym+add)@dtprel@l 
+        R_PPC64_DTPREL16_HI               #  half16	(sym+add)@dtprel@h 
+        R_PPC64_DTPREL16_HA               #  half16	(sym+add)@dtprel@ha 
         R_PPC64_DTPREL64                  #  doubleword64 (sym+add)@dtprel 
-        R_PPC64_GOT_TLSGD16               #  half16*    (sym+add)@got@tlsgd 
-        R_PPC64_GOT_TLSGD16_LO            #  half16    (sym+add)@got@tlsgd@l 
-        R_PPC64_GOT_TLSGD16_HI            #  half16    (sym+add)@got@tlsgd@h 
-        R_PPC64_GOT_TLSGD16_HA            #  half16    (sym+add)@got@tlsgd@ha 
-        R_PPC64_GOT_TLSLD16               #  half16*    (sym+add)@got@tlsld 
-        R_PPC64_GOT_TLSLD16_LO            #  half16    (sym+add)@got@tlsld@l 
-        R_PPC64_GOT_TLSLD16_HI            #  half16    (sym+add)@got@tlsld@h 
-        R_PPC64_GOT_TLSLD16_HA            #  half16    (sym+add)@got@tlsld@ha 
-        R_PPC64_GOT_TPREL16_DS            #  half16ds*    (sym+add)@got@tprel 
+        R_PPC64_GOT_TLSGD16               #  half16*	(sym+add)@got@tlsgd 
+        R_PPC64_GOT_TLSGD16_LO            #  half16	(sym+add)@got@tlsgd@l 
+        R_PPC64_GOT_TLSGD16_HI            #  half16	(sym+add)@got@tlsgd@h 
+        R_PPC64_GOT_TLSGD16_HA            #  half16	(sym+add)@got@tlsgd@ha 
+        R_PPC64_GOT_TLSLD16               #  half16*	(sym+add)@got@tlsld 
+        R_PPC64_GOT_TLSLD16_LO            #  half16	(sym+add)@got@tlsld@l 
+        R_PPC64_GOT_TLSLD16_HI            #  half16	(sym+add)@got@tlsld@h 
+        R_PPC64_GOT_TLSLD16_HA            #  half16	(sym+add)@got@tlsld@ha 
+        R_PPC64_GOT_TPREL16_DS            #  half16ds*	(sym+add)@got@tprel 
         R_PPC64_GOT_TPREL16_LO_DS         #  half16ds (sym+add)@got@tprel@l 
-        R_PPC64_GOT_TPREL16_HI            #  half16    (sym+add)@got@tprel@h 
-        R_PPC64_GOT_TPREL16_HA            #  half16    (sym+add)@got@tprel@ha 
-        R_PPC64_GOT_DTPREL16_DS           #  half16ds*    (sym+add)@got@dtprel 
+        R_PPC64_GOT_TPREL16_HI            #  half16	(sym+add)@got@tprel@h 
+        R_PPC64_GOT_TPREL16_HA            #  half16	(sym+add)@got@tprel@ha 
+        R_PPC64_GOT_DTPREL16_DS           #  half16ds*	(sym+add)@got@dtprel 
         R_PPC64_GOT_DTPREL16_LO_DS        #  half16ds (sym+add)@got@dtprel@l 
-        R_PPC64_GOT_DTPREL16_HI           #  half16    (sym+add)@got@dtprel@h 
-        R_PPC64_GOT_DTPREL16_HA           #  half16    (sym+add)@got@dtprel@ha 
-        R_PPC64_TPREL16_DS                #  half16ds*    (sym+add)@tprel 
-        R_PPC64_TPREL16_LO_DS             #  half16ds    (sym+add)@tprel@l 
-        R_PPC64_TPREL16_HIGHER            #  half16    (sym+add)@tprel@higher 
-        R_PPC64_TPREL16_HIGHERA           #  half16    (sym+add)@tprel@highera 
-        R_PPC64_TPREL16_HIGHEST           #  half16    (sym+add)@tprel@highest 
-        R_PPC64_TPREL16_HIGHESTA          #  half16    (sym+add)@tprel@highesta 
+        R_PPC64_GOT_DTPREL16_HI           #  half16	(sym+add)@got@dtprel@h 
+        R_PPC64_GOT_DTPREL16_HA           #  half16	(sym+add)@got@dtprel@ha 
+        R_PPC64_TPREL16_DS                #  half16ds*	(sym+add)@tprel 
+        R_PPC64_TPREL16_LO_DS             #  half16ds	(sym+add)@tprel@l 
+        R_PPC64_TPREL16_HIGHER            #  half16	(sym+add)@tprel@higher 
+        R_PPC64_TPREL16_HIGHERA           #  half16	(sym+add)@tprel@highera 
+        R_PPC64_TPREL16_HIGHEST           #  half16	(sym+add)@tprel@highest 
+        R_PPC64_TPREL16_HIGHESTA          #  half16	(sym+add)@tprel@highesta 
         R_PPC64_DTPREL16_DS               #  half16ds* (sym+add)@dtprel 
-        R_PPC64_DTPREL16_LO_DS            #  half16ds    (sym+add)@dtprel@l 
-        R_PPC64_DTPREL16_HIGHER           #  half16    (sym+add)@dtprel@higher 
-        R_PPC64_DTPREL16_HIGHERA          #  half16    (sym+add)@dtprel@highera 
-        R_PPC64_DTPREL16_HIGHEST          #  half16    (sym+add)@dtprel@highest 
-        R_PPC64_DTPREL16_HIGHESTA         #  half16    (sym+add)@dtprel@highesta 
+        R_PPC64_DTPREL16_LO_DS            #  half16ds	(sym+add)@dtprel@l 
+        R_PPC64_DTPREL16_HIGHER           #  half16	(sym+add)@dtprel@higher 
+        R_PPC64_DTPREL16_HIGHERA          #  half16	(sym+add)@dtprel@highera 
+        R_PPC64_DTPREL16_HIGHEST          #  half16	(sym+add)@dtprel@highest 
+        R_PPC64_DTPREL16_HIGHESTA         #  half16	(sym+add)@dtprel@highesta 
         R_PPC64_JMP_IREL                  # 
         R_PPC64_IRELATIVE                 # 
         R_PPC64_REL16                     #  half16   (sym+add-.) 
@@ -1544,7 +1548,7 @@ cdef extern from "elf.h":
         R_390_12                          #  Direct 12 bit.  
         R_390_16                          #  Direct 16 bit.  
         R_390_32                          #  Direct 32 bit.  
-        R_390_PC32                        #  PC relative 32 bit.    
+        R_390_PC32                        #  PC relative 32 bit.	
         R_390_GOT12                       #  12 bit GOT offset.  
         R_390_GOT32                       #  32 bit GOT offset.  
         R_390_PLT32                       #  32 bit PC relative PLT address.  
@@ -1552,26 +1556,26 @@ cdef extern from "elf.h":
         R_390_GLOB_DAT                    #  Create GOT entry.  
         R_390_JMP_SLOT                    #  Create PLT entry.  
         R_390_RELATIVE                    #  Adjust by program base.  
-        R_390_GOTOFF32                    #  32 bit offset to GOT.     
+        R_390_GOTOFF32                    #  32 bit offset to GOT.	 
         R_390_GOTPC                       #  32 bit PC relative offset to GOT.  
         R_390_GOT16                       #  16 bit GOT offset.  
-        R_390_PC16                        #  PC relative 16 bit.    
+        R_390_PC16                        #  PC relative 16 bit.	
         R_390_PC16DBL                     #  PC relative 16 bit shifted by 1.  
         R_390_PLT16DBL                    #  16 bit PC rel. PLT shifted by 1.  
         R_390_PC32DBL                     #  PC relative 32 bit shifted by 1.  
         R_390_PLT32DBL                    #  32 bit PC rel. PLT shifted by 1.  
         R_390_GOTPCDBL                    #  32 bit PC rel. GOT shifted by 1.  
         R_390_64                          #  Direct 64 bit.  
-        R_390_PC64                        #  PC relative 64 bit.    
+        R_390_PC64                        #  PC relative 64 bit.	
         R_390_GOT64                       #  64 bit GOT offset.  
         R_390_PLT64                       #  64 bit PC relative PLT address.  
         R_390_GOTENT                      #  32 bit PC rel. to GOT entry >> 1. 
         R_390_GOTOFF16                    #  16 bit offset to GOT. 
         R_390_GOTOFF64                    #  64 bit offset to GOT. 
-        R_390_GOTPLT12                    #  12 bit offset to jump slot.    
-        R_390_GOTPLT16                    #  16 bit offset to jump slot.    
-        R_390_GOTPLT32                    #  32 bit offset to jump slot.    
-        R_390_GOTPLT64                    #  64 bit offset to jump slot.    
+        R_390_GOTPLT12                    #  12 bit offset to jump slot.	
+        R_390_GOTPLT16                    #  16 bit offset to jump slot.	
+        R_390_GOTPLT32                    #  32 bit offset to jump slot.	
+        R_390_GOTPLT64                    #  64 bit offset to jump slot.	
         R_390_GOTPLTENT                   #  32 bit rel. offset to jump slot.  
         R_390_PLTOFF16                    #  16 bit offset from GOT to PLT. 
         R_390_PLTOFF32                    #  32 bit offset from GOT to PLT. 
@@ -1594,7 +1598,7 @@ cdef extern from "elf.h":
         R_390_TLS_LDO32                   #  32 bit offset relative to TLS
         R_390_TLS_LDO64                   #  64 bit offset relative to TLS
         R_390_TLS_DTPMOD                  #  ID of module containing symbol.  
-        R_390_TLS_DTPOFF                  #  Offset in TLS block.     
+        R_390_TLS_DTPOFF                  #  Offset in TLS block.	 
         R_390_TLS_TPOFF                   #  Negated offset in static TLS
         R_390_20                          #  Direct 20 bit.  
         R_390_GOT20                       #  20 bit GOT offset.  

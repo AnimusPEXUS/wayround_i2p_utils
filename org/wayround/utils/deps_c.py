@@ -4,8 +4,10 @@ import io
 import logging
 import os
 import re
+import mmap
 
 import org.wayround.utils.exec
+import org.wayround.utils.format.elf
 import org.wayround.utils.path
 import org.wayround.utils.stream
 
@@ -20,49 +22,67 @@ def elf_deps(filename, mute=True):
 
     ret = 0
 
-    filename = org.wayround.utils.path.abspath(filename)
+    f = open(filename, 'r')
 
-    if not os.path.isfile(filename):
-        #or os.path.islink(filename):
-        if not mute:
-            logging.error("Not a file")
-        ret = 1
+    try:
+        m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
+    except:
+        ret = 2
     else:
 
-        str_file = io.StringIO()
+        is_elf = org.wayround.utils.format.elf.is_elf(m)
 
-        lddproc = ldd(
-            options=[filename]
-            )
-
-        catproc = org.wayround.utils.stream.cat(
-            lddproc.stdout,
-            str_file,
-            threaded=True,
-            convert_to_str='utf-8'
-            )
-        catproc.start()
-
-        lddproc.wait()
-
-        catproc.join()
-
-        str_file.seek(0)
-
-        deps_txt = str_file.read()
-
-        str_file.close()
-        del(str_file)
-
-        if lddproc.returncode == 0:
-            dep_lst = parse_ldd_output(deps_txt)
-            ret = copy.copy(dep_lst)
+        if not is_elf:
+            ret = 1
         else:
-            if not mute:
-                logging.error("`ldd' returned error")
-            ret = 2
 
-        del(lddproc)
+            filename = org.wayround.utils.path.abspath(filename)
+
+            if not os.path.isfile(filename):
+                #or os.path.islink(filename):
+                if not mute:
+                    logging.error("Not a file")
+                ret = 1
+            else:
+
+                str_file = io.StringIO()
+
+                lddproc = ldd(
+                    options=[filename]
+                    )
+
+                catproc = org.wayround.utils.stream.cat(
+                    lddproc.stdout,
+                    str_file,
+                    threaded=True,
+                    convert_to_str='utf-8'
+                    )
+                catproc.start()
+
+                lddproc.wait()
+
+                catproc.join()
+
+                str_file.seek(0)
+
+                deps_txt = str_file.read()
+
+                str_file.close()
+                del(str_file)
+
+                if lddproc.returncode == 0:
+                    dep_lst = parse_ldd_output(deps_txt)
+                    ret = copy.copy(dep_lst)
+                else:
+                    if not mute:
+                        logging.error("`ldd' returned error")
+                    ret = 2
+
+                del(lddproc)
+
+        m.close()
+
+    f.close()
 
     return ret
 

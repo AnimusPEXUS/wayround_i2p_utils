@@ -34,9 +34,9 @@ del _l
 def _copytree(
     src_dir,
     dst_dir,
-    overwrite_files = False,
-    copy_links = False,
-    stop_on_overwrite_error = True
+    overwrite_files=False,
+    copy_links=False,
+    stop_on_overwrite_error=True
     ):
 
     ret = 0
@@ -68,7 +68,7 @@ def _copytree(
                     or (os.path.islink(full_src_file) and copy_links):
                     if os.path.isdir(full_src_file) and not os.path.islink(full_src_file):
                         if _copytree(full_src_file, full_dst_file,
-                              overwrite_files = overwrite_files
+                              overwrite_files=overwrite_files
                               ) != 0:
                             ret = 5
                     else:
@@ -96,9 +96,9 @@ def _copytree(
 def copytree(
     src_dir,
     dst_dir,
-    overwrite_files = False,
-    clear_before_copy = False,
-    dst_must_be_empty = True
+    overwrite_files=False,
+    clear_before_copy=False,
+    dst_must_be_empty=True
     ):
 
     src_dir = org.wayround.utils.path.abspath(src_dir)
@@ -109,7 +109,7 @@ def copytree(
     logging.info("Copying `{}' to `{}'".format(src_dir, dst_dir))
 
     if not os.path.exists(dst_dir):
-        os.makedirs(dst_dir, exist_ok = True)
+        os.makedirs(dst_dir, exist_ok=True)
 
     if dst_must_be_empty:
         if isdirempty(dst_dir):
@@ -126,7 +126,7 @@ def copytree(
             logging.error("Error creating dir `{}'".format(dst_dir))
             ret = 2
         else:
-            if _copytree(src_dir, dst_dir, overwrite_files = overwrite_files) != 0:
+            if _copytree(src_dir, dst_dir, overwrite_files=overwrite_files) != 0:
                 logging.error("Some errors occurred while copying `{}' to `{}'".format(src_dir, dst_dir))
                 ret = 3
 
@@ -241,13 +241,13 @@ def inderictory_copy_file(directory, file1, file2):
 
 def files_recurcive_list(
     dirname,
-    onerror = None,
-    followlinks = False
+    onerror=None,
+    followlinks=False
     ):
 
     lst = []
 
-    for dir, dirs, files in os.walk(dirname, onerror = onerror, followlinks = followlinks):
+    for dir, dirs, files in os.walk(dirname, onerror=onerror, followlinks=followlinks):
 
         for f in files:
 
@@ -266,7 +266,7 @@ def progress_write_finish():
     sys.stdout.flush()
     return
 
-def progress_write(line_to_write, new_line = False):
+def progress_write(line_to_write, new_line=False):
 
     new_line_str = ''
 
@@ -414,7 +414,7 @@ def dereference_files_in_dir(dirname):
 
     return ret
 
-def files_by_mask_copy_to_dir(in_dir, out_dir, mask = '*.h'):
+def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
 
     in_dir = org.wayround.utils.path.abspath(in_dir)
     out_dir = org.wayround.utils.path.abspath(out_dir)
@@ -431,7 +431,7 @@ def files_by_mask_copy_to_dir(in_dir, out_dir, mask = '*.h'):
                     shutil.copy2(
                         dirpath + os.path.sep + i,
                         out_dir + os.path.sep + i,
-                        follow_symlinks = True
+                        follow_symlinks=True
                         )
 
     except:
@@ -445,16 +445,16 @@ def files_by_mask_copy_to_dir(in_dir, out_dir, mask = '*.h'):
 
 class FDStatusWatcher:
 
-    def __init__(self, on_status_changed = None):
+    def __init__(self, on_status_changed=None):
 
-        self._clear(init = True)
+        self._clear(init=True)
 
         self._on_status_changed = on_status_changed
 
     def __del__(self):
         self.stop()
 
-    def _clear(self, init = False):
+    def _clear(self, init=False):
 
         if not init:
             if self.stat() != 'stopped':
@@ -516,8 +516,8 @@ class FDStatusWatcher:
     def start(self):
 
         threading.Thread(
-            name = "Thread Starting Socket Watcher",
-            target = self._start
+            name="Thread Starting Socket Watcher",
+            target=self._start
             ).start()
 
     def _start(self):
@@ -537,8 +537,8 @@ class FDStatusWatcher:
                 )
 
             self._watching_thread = threading.Thread(
-                name = "Thread watching FD {}".format(self._fd),
-                target = self._watching_method
+                name="Thread watching FD {}".format(self._fd),
+                target=self._watching_method
                 )
 
             self._watching_thread.start()
@@ -556,7 +556,7 @@ class FDStatusWatcher:
 
         return ret
 
-    def wait(self, what = 'stopped'):
+    def wait(self, what='stopped'):
 
         allowed_what = ['stopped', 'working']
 
@@ -585,12 +585,12 @@ class FDStatusWatcher:
 
                 if new_stat_event != self.fd_status:
                     threading.Thread(
-                        name = "FD {} status changed to [{}]".format(
+                        name="FD {} status changed to [{}]".format(
                             self._fd,
                             '|'.join(poll_stat_namer(new_stat_event))
                             ),
-                        target = self._on_status_changed,
-                        args = (self._fd, poll_stat_namer(new_stat_event),)
+                        target=self._on_status_changed,
+                        args=(self._fd, poll_stat_namer(new_stat_event),)
                         ).start()
 
                 self.fd_status = new_stat_event
@@ -634,3 +634,17 @@ def poll_stat_devider(event):
 
 def print_status_change(sock, stats):
     logging.info("Socket {} status changed to {}".format(sock, stats))
+
+def which(name):
+    ret = None
+
+    os_path = os.environ['PATH'].split(':')
+
+    for i in os_path:
+
+        n_f_n = os.path.join(i, name)
+
+        if os.path.isfile(n_f_n):
+            ret = n_f_n
+
+    return ret
