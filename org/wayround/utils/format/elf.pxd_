@@ -200,22 +200,37 @@ cdef extern from "elf.h":
 
     # Dynamic section entry.  
 
-#    ctypedef union d_un32_uni:
+
+#    ctypedef union p_un_32:
 #        Elf32_Word      d_val          # Integer value
 #        Elf32_Addr      d_ptr          # Address value
 #
 #    ctypedef struct Elf32_Dyn:
 #        Elf32_Sword     d_tag          # Dynamic entry type
-#        d_un32_uni      d_un
+#        p_un_32         p_un
 #
-#    ctypedef union d_un64_uni:
+#    ctypedef union p_un_64:
 #        Elf64_Xword     d_val
 #        Elf64_Addr      d_ptr
 #
 #    ctypedef struct Elf64_Dyn:
 #        Elf64_Sxword    d_tag
-#        d_un64_uni      d_un
+#        p_un_64         p_un
 
+#    cdef union p_un_32:
+#        d_val          # Integer value
+#        d_ptr          # Address value
+#    cdef struct Elf32_Dyn:
+#        d_tag          # Dynamic entry type
+#        p_un
+
+#    cdef union p_un_64:
+#        d_val
+#        d_ptr
+
+#    cdef struct Elf64_Dyn:
+#        d_tag
+#        p_un
 
     # Version definition sections.
 
