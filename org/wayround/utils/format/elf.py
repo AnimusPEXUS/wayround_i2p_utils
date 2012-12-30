@@ -2,19 +2,38 @@
 import copy
 import sys
 
+from  org.wayround.utils.format.elf_enum import *
 import org.wayround.utils.format.elf_bin as elf_bin
 
-def read_e_ident(data):
-    return elf_bin.read_e_ident(data)
 
-def is_elf(data):
-    return elf_bin.is_elf(data[0:4])
+read_e_ident = elf_bin.read_e_ident
+is_elf = elf_bin.is_elf
+e_ident_bitness = elf_bin.e_ident_bitness
+e_ident_to_dict = elf_bin.e_ident_to_dict
 
-def e_ident_bitness(e_ident):
-    return elf_bin.e_ident_bitness(e_ident)
+read_elf_ehdr_x = elf_bin.read_elf_ehdr_x
+read_elf_ehdr = elf_bin.read_elf_ehdr
 
-def e_ident_to_dict(data):
-    return elf_bin.e_ident_to_dict(data)
+elf32_ehdr_to_dict = elf_bin.elf32_ehdr_to_dict
+elf64_ehdr_to_dict = elf_bin.elf64_ehdr_to_dict
+elf_ehdr_to_dict = elf_bin.elf_ehdr_to_dict
+
+read_elf_shdr_x = elf_bin.read_elf_shdr_x
+read_elf_shdr = elf_bin.read_elf_shdr
+
+read_elf_phdr_x = elf_bin.read_elf_phdr_x
+read_elf_phdr = elf_bin.read_elf_phdr
+
+
+read_elf_section_header_table = elf_bin.read_elf_section_header_table
+read_elf_section_header_table_names = elf_bin.read_elf_section_header_table_names
+
+read_elf_program_header_table = elf_bin.read_elf_program_header_table
+
+read_dynamic_section = elf_bin.read_dynamic_section
+
+get_dynamic_libs_names = elf_bin.get_dynamic_libs_names
+
 
 def e_ident_format(e_ident_dict):
 
@@ -28,35 +47,25 @@ ABI Version: {e_i_s_abiversion}
 
     return ret
 
-def read_elf_ehdr_x(data, index, x):
-    return elf_bin.read_elf_ehdr_x(data, index, x)
 
-def read_elf_ehdr(data, index, e_ident):
-    return elf_bin.read_elf_ehdr(data, index, e_ident)
-
-def read_elf_shdr_x(data, index, x):
-    return elf_bin.read_elf_shdr_x(data, index, x)
-
-def read_elf_shdr(data, index, e_ident):
-    return elf_bin.read_elf_shdr(data, index, e_ident)
-
-def elf32_ehdr_to_dict(data, index):
-    return elf_bin.elf32_ehdr_to_dict(data, index)
-
-def elf64_ehdr_to_dict(data, index):
-    return elf_bin.elf64_ehdr_to_dict(data, index)
-
-def elf_ehdr_to_dict(data, index, e_ident):
-    return elf_bin.elf_ehdr_to_dict(data, index, e_ident)
-
-def dict_byte_to_ints(elf_ehdr_dict):
+def dict_byte_to_ints(elf_ehdr_dict, only_keys=None):
 
     ret = copy.copy(elf_ehdr_dict)
 
     for i in ret.keys():
-        ret[i] = int.from_bytes(ret[i], sys.byteorder)
+        work_it = False
+
+        if isinstance(only_keys, (list, set)):
+            if i in only_keys:
+                work_it = True
+        else:
+            work_it = True
+
+        if work_it:
+            ret[i] = int.from_bytes(ret[i], sys.byteorder)
 
     return ret
+
 
 def elf_x_ehdr_format(elf_ehdr_dict):
 
@@ -77,6 +86,7 @@ Section header string table index    {e_shstrndx}
 """.format_map(dict_byte_to_ints(elf_ehdr_dict))
 
     return ret
+
 
 def get_section_header_type_name(value):
 
@@ -128,6 +138,7 @@ def get_section_header_type_name(value):
 
     return ret
 
+
 def get_program_header_type_name(value):
 
     ret = None
@@ -161,3 +172,242 @@ def get_program_header_type_name(value):
         ret = '0x{:x}'.format(value)
 
     return ret
+
+
+def get_dynamic_type_name(value):
+    ret = None
+
+    names = {
+        DT_NULL: 'DT_NULL',
+        DT_NEEDED: 'DT_NEEDED',
+        DT_PLTRELSZ: 'DT_PLTRELSZ',
+        DT_PLTGOT: 'DT_PLTGOT',
+        DT_HASH: 'DT_HASH',
+        DT_STRTAB: 'DT_STRTAB',
+        DT_SYMTAB: 'DT_SYMTAB',
+        DT_RELA: 'DT_RELA',
+        DT_RELASZ: 'DT_RELASZ',
+        DT_RELAENT: 'DT_RELAENT',
+        DT_STRSZ: 'DT_STRSZ',
+        DT_SYMENT: 'DT_SYMENT',
+        DT_INIT: 'DT_INIT',
+        DT_FINI: 'DT_FINI',
+        DT_SONAME: 'DT_SONAME',
+        DT_RPATH: 'DT_RPATH',
+        DT_SYMBOLIC: 'DT_SYMBOLIC',
+        DT_REL: 'DT_REL',
+        DT_RELSZ: 'DT_RELSZ',
+        DT_RELENT: 'DT_RELENT',
+        DT_PLTREL: 'DT_PLTREL',
+        DT_DEBUG: 'DT_DEBUG',
+        DT_TEXTREL: 'DT_TEXTREL',
+        DT_JMPREL: 'DT_JMPREL',
+        DT_BIND_NOW: 'DT_BIND_NOW',
+        DT_INIT_ARRAY: 'DT_INIT_ARRAY',
+        DT_FINI_ARRAY: 'DT_FINI_ARRAY',
+        DT_INIT_ARRAYSZ: 'DT_INIT_ARRAYSZ',
+        DT_FINI_ARRAYSZ: 'DT_FINI_ARRAYSZ',
+        DT_RUNPATH: 'DT_RUNPATH',
+        DT_FLAGS: 'DT_FLAGS',
+        DT_ENCODING: 'DT_ENCODING',
+        DT_PREINIT_ARRAY: 'DT_PREINIT_ARRAY',
+        DT_PREINIT_ARRAYSZ: 'DT_PREINIT_ARRAYSZ',
+        DT_NUM: 'DT_NUM',
+        DT_LOOS: 'DT_LOOS',
+        DT_HIOS: 'DT_HIOS',
+        DT_LOPROC: 'DT_LOPROC',
+        DT_HIPROC: 'DT_HIPROC',
+        DT_PROCNUM: 'DT_PROCNUM',
+        DT_VALRNGLO: 'DT_VALRNGLO',
+        DT_GNU_PRELINKED: 'DT_GNU_PRELINKED',
+        DT_GNU_CONFLICTSZ: 'DT_GNU_CONFLICTSZ',
+        DT_GNU_LIBLISTSZ: 'DT_GNU_LIBLISTSZ',
+        DT_CHECKSUM: 'DT_CHECKSUM',
+        DT_PLTPADSZ: 'DT_PLTPADSZ',
+        DT_MOVEENT: 'DT_MOVEENT',
+        DT_MOVESZ: 'DT_MOVESZ',
+        DT_FEATURE_1: 'DT_FEATURE_1',
+        DT_POSFLAG_1: 'DT_POSFLAG_1',
+        DT_SYMINSZ: 'DT_SYMINSZ',
+        DT_SYMINENT: 'DT_SYMINENT',
+        DT_VALRNGHI: 'DT_VALRNGHI',
+        DT_VALNUM: 'DT_VALNUM',
+        DT_ADDRRNGLO: 'DT_ADDRRNGLO',
+        DT_GNU_HASH: 'DT_GNU_HASH',
+        DT_TLSDESC_PLT: 'DT_TLSDESC_PLT',
+        DT_TLSDESC_GOT: 'DT_TLSDESC_GOT',
+        DT_GNU_CONFLICT: 'DT_GNU_CONFLICT',
+        DT_GNU_LIBLIST: 'DT_GNU_LIBLIST',
+        DT_CONFIG: 'DT_CONFIG',
+        DT_DEPAUDIT: 'DT_DEPAUDIT',
+        DT_AUDIT: 'DT_AUDIT',
+        DT_PLTPAD: 'DT_PLTPAD',
+        DT_MOVETAB: 'DT_MOVETAB',
+        DT_SYMINFO: 'DT_SYMINFO',
+        DT_ADDRRNGHI: 'DT_ADDRRNGHI',
+        DT_ADDRNUM: 'DT_ADDRNUM',
+        DT_VERSYM: 'DT_VERSYM',
+        DT_RELACOUNT: 'DT_RELACOUNT',
+        DT_RELCOUNT: 'DT_RELCOUNT',
+        DT_FLAGS_1: 'DT_FLAGS_1',
+        DT_VERDEF: 'DT_VERDEF',
+        DT_VERDEFNUM: 'DT_VERDEFNUM',
+        DT_VERNEED: 'DT_VERNEED',
+        DT_VERNEEDNUM: 'DT_VERNEEDNUM',
+        DT_VERSIONTAGNUM: 'DT_VERSIONTAGNUM',
+        DT_AUXILIARY: 'DT_AUXILIARY',
+        DT_FILTER: 'DT_FILTER',
+        DT_EXTRANUM: 'DT_EXTRANUM',
+        }
+
+    if value in names:
+        ret = names[value]
+    else:
+        ret = '0x{:x}'.format(value)
+
+    return ret
+
+
+def convert_virtual_to_file(program_section_table, value):
+
+    ret = None
+
+    for i in program_section_table:
+        if value >= i['p_vaddr'] and value < (i['p_vaddr'] + i['p_memsz']):
+            ret = i
+            break
+
+    return ret
+
+def section_header_table_format(data, elf_section_header_table, ehdr_dict):
+
+
+    ret = ''
+
+    names = read_elf_section_header_table_names(
+        data, elf_section_header_table, ehdr_dict
+        )
+
+    section_header_table2 = []
+    for i in elf_section_header_table:
+        section_header_table2.append(
+            dict_byte_to_ints(
+                i
+                )
+            )
+
+    elf_section_header_table = section_header_table2
+
+    longest = 0
+    for i in names:
+        if len(i) > longest:
+            longest = len(i)
+
+    types = []
+    for i in range(len(elf_section_header_table)):
+        types.append(
+            get_section_header_type_name(elf_section_header_table[i]['sh_type'])
+            )
+
+    longest_t = 0
+    for i in types:
+        if len(i) > longest_t:
+            longest_t = len(i)
+
+    ret += "  [{index:2}] {name}(sto:{name_addr:5}) {typ} {addr:8} {off:8} {size:8} {es:2} {flg:10} {lk:3} {inf:3} {al:3}\n".format(
+        index='No',
+        name='Name'.ljust(longest),
+        name_addr='',
+        typ='Type'.ljust(longest_t),
+        flg='Flags',
+        addr='Address',
+        off='Offset',
+        size='Size',
+        lk='Lnk',
+        inf='Inf',
+        al='Al',
+        es='SZ'
+        )
+
+
+    for i in range(len(elf_section_header_table)):
+        ret += "  [{index:2}] {name}(sto:{name_addr:5x}) {typ} {addr:08x} {off:08x} {size:08x} {es:02x} {flg:010b} {lk:03x} {inf:03x} {al:03x}\n".format(
+            index=i,
+            name=names[i].ljust(longest),
+            name_addr=elf_section_header_table[i]['sh_name'],
+            typ=types[i].ljust(longest_t),
+            flg=elf_section_header_table[i]['sh_flags'],
+            addr=elf_section_header_table[i]['sh_addr'],
+            off=elf_section_header_table[i]['sh_offset'],
+            size=elf_section_header_table[i]['sh_size'],
+            lk=elf_section_header_table[i]['sh_link'],
+            inf=elf_section_header_table[i]['sh_info'],
+            al=elf_section_header_table[i]['sh_addralign'],
+            es=elf_section_header_table[i]['sh_entsize']
+            )
+
+    ret += '\n'
+    ret += 'sto - string table offset\n'
+
+    return ret
+
+
+def program_header_table_format(program_header_table):
+
+    ret = ''
+
+    program_header_table2 = []
+    for i in program_header_table:
+        program_header_table2.append(
+            dict_byte_to_ints(
+                i
+                )
+            )
+
+    program_header_table = program_header_table2
+
+    types = []
+    for i in range(len(program_header_table)):
+        types.append(get_program_header_type_name(program_header_table[i]['p_type']))
+
+    longest_t = 0
+    for i in types:
+        if len(i) > longest_t:
+            longest_t = len(i)
+
+    ret += "  {typ} {offset:8} {virtaddr:8} {physaddr:8} {filesize:8} {memsize:8} {flag:10} {align:8}\n".format(
+        typ='Type'.ljust(longest_t),
+        flag='Flags',
+        offset='F Offset',
+        virtaddr='VirtAddr',
+        physaddr='PhisAddr',
+        filesize='FileSize',
+        memsize='MemSize',
+        align='Align'
+        )
+
+    for i in range(len(program_header_table)):
+        ret += "  {typ} {offset:08x} {virtaddr:08x} {physaddr:08x} {filesize:08x} {memsize:08x} {flag:010b} {align:08x}\n".format(
+            typ=types[i].ljust(longest_t),
+            flag=program_header_table[i]['p_flags'],
+            offset=program_header_table[i]['p_offset'],
+            virtaddr=program_header_table[i]['p_vaddr'],
+            physaddr=program_header_table[i]['p_paddr'],
+            filesize=program_header_table[i]['p_filesz'],
+            memsize=program_header_table[i]['p_memsz'],
+            align=program_header_table[i]['p_align']
+            )
+
+    return ret
+
+
+def dynamics_format(dinamics_table):
+
+    ret = ''
+
+    for i in dinamics_table:
+        ret += "{}\n".format(get_dynamic_type_name(i['d_tag']))
+
+    return ret
+
+
