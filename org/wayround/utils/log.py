@@ -35,6 +35,7 @@ class Log:
         self.code = 0
         self.fileobj = None
         self.logname = logname
+        self.log_filename = None
 
         if not os.path.exists(log_dir):
             try:
@@ -68,6 +69,8 @@ class Log:
                         )
                     )
                 )
+
+            self.log_filename = filename
 
             try:
                 self.fileobj = open(filename, 'w')

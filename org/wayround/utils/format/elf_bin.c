@@ -198,12 +198,9 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
 PyObject *
 read_e_ident(PyObject *self, PyObject *args)
 {
+    PyObject * ret = NULL;
 
     PyObject * bytes_data = NULL;
-
-    PyObject * ret = Py_None;
-
-    Py_XINCREF(ret);
 
     if (PyArg_ParseTuple(args, "O", &bytes_data) == 0)
     {
@@ -211,7 +208,6 @@ read_e_ident(PyObject *self, PyObject *args)
             PyExc_RuntimeError,
             "Wrong parameters to function read_e_ident");
 
-        Py_XDECREF(ret);
         ret = NULL;
     }
     else
@@ -223,14 +219,12 @@ read_e_ident(PyObject *self, PyObject *args)
                 PyExc_TypeError,
                 "Wrong parameter type to function read_e_ident");
 
-            Py_XDECREF(ret);
             ret = NULL;
         }
         else
         {
             if (PySequence_Length(bytes_data) < EI_NIDENT)
             {
-                Py_XDECREF(ret);
                 ret = Py_None;
                 Py_XINCREF(ret);
             }
@@ -250,18 +244,16 @@ read_e_ident(PyObject *self, PyObject *args)
 PyObject *
 is_elf(PyObject *self, PyObject *args)
 {
+    PyObject * ret = NULL;
+
     PyObject * bytes_data = NULL;
     PyObject * bytes_data_slice = NULL;
     char * bytes_data_c = NULL;
-
-    PyObject * ret = Py_False;
-    Py_XINCREF(ret);
 
     if (PyArg_ParseTuple(args, "O", &bytes_data) == 0)
     {
         PyErr_SetString(PyExc_TypeError, "Wrong parameters to function is_elf");
 
-        Py_XDECREF(ret);
         ret = NULL;
     }
     else
@@ -274,21 +266,20 @@ is_elf(PyObject *self, PyObject *args)
         if (PySequence_Length(bytes_data_slice) < SELFMAG)
         {
             ret = Py_False;
+            Py_XINCREF(ret);
         }
         else
         {
-            ret = Py_False;
-
             bytes_data_c = PyBytes_AsString(bytes_data_slice);
 
             if (bytes_data_c[0] != ELFMAG0 || bytes_data_c[1] != ELFMAG1
                 || bytes_data_c[2] != ELFMAG2 || bytes_data_c[3] != ELFMAG3)
             {
                 ret = Py_False;
+                Py_XINCREF(ret);
             }
             else
             {
-                Py_XDECREF(ret);
                 ret = Py_True;
                 Py_XINCREF(ret);
             }

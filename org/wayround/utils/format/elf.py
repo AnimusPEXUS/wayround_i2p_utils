@@ -584,6 +584,30 @@ def get_libs_list(filename):
 
     return ret
 
+def is_elf_file(filename):
+    ret = 0
+
+    f = open(filename, 'rb')
+
+    m = None
+
+    try:
+        m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
+    except:
+        ret = 2
+    else:
+
+        ret = is_elf(m)
+
+        m.close()
+
+    f.close()
+
+    del(m)
+    del(f)
+
+    return ret
+
 def test_empty():
     empty()
 
