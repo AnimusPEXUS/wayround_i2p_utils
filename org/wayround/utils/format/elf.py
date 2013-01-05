@@ -1,9 +1,10 @@
 
 import copy
 import mmap
+import os.path
 import sys
 
-from  org.wayround.utils.format.elf_enum import *
+from org.wayround.utils.format.elf_enum import *
 
 #def is_elf(bytes_data):
 #    return org.wayround.utils.format.elf_bin.is_elf(bytes_data[0:4])
@@ -585,7 +586,36 @@ def get_libs_list(filename):
     return ret
 
 def is_elf_file(filename):
-    ret = 0
+
+    if not os.path.isfile():
+        ret = False
+    else:
+
+        ret = 0
+
+        f = open(filename, 'rb')
+
+        m = None
+
+        try:
+            m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
+        except:
+            ret = 2
+        else:
+
+            ret = is_elf(m)
+
+            m.close()
+
+        f.close()
+
+        del(m)
+        del(f)
+
+    return ret
+
+def get_elf_file_type(filename):
+    ret = None
 
     f = open(filename, 'rb')
 
@@ -594,10 +624,17 @@ def is_elf_file(filename):
     try:
         m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
     except:
-        ret = 2
+        ret = None
     else:
 
-        ret = is_elf(m)
+        if is_elf(m):
+            e_ident = read_e_ident(m)
+
+            e_ident_dict = e_ident_to_dict(e_ident)
+
+            elf_ehdr_dict = elf_ehdr_to_dict(m, 0, e_ident_dict)
+
+            ret = int.from_bytes(elf_ehdr_dict['e_type'], sys.byteorder)
 
         m.close()
 
@@ -607,7 +644,4 @@ def is_elf_file(filename):
     del(f)
 
     return ret
-
-def test_empty():
-    empty()
 

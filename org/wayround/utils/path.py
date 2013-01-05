@@ -1,4 +1,5 @@
 
+import copy
 import os.path
 
 D_SEP = os.path.sep * 2
@@ -24,3 +25,38 @@ def relpath(path, start):
 
 def realpath(filename):
     return _remove_double_sep(os.path.realpath(filename))
+
+def realpaths(lst):
+
+    lst = copy.copy(lst)
+
+    for i in range(len(lst)):
+        lst[i] = realpath(lst[i])
+
+    lst = list(set(lst))
+
+    return lst
+
+def prepend_path(lst, base):
+    """
+    Removes any trailing sep from base, and inserts it in the start of every
+    lst item. it item not starts with sep, inserts set between base and item
+    """
+
+    lst = copy.copy(lst)
+
+    while base.endswith(S_SEP):
+        base = base[:-1]
+
+    for i in range(len(lst)):
+        sep = ''
+
+        if lst[i][0] != S_SEP:
+            sep = S_SEP
+
+        lst[i] = base + sep + lst[i]
+
+    lst = list(set(lst))
+
+    return lst
+

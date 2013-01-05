@@ -188,7 +188,8 @@ def cat(
 
 
                 try:
-                    # TODO: some kind of timeout needed, or some kind of termination
+                    # TODO: some kind of timeout needed, or some kind of
+                    # termination
                     buff = eval("stdin.{}(bs)".format(read_method_name))
                 except:
                     if on_input_read_error:

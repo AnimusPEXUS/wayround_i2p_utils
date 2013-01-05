@@ -5,9 +5,10 @@ import sys
 
 from org.wayround.utils import ftpwalk
 
+
 # TODO: cleanups and rewrites required
 
-def main(server, fdir, tdir, verbose=False):
+def main(server, fdir, tdir,verbose=False):
 
 
     fw = ftpwalk.FTPWalkSole(server, verbose)
