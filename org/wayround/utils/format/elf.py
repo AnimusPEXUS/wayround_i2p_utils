@@ -587,7 +587,7 @@ def get_libs_list(filename):
 
 def is_elf_file(filename):
 
-    if not os.path.isfile():
+    if not os.path.isfile(filename) or not os.path.exists(filename):
         ret = False
     else:
 
