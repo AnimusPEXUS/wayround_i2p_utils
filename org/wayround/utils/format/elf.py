@@ -6,41 +6,6 @@ import sys
 
 from org.wayround.utils.format.elf_enum import *
 
-#def is_elf(bytes_data):
-#    return org.wayround.utils.format.elf_bin.is_elf(bytes_data[0:4])
-
-#import org.wayround.utils.format.elf_bin
-#
-#
-#
-#read_e_ident = elf_bin.read_e_ident
-#is_elf = elf_bin.is_elf
-#e_ident_bitness = elf_bin.e_ident_bitness
-#e_ident_to_dict = elf_bin.e_ident_to_dict
-#
-#read_elf_ehdr_x = elf_bin.read_elf_ehdr_x
-#read_elf_ehdr = elf_bin.read_elf_ehdr
-#
-#elf32_ehdr_to_dict = elf_bin.elf32_ehdr_to_dict
-#elf64_ehdr_to_dict = elf_bin.elf64_ehdr_to_dict
-#elf_ehdr_to_dict = elf_bin.elf_ehdr_to_dict
-#
-#read_elf_shdr_x = elf_bin.read_elf_shdr_x
-#read_elf_shdr = elf_bin.read_elf_shdr
-#
-#read_elf_phdr_x = elf_bin.read_elf_phdr_x
-#read_elf_phdr = elf_bin.read_elf_phdr
-#
-#
-#read_elf_section_header_table = elf_bin.read_elf_section_header_table
-#read_elf_section_header_table_names = elf_bin.read_elf_section_header_table_names
-#
-#read_elf_program_header_table = elf_bin.read_elf_program_header_table
-#
-#read_dynamic_section = elf_bin.read_dynamic_section
-#
-#get_dynamic_libs_names = elf_bin.get_dynamic_libs_names
-
 from org.wayround.utils.format.elf_bin import (
     read_e_ident,
     is_elf,

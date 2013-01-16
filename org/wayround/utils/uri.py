@@ -14,7 +14,7 @@ def paths_by_path(path, last_el_type=None, path_is_absolute=None):
        - last_el_type: last element type: 'dir' or 'file'
        - path_is_absolute: True if path_str begins with '/'
 
-    Input value can ether be URI path part string ether list with path
+    Input value can either be URI path part string ether list with path
     parts. If input type is list, then second parameter determines
     returning last_el_type.
 
