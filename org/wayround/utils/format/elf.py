@@ -2,7 +2,7 @@
 import copy
 import mmap
 import os.path
-import sys
+import logging
 
 from org.wayround.utils.format.elf_enum import *
 
@@ -10,46 +10,37 @@ from org.wayround.utils.format.elf_bin import (
     read_e_ident,
     is_elf,
     e_ident_bitness,
-    e_ident_to_dict ,
+    e_ident_endianness,
+    e_ident_to_dict,
 
-    read_elf_ehdr_x ,
-    read_elf_ehdr ,
+    read_elf_ehdr_x,
+    read_elf_ehdr,
 
     elf32_ehdr_to_dict,
     elf64_ehdr_to_dict,
     elf_ehdr_to_dict ,
 
     read_elf_shdr_x,
-    read_elf_shdr ,
+    read_elf_shdr,
 
-    read_elf_phdr_x ,
-    read_elf_phdr ,
+    read_elf_phdr_x,
+    read_elf_phdr,
 
 
-    read_elf_section_header_table ,
-    read_elf_section_header_table_names ,
+    read_elf_section_header_table,
+    read_elf_section_header_table_names,
 
-    read_elf_program_header_table ,
+    read_elf_program_header_table,
 
-    read_dynamic_section ,
+    read_dynamic_section,
 
-    get_dynamic_libs_names
+    get_dynamic_libs_names,
+    convert_virtual_to_file
     )
 
-def e_ident_format(e_ident_dict):
-
-    ret = """\
-Class:       {e_i_s_class}
-Data:        {e_i_s_data}
-Version:     {e_i_s_version}
-OS ABI:      {e_i_s_osabi}
-ABI Version: {e_i_s_abiversion}
-""".format_map(e_ident_dict)
-
-    return ret
 
 
-def dict_byte_to_ints(elf_ehdr_dict, only_keys=None):
+def dict_byte_to_ints(elf_ehdr_dict, only_keys=None, endianness='little'):
 
     ret = copy.copy(elf_ehdr_dict)
 
@@ -63,12 +54,26 @@ def dict_byte_to_ints(elf_ehdr_dict, only_keys=None):
             work_it = True
 
         if work_it:
-            ret[i] = int.from_bytes(ret[i], sys.byteorder)
+            ret[i] = int.from_bytes(ret[i], endianness)
 
     return ret
 
 
-def elf_x_ehdr_format(elf_ehdr_dict):
+
+def e_ident_text(e_ident_dict):
+
+    ret = """\
+Class:       {e_i_s_class}
+Data:        {e_i_s_data}
+Version:     {e_i_s_version}
+OS ABI:      {e_i_s_osabi}
+ABI Version: {e_i_s_abiversion}
+""".format_map(e_ident_dict)
+
+    return ret
+
+
+def elf_x_ehdr_text(elf_ehdr_dict, endianness):
 
     ret = """\
 Object file type                     0x{e_type:x}
@@ -84,7 +89,7 @@ Program header table entry count     {e_phnum}
 Section header table entry size      {e_shentsize} B
 Section header table entry count     {e_shnum}
 Section header string table index    {e_shstrndx}
-""".format_map(dict_byte_to_ints(elf_ehdr_dict))
+""".format_map(dict_byte_to_ints(elf_ehdr_dict, endianness=endianness))
 
     return ret
 
@@ -269,31 +274,26 @@ def get_dynamic_type_name(value):
     return ret
 
 
-def convert_virtual_to_file(program_section_table, value):
 
-    ret = None
-
-    for i in program_section_table:
-        if value >= i['p_vaddr'] and value < (i['p_vaddr'] + i['p_memsz']):
-            ret = i
-            break
-
-    return ret
-
-def section_header_table_format(data, elf_section_header_table, ehdr_dict):
-
+def section_header_table_text(
+    data,
+    elf_section_header_table,
+    ehdr_dict,
+    endianness
+    ):
 
     ret = ''
 
     names = read_elf_section_header_table_names(
-        data, elf_section_header_table, ehdr_dict
+        data, elf_section_header_table, ehdr_dict, endianness
         )
 
     section_header_table2 = []
     for i in elf_section_header_table:
         section_header_table2.append(
             dict_byte_to_ints(
-                i
+                i,
+                endianness=endianness
                 )
             )
 
@@ -353,7 +353,7 @@ def section_header_table_format(data, elf_section_header_table, ehdr_dict):
     return ret
 
 
-def program_header_table_format(program_header_table):
+def program_header_table_text(program_header_table, endianness):
 
     ret = ''
 
@@ -361,7 +361,8 @@ def program_header_table_format(program_header_table):
     for i in program_header_table:
         program_header_table2.append(
             dict_byte_to_ints(
-                i
+                i,
+                endianness=endianness
                 )
             )
 
@@ -402,7 +403,7 @@ def program_header_table_format(program_header_table):
     return ret
 
 
-def dynamics_format(dinamics_table):
+def dynamic_section_text(dinamics_table, endianness):
 
     ret = ''
 
@@ -417,196 +418,281 @@ def dynamics_format(dinamics_table):
             longest_t = len(i)
 
     for i in dinamics_table:
-        ret += "{}  {:08x}\n".format(get_dynamic_type_name(i['d_tag']).ljust(longest_t), i['d_val'])
+        number = 0
+        if get_dynamic_type_name(i['d_tag']) == 'DT_NEEDED':
+            number = i['d_ptr'];
+        else:
+            number = i['d_val'];
+        ret += "{}  {:08x}\n".format(get_dynamic_type_name(i['d_tag']).ljust(longest_t), number)
 
     return ret
 
 
 
-def read_elf(filename):
+class ELF:
 
-    f = open(filename, 'rb')
+    def __init__(self, filename):
 
+        self.verbose = False
 
-    m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
+        self.opened = False
 
-    print("is elf?: {}".format(is_elf(m)))
+        self.filename = filename
 
-    e_ident = read_e_ident(m)
+        self.is_elf = False
+        self.e_ident = None
+        self.bitness = None
+        self.elf_type_name = None
+        self.endianness = None
+        self.e_ident_dict = None
+        self.e_ident_text = None
+        self.elf_ehdr = None
+        self.elf_ehdr_dict = None
+        self.elf_x_ehdr_text = None
+        self.section_table = None
+        self.section_names = None
+        self.program_table = None
+        self.section_header_table_text = None
+        self.program_header_table_text = None
+        self.dynamic_section = None
+        self.dynamic_section_text = None
+        self.needed_libs_list = None
+        self.libs_list_text = None
 
-    bitness = e_ident_bitness(e_ident)
-
-    print("({}-bit)".format(bitness))
-
-    e_ident_dict = e_ident_to_dict(e_ident)
-
-    print(e_ident_format(e_ident_dict))
-
-    elf_ehdr = read_elf_ehdr(m, 0, e_ident_dict)
-
-    elf_ehdr_dict = elf_ehdr_to_dict(m, 0, e_ident_dict)
-
-    print(elf_x_ehdr_format(elf_ehdr_dict))
-
-    section_table = read_elf_section_header_table(
-        m, e_ident_dict, elf_ehdr_dict
-        )
-
-    print("section table:")
-    print(
-        section_header_table_format(m, section_table, elf_ehdr_dict)
-        )
-
-    section_names = read_elf_section_header_table_names(
-        m, section_table, elf_ehdr_dict
-        )
-
-    program_table = read_elf_program_header_table(
-        m, e_ident_dict, elf_ehdr_dict
-        )
-
-    print("program table:")
-    print(
-        program_header_table_format(program_table)
-        )
-
-    dyn_sect_index = section_names.index('.dynamic')
-
-    dyn_sect_offset = int.from_bytes(section_table[dyn_sect_index]['sh_offset'], sys.byteorder)
-
-    dyn_sect = read_dynamic_section(m, dyn_sect_offset, bitness)
-
-    print("Dynamic section:")
-    print(dynamics_format(dyn_sect))
-    #print("names: \n{}".format(section_names))
-
-    libs = get_dynamic_libs_names(
-        m, program_table, dyn_sect, section_table, elf_ehdr_dict
-        )
-
-    print("libs:")
-    print("{}.".format(', '.join(libs)))
-
-    m.close()
-    f.close()
-
-def get_libs_list(filename):
-
-    ret = 0
-
-    f = open(filename, 'rb')
-
-    m = None
-
-    try:
-        m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
-    except:
-        ret = 2
-    else:
-
-        if is_elf(m):
-
-            e_ident = read_e_ident(m)
-
-            bitness = e_ident_bitness(e_ident)
-
-            e_ident_dict = e_ident_to_dict(e_ident)
-
-            elf_ehdr_dict = elf_ehdr_to_dict(m, 0, e_ident_dict)
-
-            section_table = read_elf_section_header_table(
-                m, e_ident_dict, elf_ehdr_dict
-                )
-
-            section_names = read_elf_section_header_table_names(
-                m, section_table, elf_ehdr_dict
-                )
-
-            program_table = read_elf_program_header_table(
-                m, e_ident_dict, elf_ehdr_dict
-                )
-
-            if not '.dynamic' in section_names:
-                ret = None
-            else:
-                dyn_sect_index = section_names.index('.dynamic')
-
-                dyn_sect_offset = int.from_bytes(section_table[dyn_sect_index]['sh_offset'], sys.byteorder)
-
-                dyn_sect = read_dynamic_section(m, dyn_sect_offset, bitness)
-
-                libs = get_dynamic_libs_names(
-                    m, program_table, dyn_sect, section_table, elf_ehdr_dict
-                    )
-
-                ret = copy.copy(libs)
-
-        m.close()
-
-    f.close()
-
-    del(m)
-    del(f)
-
-    return ret
-
-def is_elf_file(filename):
-
-    if not os.path.isfile(filename) or not os.path.exists(filename):
-        ret = False
-    else:
-
-        ret = 0
-
-        f = open(filename, 'rb')
-
-        m = None
-
-        try:
-            m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
-        except:
-            ret = 2
+        if not os.path.isfile(filename):
+            logging.error("Not a file: `{}'".format(filename))
         else:
 
-            ret = is_elf(m)
+            try:
+                f = open(filename, 'rb')
+            except KeyboardInterrupt:
+                raise
+            except:
+                if self.verbose:
+                    logging.exception("Couldn't open file for read: `{}'".format(filename))
+            else:
 
-            m.close()
+                try:
+                    m = mmap.mmap(
+                        f.fileno(),
+                        0,
+                        flags=mmap.MAP_PRIVATE,
+                        prot=mmap.PROT_READ
+                        )
+                except KeyboardInterrupt:
+                    raise
+                except:
+                    if self.verbose:
+                        logging.exception("Couldn't map file: `{}'".format(filename))
+                else:
+                    try:
+                        self.opened = True
 
-        f.close()
+                        self.is_elf = is_elf(m)
 
-        del(m)
-        del(f)
+                        self.e_ident = read_e_ident(m)
 
-    return ret
+#                        print(
+#                            "py bitness: {}".format(
+#                                int.from_bytes(self.e_ident[EI_CLASS], 'little', False)
+#                                )
+#                            )
+                        if self.e_ident:
+                            self.bitness = e_ident_bitness(self.e_ident)
 
-def get_elf_file_type(filename):
-    ret = None
+                        if self.e_ident:
+                            self.endianness = e_ident_endianness(self.e_ident)
 
-    f = open(filename, 'rb')
+                        if self.e_ident:
+                            self.e_ident_dict = e_ident_to_dict(self.e_ident)
 
-    m = None
+                        if self.e_ident_dict:
+                            self.e_ident_text = e_ident_text(
+                                self.e_ident_dict
+                                )
 
-    try:
-        m = mmap.mmap(f.fileno(), 0, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ)
-    except:
-        ret = None
-    else:
+                        if self.e_ident_dict:
+                            self.elf_ehdr = read_elf_ehdr(
+                                m,
+                                0,
+                                self.e_ident_dict
+                                )
 
-        if is_elf(m):
-            e_ident = read_e_ident(m)
+                        if self.e_ident_dict:
+                            self.elf_ehdr_dict = elf_ehdr_to_dict(
+                                m,
+                                0,
+                                self.e_ident_dict
+                                )
 
-            e_ident_dict = e_ident_to_dict(e_ident)
+                        if self.elf_ehdr_dict and self.endianness:
+                            self.elf_x_ehdr_text = elf_x_ehdr_text(
+                                self.elf_ehdr_dict,
+                                self.endianness
+                                )
 
-            elf_ehdr_dict = elf_ehdr_to_dict(m, 0, e_ident_dict)
+                        if self.elf_ehdr_dict and self.endianness:
+                            self.elf_type_name = int.from_bytes(
+                                self.elf_ehdr_dict['e_type'],
+                                self.endianness
+                                )
 
-            ret = int.from_bytes(elf_ehdr_dict['e_type'], sys.byteorder)
+                            for i in [
+                                'ET_NONE',
+                                'ET_REL',
+                                'ET_EXEC',
+                                'ET_DYN',
+                                'ET_CORE',
+                                'ET_NUM',
+                                'ET_LOOS',
+                                'ET_HIOS',
+                                'ET_LOPROC',
+                                'ET_HIPROC'
+                                ]:
 
-        m.close()
+                                if self.elf_type_name == eval(i):
+                                    self.elf_type_name = i
+                                    break
 
-    f.close()
 
-    del(m)
-    del(f)
+                        if self.e_ident_dict and self.elf_ehdr_dict:
+                            self.section_table = read_elf_section_header_table(
+                                m,
+                                self.e_ident_dict,
+                                self.elf_ehdr_dict
+                                )
 
-    return ret
+                        if (self.section_table
+                            and self.elf_ehdr_dict
+                            and self.endianness):
+                            self.section_names = (
+                                read_elf_section_header_table_names(
+                                    m,
+                                    self.section_table,
+                                    self.elf_ehdr_dict,
+                                    self.endianness
+                                    )
+                                )
 
+                        if self.e_ident_dict and self.elf_ehdr_dict:
+                            self.program_table = read_elf_program_header_table(
+                                m,
+                                self.e_ident_dict,
+                                self.elf_ehdr_dict
+                                )
+
+                        if (self.section_table
+                            and self.elf_ehdr_dict
+                            and self.endianness):
+                            self.section_header_table_text = (
+                                section_header_table_text(
+                                    m,
+                                    self.section_table,
+                                    self.elf_ehdr_dict,
+                                    self.endianness
+                                    )
+                                )
+
+                        if self.program_table and self.endianness:
+                            self.program_header_table_text = (
+                                program_header_table_text(
+                                    self.program_table,
+                                    self.endianness
+                                    )
+                                )
+
+                        dyn_sect_index = None
+                        if (self.section_names
+                            and '.dynamic' in self.section_names):
+                            dyn_sect_index = self.section_names.index('.dynamic')
+
+                        dyn_sect_offset = None
+                        if (self.section_table
+                            and dyn_sect_index
+                            and self.endianness
+                            and 'sh_offset' in self.section_table[dyn_sect_index]):
+                            dyn_sect_offset = int.from_bytes(
+                                self.section_table[dyn_sect_index]['sh_offset'],
+                                self.endianness
+                                )
+
+                        if dyn_sect_offset and self.bitness and self.endianness:
+                            self.dynamic_section = read_dynamic_section(
+                                m,
+                                dyn_sect_offset,
+                                self.bitness,
+                                self.endianness
+                                )
+
+                        if self.dynamic_section and self.endianness:
+                            self.dynamic_section_text = dynamic_section_text(
+                                self.dynamic_section,
+                                self.endianness
+                                )
+
+                        if (self.program_table
+                            and self.dynamic_section
+                            and self.section_table
+                            and self.endianness):
+                            self.needed_libs_list = get_dynamic_libs_names(
+                                m,
+                                self.program_table,
+                                self.dynamic_section,
+                                self.section_table,
+                                self.endianness
+                                )
+
+                        if self.needed_libs_list:
+                            self.libs_list_text = "{}.".format(
+                                ', '.join(self.needed_libs_list)
+                                )
+                    except KeyboardInterrupt:
+                        raise
+                    except:
+                        if self.verbose:
+                            logging.exception("Some error while populating instance")
+
+                    finally:
+                        m.close()
+                finally:
+                    f.close()
+        return
+
+    def return_text(self):
+        ret = """\
+file: {filename}
+
+is elf?: {is_elf}
+
+({bitness}-bit)
+({endianness}-byteorder)
+
+{e_ident_text}
+
+{elf_x_ehdr_text}
+
+Section table:
+{section_header_table_text}
+
+Program table:
+{program_header_table_text}
+
+Dynamic section:
+{dynamic_section_text}
+
+Needed libs list:
+{libs_list_text}
+""".format(
+            filename=self.filename,
+            is_elf=self.is_elf,
+            bitness=self.bitness,
+            endianness=self.endianness,
+            e_ident_text=self.e_ident_text,
+            elf_x_ehdr_text=self.elf_x_ehdr_text,
+            section_header_table_text=self.section_header_table_text,
+            program_header_table_text=self.program_header_table_text,
+            dynamic_section_text=self.dynamic_section_text,
+            libs_list_text=self.libs_list_text
+            )
+
+        return ret

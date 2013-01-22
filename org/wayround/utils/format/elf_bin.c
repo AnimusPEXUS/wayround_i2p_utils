@@ -5,8 +5,11 @@
 #include <elf.h>
 
 #include "Python.h"
+#include "elf_bin.h"
 
-char *e_indent_names[] =
+#define member_size(type, member) sizeof(((type *)0)->member)
+
+const char *e_indent_names[] =
     {
         "e_i_s_mag0",
         "e_i_s_mag1",
@@ -27,103 +30,303 @@ char *e_indent_names[] =
         NULL };
 
 PyObject *
-PyLong_FromPyBytes(PyObject *bytes, PyObject *sign)
+endianness_to_name(unsigned char in)
 {
-
     PyObject * ret = NULL;
 
-    char * bytes_as_char = NULL;
-    Py_ssize_t bytes_size = 0;
-
-    union
+    switch (in)
     {
-        unsigned long ul;
-        unsigned long long ull;
-        long l;
-        long long ll;
-    } u;
-
-    u.ull = 0;
-
-    if (PyBytes_Check(bytes) == 0 || PyBool_Check(sign) == 0)
-    {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Wrong parameters to function PyLong_FromPyBytes");
-
-        ret = NULL;
+        case ELFDATANONE:
+            PyErr_SetString(PyExc_ValueError, "EI_DATA is ELFDATANONE");
+            ret = NULL;
+            break;
+        case ELFDATA2LSB:
+            ret = PyUnicode_FromString("little");
+            break;
+        case ELFDATA2MSB:
+            ret = PyUnicode_FromString("big");
+            break;
+        default:
+            PyErr_SetString(PyExc_ValueError, "EI_DATA value is unknown");
+            ret = NULL;
     }
-    else
+
+    if (PyErr_Occurred() != NULL)
     {
-        bytes_as_char = PyBytes_AsString(bytes);
-        bytes_size = PySequence_Length(bytes);
-
-        if (sign == Py_True)
-        {
-            if (bytes_size <= sizeof(long))
-            {
-                memcpy(&u.l, bytes_as_char, bytes_size);
-                ret = PyLong_FromLong(u.l);
-
-            }
-            else if (bytes_size <= sizeof(long long))
-            {
-                memcpy(&u.ll, bytes_as_char, bytes_size);
-                ret = PyLong_FromLongLong(u.ll);
-            }
-            else
-            {
-                PyErr_SetString(PyExc_ValueError, "Value Is Too Large");
-                ret = NULL;
-            }
-        }
-        else
-        {
-            if (bytes_size <= sizeof(unsigned long))
-            {
-                memcpy(&u.ul, bytes_as_char, bytes_size);
-                ret = PyLong_FromUnsignedLong(u.ul);
-            }
-            else if (bytes_size <= sizeof(unsigned long long))
-            {
-                memcpy(&u.ull, bytes_as_char, bytes_size);
-                ret = PyLong_FromUnsignedLongLong(u.ull);
-            }
-            else
-            {
-                PyErr_SetString(PyExc_ValueError, "Value Is Too Large");
-                ret = NULL;
-            }
-        }
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
 }
 
 PyObject *
-ExpPyLong_FromPyBytes(PyObject *self, PyObject *args)
+class_switch(long val)
 {
-
-    PyObject * bytes = NULL;
-    PyObject * sign = NULL;
     PyObject * ret = NULL;
 
-    if (PyArg_ParseTuple(args, "OO", &bytes, &sign) == 0)
-    {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Wrong parameters to function ExpPyLong_FromPyBytes");
+    printf("val: %ld\n", val);
 
-        ret = NULL;
-    }
-    else
+    switch (val)
     {
-        ret = PyLong_FromPyBytes(bytes, sign);
+        case ELFCLASS32:
+            ret = PyLong_FromLong(32);
+            break;
+        case ELFCLASS64:
+            ret = PyLong_FromLong(64);
+            break;
+        default:
+            PyErr_SetString(
+                PyExc_ValueError,
+                "Wrong parameter value to function class_switch");
+            ret = NULL;
+            break;
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
 }
 
+/*
+ * Convert PyBytes to PyLong
+ */
+PyObject *
+PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
+{
+
+    PyObject * builtins = NULL;
+    PyObject * from_bytes = NULL;
+    PyObject * ret = NULL;
+
+    PyObject * args2 = NULL;
+    PyObject * kwargs2 = NULL;
+    PyObject * ret2 = NULL;
+
+    builtins = PyImport_ImportModule("builtins");
+
+    if (builtins == NULL)
+    {
+        ret = NULL;
+    }
+    else
+    {
+
+        from_bytes = PyObject_GetAttr(builtins, PyUnicode_FromString("int"));
+
+        if (from_bytes == NULL)
+        {
+            ret = NULL;
+        }
+        else
+        {
+            from_bytes = PyObject_GetAttr(
+                from_bytes,
+                PyUnicode_FromString("from_bytes"));
+
+            if (from_bytes == NULL)
+            {
+                ret = NULL;
+            }
+            else
+            {
+
+                kwargs2 = PyDict_New();
+
+                PyDict_SetItem(
+                    kwargs2,
+                    PyUnicode_FromString("byteorder"),
+                    byteorder);
+                PyDict_SetItem(kwargs2, PyUnicode_FromString("signed"), sign);
+
+                args2 = Py_BuildValue("(O)", bytes);
+
+                ret2 = PyObject_Call(from_bytes, args2, kwargs2);
+
+                Py_XDECREF(args2);
+                Py_XDECREF(kwargs2);
+
+                if (ret2 == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
+                    ret = ret2;
+                }
+
+            }
+        }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+/*
+ * Make a copy of object
+ */
+PyObject *
+Object_Copy(PyObject *object)
+{
+
+    PyObject * builtins = NULL;
+    PyObject * from_bytes = NULL;
+    PyObject * ret = NULL;
+
+    PyObject * args2 = NULL;
+    PyObject * ret2 = NULL;
+
+    builtins = PyImport_ImportModule("copy");
+
+    if (builtins == NULL)
+    {
+        ret = NULL;
+    }
+    else
+    {
+
+        from_bytes = PyObject_GetAttr(builtins, PyUnicode_FromString("copy"));
+
+        if (from_bytes == NULL)
+        {
+            ret = NULL;
+        }
+        else
+        {
+
+            args2 = Py_BuildValue("(O)", object);
+
+            ret2 = PyObject_CallObject(from_bytes, args2);
+
+            Py_XDECREF(args2);
+
+            if (ret2 == NULL)
+            {
+                ret = NULL;
+            }
+            else
+            {
+                ret = ret2;
+            }
+
+        }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+PyObject *
+ReadLong(
+    PyObject * data,
+    PyObject * offset,
+    PyObject * end,
+    PyObject * endianness,
+    PyObject * sign)
+{
+    PyObject * ret = NULL;
+
+    PyObject * data_length = NULL;
+    PyObject * ts = NULL;
+
+    if (PySequence_Check(data) == 0 || PyLong_Check(offset) == 0
+        || PyLong_Check(end) == 0 || PyUnicode_Check(endianness) == 0
+        || PyBool_Check(sign) == 0)
+    {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Wrong parameters in function ReadLong");
+
+        ret = NULL;
+    }
+    else
+    {
+        data_length = PyLong_FromSsize_t(PySequence_Length(data));
+
+        if (PyObject_RichCompareBool(offset, data_length, Py_GT) == 1)
+        {
+            PyErr_SetString(
+                PyExc_IndexError,
+                "Wrong parameter `offset' in function ReadLong");
+
+            ret = NULL;
+        }
+        else
+        {
+            if ((PyObject_RichCompareBool(end, offset, Py_LT) == 1)
+                || (PyObject_RichCompareBool(end, data_length, Py_GT) == 1))
+            {
+                PyErr_SetString(
+                    PyExc_IndexError,
+                    "Wrong parameter `end' in function ReadLong");
+
+                ret = NULL;
+            }
+            else
+            {
+                if ((PyObject_RichCompareBool(
+                    endianness,
+                    PyUnicode_FromString("little"),
+                    Py_NE) == 1)
+                    && (PyObject_RichCompareBool(
+                        endianness,
+                        PyUnicode_FromString("big"),
+                        Py_NE) == 1))
+                {
+                    PyErr_SetString(
+                        PyExc_ValueError,
+                        "Wrong parameter `endianness' in function ReadLong");
+                    ret = NULL;
+                }
+                else
+                {
+                    ts = PySequence_GetSlice(
+                        data,
+                        PyLong_AsSsize_t(offset),
+                        PyLong_AsSsize_t(end));
+
+                    ret = PyLong_FromPyBytes(ts, endianness, sign);
+
+                    Py_XDECREF(ts);
+                }
+            }
+        }
+
+        Py_XDECREF(data_length);
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+/*
+ * Converts virtual address to offset
+ */
 PyObject *
 convert_virtual_to_file(PyObject *self, PyObject *args)
 {
@@ -131,17 +334,23 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
 
     PyObject * program_section_table = NULL;
     PyObject * value = NULL;
+    PyObject * byteorder = NULL;
 
     PyObject * item = NULL;
 
-    long i = 0;
-    long program_section_table_size = 0;
+    PyObject * p_vaddr = NULL;
 
-    unsigned long long long_value = 0;
-    unsigned long long p_vaddr = 0;
-    unsigned long long shift = 0;
+    PyObject * shift = NULL;
 
-    if (PyArg_ParseTuple(args, "OO", &program_section_table, &value) == 0)
+    unsigned long long i = 0;
+    unsigned long long program_section_table_size = 0;
+
+    if (PyArg_ParseTuple(
+        args,
+        "OOO",
+        &program_section_table,
+        &value,
+        &byteorder) == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -152,49 +361,90 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
     else
     {
 
-        long_value = PyLong_AsUnsignedLongLong(value);
-
-        program_section_table_size = PySequence_Length(program_section_table);
-
-        for (i = 0; i != program_section_table_size; i++)
+        if (PySequence_Check(program_section_table) != 1
+            || PyLong_Check(value) != 1 || PyUnicode_Check(byteorder) != 1)
         {
-            item = PyList_GetItem(program_section_table, i);
+            PyErr_SetString(
+                PyExc_TypeError,
+                "Wrong parameter type to function read_e_ident");
 
-            p_vaddr = PyLong_AsUnsignedLongLong(
-                PyLong_FromPyBytes(
-                    PyDict_GetItem(item, PyUnicode_FromString("p_vaddr")),
-                    Py_False));
-
-            if (long_value >= p_vaddr
-                && long_value
-                    < (p_vaddr
-                        + PyLong_AsUnsignedLongLong(
-                            PyLong_FromPyBytes(
-                                PyDict_GetItem(
-                                    item,
-                                    PyUnicode_FromString("p_memsz")),
-                                Py_False))))
-
-            {
-                shift = long_value - p_vaddr
-                    + PyLong_AsUnsignedLongLong(
-                        PyLong_FromPyBytes(
-                            PyDict_GetItem(
-                                item,
-                                PyUnicode_FromString("p_offset")),
-                            Py_False));
-
-                ret = PyLong_FromUnsignedLongLong(shift);
-                break;
-            }
-
+            ret = NULL;
         }
+        else
+        {
 
+            program_section_table_size = PySequence_Length(
+                program_section_table);
+
+            for (i = 0; i != program_section_table_size; i++)
+            {
+                item = PyList_GetItem(program_section_table, i);
+
+                if (item == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
+
+                    p_vaddr = PyLong_FromPyBytes(
+                        PyDict_GetItem(item, PyUnicode_FromString("p_vaddr")),
+                        byteorder,
+                        Py_False);
+
+                    if (p_vaddr == NULL)
+                    {
+                        ret = NULL;
+                    }
+                    else
+                    {
+
+                        if ((PyObject_RichCompareBool(value, p_vaddr, Py_GE)
+                            == 1)
+                            && (PyObject_RichCompareBool(
+                                value,
+                                (PyNumber_Add(
+                                    p_vaddr,
+                                    PyLong_FromPyBytes(
+                                        PyDict_GetItem(
+                                            item,
+                                            PyUnicode_FromString("p_memsz")),
+                                        byteorder,
+                                        Py_False))),
+                                Py_LT)))
+
+                        {
+                            shift = PyNumber_Add(
+                                PyNumber_Subtract(value, p_vaddr),
+                                PyLong_FromPyBytes(
+                                    PyDict_GetItem(
+                                        item,
+                                        PyUnicode_FromString("p_offset")),
+                                    byteorder,
+                                    Py_False));
+
+                            ret = shift;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
 }
 
+/*
+ * Reads e_ident from sequence parameter
+ */
 PyObject *
 read_e_ident(PyObject *self, PyObject *args)
 {
@@ -230,12 +480,16 @@ read_e_ident(PyObject *self, PyObject *args)
             }
             else
             {
-                ret = PySequence_GetSlice(
-                    bytes_data,
-                    PyLong_AsSize_t(PyLong_FromLong(0)),
-                    PyLong_AsSize_t(PyLong_FromLong(EI_NIDENT)));
+                ret = PySequence_GetSlice(bytes_data, 0, EI_NIDENT);
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -288,28 +542,11 @@ is_elf(PyObject *self, PyObject *args)
         Py_XDECREF(bytes_data_slice);
     }
 
-    return ret;
-}
-
-PyObject *
-class_switch(long val)
-{
-    PyObject * ret = NULL;
-
-    switch (val)
+    if (PyErr_Occurred() != NULL)
     {
-        case ELFCLASS32:
-            ret = PyLong_FromLong(32);
-            break;
-        case ELFCLASS64:
-            ret = PyLong_FromLong(64);
-            break;
-        default:
-            PyErr_SetString(
-                PyExc_ValueError,
-                "Wrong parameter value to function class_switch");
-            ret = NULL;
-            break;
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -323,7 +560,7 @@ e_ident_bitness(PyObject *self, PyObject *args)
 
     PyObject * e_ident = NULL;
 
-    char * t;
+    PyObject * endianness = NULL;
 
     if (PyArg_ParseTuple(args, "O", &e_ident) == 0)
     {
@@ -345,14 +582,33 @@ e_ident_bitness(PyObject *self, PyObject *args)
         }
         else
         {
-            t = PyBytes_AsString(
-                PySequence_GetSlice(
-                    e_ident,
-                    PyLong_AsSize_t(PyLong_FromLong(EI_CLASS)),
-                    PyLong_AsSize_t(PyLong_FromLong(EI_CLASS + 1))));
+            endianness = e_ident_endianness(self, args);
 
-            ret = class_switch(t[0]);
+            if (endianness == NULL)
+            {
+                ret = NULL;
+            }
+            else
+            {
+
+                ret = class_switch(
+                    PyLong_AsLong(
+                        PyLong_FromPyBytes(
+                            PySequence_GetItem(
+                                e_ident,
+                                PyLong_AsSsize_t(PyLong_FromLong(EI_CLASS))),
+                            endianness,
+                            Py_False)));
+
+            }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -385,12 +641,128 @@ e_ident_dict_bitness(PyObject *self, PyObject *args)
         else
         {
 
+//            printf(
+//                "2: %ld\n",
+//                PyLong_AsLong(
+//                    PyDict_GetItem(
+//                        e_ident_dict,
+//                        PyUnicode_FromString("e_i_s_class"))));
             ret = class_switch(
                 PyLong_AsLong(
                     PyDict_GetItem(
                         e_ident_dict,
                         PyUnicode_FromString("e_i_s_class"))));
+            Py_XINCREF(ret);
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+PyObject *
+e_ident_endianness(PyObject *self, PyObject *args)
+{
+
+    PyObject * ret = NULL;
+
+    PyObject * e_ident = NULL;
+
+    char * t;
+
+    if (PyArg_ParseTuple(args, "O", &e_ident) == 0)
+    {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Wrong parameter to function e_ident_endianness");
+
+        ret = NULL;
+    }
+    else
+    {
+        if (PySequence_Check(e_ident) == 0)
+        {
+            PyErr_SetString(
+                PyExc_TypeError,
+                "Wrong parameter to function e_ident_endianness");
+
+            ret = NULL;
+        }
+        else
+        {
+            t = PyBytes_AsString(
+                PySequence_GetSlice(
+                    e_ident,
+                    PyLong_AsSize_t(PyLong_FromLong(EI_DATA)),
+                    PyLong_AsSize_t(PyLong_FromLong(EI_DATA + 1))));
+
+            if (t == NULL)
+            {
+                ret = NULL;
+            }
+            else
+            {
+                ret = endianness_to_name(t[0]);
+            }
+        }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+PyObject *
+e_ident_dict_endianness(PyObject *self, PyObject *args)
+{
+
+    PyObject * ret = NULL;
+
+    PyObject * e_ident_dict = NULL;
+
+    if (PyArg_ParseTuple(args, "O", &e_ident_dict) == 0)
+    {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Wrong parameter to function e_ident_dict_endianness");
+        ret = NULL;
+    }
+    else
+    {
+        if (PyDict_Check(e_ident_dict) == 0)
+        {
+            PyErr_SetString(
+                PyExc_TypeError,
+                "Wrong parameter to function e_ident_dict_endianness");
+            ret = NULL;
+        }
+        else
+        {
+
+            ret = endianness_to_name(
+                PyLong_AsLong(
+                    PyDict_GetItem(
+                        e_ident_dict,
+                        PyUnicode_FromString("e_i_s_data"))));
+        }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -402,6 +774,8 @@ e_ident_to_dict(PyObject *self, PyObject *args)
     PyObject * ret = NULL;
 
     PyObject * e_ident_bytes = NULL;
+
+    PyObject * endianness = NULL;
 
     long i = 0;
 
@@ -417,31 +791,64 @@ e_ident_to_dict(PyObject *self, PyObject *args)
     else
     {
 
-        ret = PyDict_New();
-
-        i = 0;
-        while (1)
+        if (PySequence_Length(e_ident_bytes) < EI_NIDENT)
         {
-            if (e_indent_names[i] == NULL)
+            PyErr_SetString(
+                PyExc_TypeError,
+                "Input data sequence too short to function e_ident_to_dict");
+            ret = NULL;
+        }
+        else
+        {
+            endianness = endianness_to_name(
+                (unsigned char) PyBytes_AsString(
+                    PySequence_GetSlice(e_ident_bytes, EI_DATA, EI_DATA + 1))[0]);
+
+            if (endianness == NULL)
             {
-                break;
+                ret = NULL;
             }
+            else
+            {
 
-            PyDict_SetItem(
-                ret,
-                PyUnicode_FromString(e_indent_names[i]),
-                PyLong_FromPyBytes(
-                    PySequence_GetSlice(
-                        e_ident_bytes,
-                        PyLong_AsSize_t(PyLong_FromLong(i)),
-                        PyLong_AsSize_t(PyLong_FromLong(i + 1))),
-                    Py_False));
+                ret = PyDict_New();
 
-            i++;
+                i = 0;
+                while (1)
+                {
+                    if (e_indent_names[i] == NULL)
+                    {
+                        break;
+                    }
+
+                    PyDict_SetItem(
+                        ret,
+                        PyUnicode_FromString(e_indent_names[i]),
+                        PyLong_FromPyBytes(
+                            PySequence_GetSlice(
+                                e_ident_bytes,
+                                PyLong_AsSize_t(PyLong_FromLong(i)),
+                                PyLong_AsSize_t(PyLong_FromLong(i + 1))),
+                            endianness,
+                            Py_False));
+
+                    i++;
+                }
+
+                Py_XDECREF(endianness);
+
+            }
         }
     }
 
     Py_XDECREF(e_ident_bytes);
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
 
     return ret;
 }
@@ -502,9 +909,16 @@ read_elf_ehdr_x(PyObject *self, PyObject *args)
                         elf_x_ehdr_i_size = sizeof(Elf64_Ehdr);
                         break;
                     }
+                    default:
+                        PyErr_SetString(
+                            PyExc_ValueError,
+                            "Wrong bitness number in function read_elf_ehdr_x");
+                        ret = NULL;
+                        elf_x_ehdr_i_size = 0;
+                        break;
                 }
 
-                if (PyLong_Check(ret) == 0)
+                if (elf_x_ehdr_i_size != 0)
                 {
                     ret = PySequence_GetSlice(
                         data,
@@ -513,7 +927,13 @@ read_elf_ehdr_x(PyObject *self, PyObject *args)
                 }
             }
         }
+    }
 
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -570,14 +990,29 @@ read_elf_ehdr(PyObject *self, PyObject *args)
 
                 Py_XDECREF(args2);
 
-                args2 = Py_BuildValue("(OOO)", data, index, x);
+                if (x == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
 
-                ret = read_elf_ehdr_x(self, args2);
+                    args2 = Py_BuildValue("(OOO)", data, index, x);
 
-                Py_XDECREF(args2);
-                Py_XDECREF(x);
+                    ret = read_elf_ehdr_x(self, args2);
+
+                    Py_XDECREF(args2);
+                    Py_XDECREF(x);
+                }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -666,6 +1101,13 @@ elf32_ehdr_to_dict(PyObject *self, PyObject *args)
             }
         }
 
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -758,6 +1200,13 @@ elf64_ehdr_to_dict(PyObject *self, PyObject *args)
 
     }
 
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
     return ret;
 }
 
@@ -813,29 +1262,47 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
 
                 Py_XDECREF(args2);
 
-                args2 = Py_BuildValue("OO", data, index);
-
-                switch (PyLong_AsLong(x))
+                if (x == NULL)
                 {
-                    case 32:
-                    {
-                        ret = elf32_ehdr_to_dict(self, args2);
-                        break;
-                    }
-                    case 64:
-                    {
-                        ret = elf64_ehdr_to_dict(self, args2);
-                        break;
-                    }
-                    default:
-                        ret = PyLong_FromLong(4);
-                        break;
+                    ret = NULL;
                 }
+                else
+                {
 
-                Py_XDECREF(args2);
-                Py_XDECREF(x);
+                    args2 = Py_BuildValue("OO", data, index);
+
+                    switch (PyLong_AsLong(x))
+                    {
+                        case 32:
+                        {
+                            ret = elf32_ehdr_to_dict(self, args2);
+                            break;
+                        }
+                        case 64:
+                        {
+                            ret = elf64_ehdr_to_dict(self, args2);
+                            break;
+                        }
+                        default:
+                            PyErr_SetString(
+                                PyExc_ValueError,
+                                "Wrong bitness value in function elf_ehdr_to_dict");
+                            ret = NULL;
+                            break;
+                    }
+
+                    Py_XDECREF(args2);
+                    Py_XDECREF(x);
+                }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -897,9 +1364,16 @@ read_elf_shdr_x(PyObject *self, PyObject *args)
                         elf_x_shdr_i_size = sizeof(Elf64_Shdr);
                         break;
                     }
+                    default:
+                        PyErr_SetString(
+                            PyExc_ValueError,
+                            "Wrong bitness value in function read_elf_shdr_x");
+                        ret = NULL;
+                        elf_x_shdr_i_size = 0;
+                        break;
                 }
 
-                if (PyLong_Check(ret) == 0)
+                if (elf_x_shdr_i_size != 0)
                 {
                     ret = PySequence_GetSlice(
                         data,
@@ -908,6 +1382,13 @@ read_elf_shdr_x(PyObject *self, PyObject *args)
                 }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -960,19 +1441,34 @@ read_elf_shdr(PyObject *self, PyObject *args)
 
                 args2 = Py_BuildValue("(O)", e_ident);
 
-                x = e_ident_bitness(self, args2);
+                x = e_ident_dict_bitness(self, args2);
 
                 Py_XDECREF(args2);
 
-                args2 = Py_BuildValue("(OOO)", data, index, x);
+                if (x == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
 
-                ret = read_elf_shdr_x(self, args2);
+                    args2 = Py_BuildValue("(OOO)", data, index, x);
 
-                Py_XDECREF(args2);
-                Py_XDECREF(x);
+                    ret = read_elf_shdr_x(self, args2);
 
+                    Py_XDECREF(args2);
+
+                    Py_XDECREF(x);
+                }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1016,7 +1512,7 @@ shdr32_to_dict(PyObject *self, PyObject *args)
         else
         {
 
-            if (PyLong_AsLongLong(index) < 0)
+            if (PyLong_AsUnsignedLongLong(index) < 0)
             {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -1039,6 +1535,13 @@ shdr32_to_dict(PyObject *self, PyObject *args)
                 PYDICT_SETITEM(sh_entsize, Elf32_Word)
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1083,7 +1586,7 @@ shdr64_to_dict(PyObject *self, PyObject *args)
         else
         {
 
-            if (PyLong_AsLongLong(index) < 0)
+            if (PyLong_AsUnsignedLongLong(index) < 0)
             {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -1106,6 +1609,13 @@ shdr64_to_dict(PyObject *self, PyObject *args)
                 PYDICT_SETITEM(sh_entsize, Elf64_Word)
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1133,7 +1643,9 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
     PyObject * index = NULL;
     PyObject * offset = NULL;
 
-    long i = 0;
+    PyObject * endianness = NULL;
+
+    unsigned long long i = 0;
 
     if (PyArg_ParseTuple(args, "OOO", &data_seq, &e_ident_dict, &ehdr_dict)
         == 0)
@@ -1164,64 +1676,130 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
 
             Py_XDECREF(args2);
 
-            sheader_size = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_shentsize")),
-                Py_True);
-
-            offset = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_shoff")),
-                Py_True);
-
-            sheaders_count = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_shnum")),
-                Py_True);
-
-            ret = PyList_New(0);
-
-            for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
+            if (bits == NULL)
             {
-                switch (PyLong_AsLong(bits))
+                ret = NULL;
+            }
+            else
+            {
+
+                endianness = endianness_to_name(
+                    PyLong_AsLong(
+                        PyDict_GetItem(
+                            e_ident_dict,
+                            PyUnicode_FromString("e_i_s_data"))));
+
+                if (endianness == NULL)
                 {
-
-                    case 32:
-                    {
-                        index = PyNumber_Add(
-                            offset,
-                            PyNumber_Multiply(
-                                sheader_size,
-                                PyLong_FromLong(i)));
-                        args2 = Py_BuildValue("OO", data_seq, index);
-                        td = shdr32_to_dict(self, args2);
-                        Py_XDECREF(args2);
-                        break;
-                    }
-                    case 64:
-                    {
-                        index = PyNumber_Add(
-                            offset,
-                            PyNumber_Multiply(
-                                sheader_size,
-                                PyLong_FromLong(i)));
-                        args2 = Py_BuildValue("OO", data_seq, index);
-                        td = shdr64_to_dict(self, args2);
-                        Py_XDECREF(args2);
-                        break;
-                    }
-                    default:
-                        td = Py_None;
-                        Py_XINCREF(td);
+                    ret = NULL;
                 }
+                else
+                {
+                    sheader_size = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_shentsize")),
+                        endianness,
+                        Py_False);
 
-                PyList_Append(ret, td);
+                    offset = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_shoff")),
+                        endianness,
+                        Py_False);
 
+                    sheaders_count = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_shnum")),
+                        endianness,
+                        Py_False);
+
+                    ret = PyList_New(0);
+
+                    for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
+                    {
+                        switch (PyLong_AsLong(bits))
+                        {
+
+                            case 32:
+                            {
+                                index = PyNumber_Add(
+                                    offset,
+                                    PyNumber_Multiply(
+                                        sheader_size,
+                                        PyLong_FromUnsignedLongLong(i)));
+
+                                args2 = Py_BuildValue("OO", data_seq, index);
+
+                                td = shdr32_to_dict(self, args2);
+
+                                if (td == NULL)
+                                {
+                                    ret = NULL;
+                                }
+
+                                Py_XDECREF(args2);
+
+                                break;
+                            }
+                            case 64:
+                            {
+                                index = PyNumber_Add(
+                                    offset,
+                                    PyNumber_Multiply(
+                                        sheader_size,
+                                        PyLong_FromUnsignedLongLong(i)));
+
+                                args2 = Py_BuildValue("OO", data_seq, index);
+
+                                td = shdr64_to_dict(self, args2);
+
+                                if (td == NULL)
+                                {
+                                    ret = NULL;
+                                }
+
+                                Py_XDECREF(args2);
+
+                                break;
+                            }
+                            default:
+                                PyErr_SetString(
+                                    PyExc_ValueError,
+                                    "Wrong bitness in function read_elf_section_header_table");
+
+                                ret = NULL;
+                        }
+
+                        if (td == NULL)
+                        {
+                            break;
+                        }
+
+                        if (td != NULL)
+                        {
+                            PyList_Append(ret, td);
+                        }
+
+                    }
+
+                    Py_XDECREF(sheader_size);
+                    Py_XDECREF(offset);
+                    Py_XDECREF(sheaders_count);
+                }
             }
 
-            Py_XDECREF(sheader_size);
-            Py_XDECREF(offset);
-            Py_XDECREF(sheaders_count);
             Py_XDECREF(bits);
-
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1238,7 +1816,7 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
 
     PyObject * x = NULL;
 
-    long elf_x_phdr_i_size = 0;
+    unsigned long long elf_x_phdr_i_size = 0;
 
     if (PyArg_ParseTuple(args, "OOO", &data, &index, &x) == 0)
     {
@@ -1262,8 +1840,11 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
         else
         {
 
-            if (PyLong_AsLongLong(index) < 0
-                || (PyLong_AsLongLong(x) != 32 && PyLong_AsLongLong(x) != 64))
+            if ((PyObject_RichCompareBool(index, PyLong_FromLong(0), Py_LT) == 1)
+                || (((PyObject_RichCompareBool(x, PyLong_FromLong(32), Py_NE))
+                    == 1)
+                    && ((PyObject_RichCompareBool(x, PyLong_FromLong(64), Py_NE))
+                        == 1)))
             {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -1295,6 +1876,13 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
                 }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1346,18 +1934,32 @@ read_elf_phdr(PyObject *self, PyObject *args)
             {
                 args2 = Py_BuildValue("(O)", e_ident);
 
-                x = e_ident_bitness(self, args2);
+                x = e_ident_dict_bitness(self, args2);
 
+                if (x == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
+
+                    args2 = Py_BuildValue("(OOO)", data, index, x);
+
+                    ret = read_elf_phdr_x(self, args2);
+
+                    Py_XDECREF(args2);
+                    Py_XDECREF(x);
+                }
                 Py_XDECREF(args2);
-
-                args2 = Py_BuildValue("(OOO)", data, index, x);
-
-                ret = read_elf_phdr_x(self, args2);
-
-                Py_XDECREF(args2);
-                Py_XDECREF(x);
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1425,6 +2027,13 @@ phdr32_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
     return ret;
 }
 
@@ -1490,6 +2099,13 @@ phdr64_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
+    }
+
     return ret;
 }
 
@@ -1515,6 +2131,8 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
 
     PyObject * index = NULL;
     PyObject * offset = NULL;
+
+    PyObject * endianness = NULL;
 
     long i = 0;
 
@@ -1546,64 +2164,120 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
 
             Py_XDECREF(args2);
 
-            sheader_size = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_phentsize")),
-                Py_True);
-
-            offset = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_phoff")),
-                Py_True);
-
-            sheaders_count = PyLong_FromPyBytes(
-                PyDict_GetItem(ehdr_dict, PyUnicode_FromString("e_phnum")),
-                Py_True);
-
-            ret = PyList_New(0);
-
-            for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
+            if (bits == NULL)
             {
-                switch (PyLong_AsLong(bits))
+                ret = NULL;
+            }
+            else
+            {
+                endianness = endianness_to_name(
+                    PyLong_AsLong(
+                        PyDict_GetItem(
+                            e_ident_dict,
+                            PyUnicode_FromString("e_i_s_data"))));
+
+                if (endianness == NULL)
+                {
+                    ret = NULL;
+                }
+                else
                 {
 
-                    case 32:
-                    {
-                        index = PyNumber_Add(
-                            offset,
-                            PyNumber_Multiply(
-                                sheader_size,
-                                PyLong_FromLong(i)));
-                        args2 = Py_BuildValue("OO", data_seq, index);
-                        td = phdr32_to_dict(self, args2);
-                        Py_XDECREF(args2);
-                        break;
-                    }
-                    case 64:
-                    {
-                        index = PyNumber_Add(
-                            offset,
-                            PyNumber_Multiply(
-                                sheader_size,
-                                PyLong_FromLong(i)));
+                    sheader_size = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_phentsize")),
+                        endianness,
+                        Py_False);
 
-                        args2 = Py_BuildValue("OO", data_seq, index);
-                        td = phdr64_to_dict(self, args2);
-                        Py_XDECREF(args2);
-                        break;
+                    offset = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_phoff")),
+                        endianness,
+                        Py_False);
+
+                    sheaders_count = PyLong_FromPyBytes(
+                        PyDict_GetItem(
+                            ehdr_dict,
+                            PyUnicode_FromString("e_phnum")),
+                        endianness,
+                        Py_False);
+
+                    ret = PyList_New(0);
+
+                    for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
+                    {
+                        switch (PyLong_AsLong(bits))
+                        {
+
+                            case 32:
+                            {
+                                index = PyNumber_Add(
+                                    offset,
+                                    PyNumber_Multiply(
+                                        sheader_size,
+                                        PyLong_FromLong(i)));
+                                args2 = Py_BuildValue("OO", data_seq, index);
+                                td = phdr32_to_dict(self, args2);
+                                if (td == NULL)
+                                {
+                                    ret = NULL;
+                                }
+                                Py_XDECREF(args2);
+                                break;
+                            }
+                            case 64:
+                            {
+                                index = PyNumber_Add(
+                                    offset,
+                                    PyNumber_Multiply(
+                                        sheader_size,
+                                        PyLong_FromLong(i)));
+
+                                args2 = Py_BuildValue("OO", data_seq, index);
+                                td = phdr64_to_dict(self, args2);
+                                if (td == NULL)
+                                {
+                                    ret = NULL;
+                                }
+                                Py_XDECREF(args2);
+                                break;
+                            }
+                            default:
+                                PyErr_SetString(
+                                    PyExc_ValueError,
+                                    "Wrong bitness number in read_elf_program_header_table");
+
+                                ret = NULL;
+                        }
+
+                        if (td == NULL)
+                        {
+                            break;
+                        }
+
+                        if (td != NULL)
+                        {
+                            PyList_Append(ret, td);
+                        }
                     }
-                    default:
-                        td = Py_None;
-                        Py_XINCREF(td);
+
+                    Py_XDECREF(sheader_size);
+                    Py_XDECREF(offset);
+                    Py_XDECREF(sheaders_count);
                 }
-
-                PyList_Append(ret, td);
             }
 
-            Py_XDECREF(sheader_size);
-            Py_XDECREF(offset);
-            Py_XDECREF(sheaders_count);
             Py_XDECREF(bits);
-
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1624,12 +2298,15 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
     PyObject * string_table_size = NULL;
     PyObject * header_bytes = NULL;
 
+    PyObject * endianness = NULL;
+
     if (PyArg_ParseTuple(
         args,
-        "OOO",
+        "OOOO",
         &data_seq,
         &elf_section_header_table,
-        &ehdr_dict) == 0)
+        &ehdr_dict,
+        &endianness) == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -1641,7 +2318,7 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
     {
         if (PySequence_Check(data_seq) == 0
             || PyList_Check(elf_section_header_table) == 0
-            || PyDict_Check(ehdr_dict) == 0)
+            || PyDict_Check(ehdr_dict) == 0 || PyUnicode_Check(endianness) == 0)
         {
             PyErr_SetString(
                 PyExc_TypeError,
@@ -1651,6 +2328,7 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
         }
         else
         {
+
             string_table_record = PySequence_GetItem(
                 elf_section_header_table,
                 PyLong_AsSsize_t(
@@ -1658,18 +2336,21 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
                         PyDict_GetItem(
                             ehdr_dict,
                             PyUnicode_FromString("e_shstrndx")),
-                        Py_True)));
+                        endianness,
+                        Py_False)));
 
             string_table_offset = PyLong_FromPyBytes(
                 PyDict_GetItem(
                     string_table_record,
                     PyUnicode_FromString("sh_offset")),
+                endianness,
                 Py_False);
 
             string_table_size = PyLong_FromPyBytes(
                 PyDict_GetItem(
                     string_table_record,
                     PyUnicode_FromString("sh_size")),
+                endianness,
                 Py_False);
 
             header_bytes = PySequence_GetSlice(
@@ -1684,6 +2365,13 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
             Py_XDECREF(string_table_offset);
             Py_XDECREF(string_table_size);
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1705,17 +2393,20 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
     long dinamics_table_size = 0;
     long i = 0;
 
-    unsigned long long strtab = 0;
-    unsigned long long strsz = 0;
+    PyObject * strtab = NULL;
+    PyObject * strsz = NULL;
 
-    unsigned long long long_value = 0;
+    PyObject * long_value = NULL;
+
+    PyObject * byteorder = NULL;
 
     if (PyArg_ParseTuple(
         args,
-        "OOO",
+        "OOOO",
         &data_seq,
         &program_table,
-        &dinamics_table) == 0)
+        &dinamics_table,
+        &byteorder) == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -1727,7 +2418,8 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
     {
 
         if (PySequence_Check(data_seq) == 0 || PyList_Check(program_table) == 0
-            || PyList_Check(dinamics_table) == 0)
+            || PyList_Check(dinamics_table) == 0
+            || PyUnicode_Check(byteorder) == 0)
         {
             PyErr_SetString(
                 PyExc_TypeError,
@@ -1743,43 +2435,64 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
             {
                 item = PyList_GetItem(dinamics_table, i);
 
-                long_value = PyLong_AsUnsignedLongLong(
-                    PyDict_GetItem(item, PyUnicode_FromString("d_tag")));
+                long_value = PyDict_GetItem(
+                    item,
+                    PyUnicode_FromString("d_tag"));
 
-                if (long_value == DT_STRTAB)
+                if (PyObject_RichCompareBool(
+                    long_value,
+                    PyLong_FromLong(DT_STRTAB),
+                    Py_EQ) == 1)
                 {
-                    strtab = PyLong_AsUnsignedLongLong(
-                        PyDict_GetItem(item, PyUnicode_FromString("d_ptr")));
+                    strtab = PyDict_GetItem(
+                        item,
+                        PyUnicode_FromString("d_ptr"));
                 }
 
-                if (long_value == DT_STRSZ)
+                if (PyObject_RichCompareBool(
+                    long_value,
+                    PyLong_FromLong(DT_STRSZ),
+                    Py_EQ) == 1)
                 {
-                    strsz = PyLong_AsUnsignedLongLong(
-                        PyDict_GetItem(item, PyUnicode_FromString("d_val")));
+                    strsz = PyDict_GetItem(item, PyUnicode_FromString("d_val"));
                 }
             }
 
-            if (strtab == 0 || strsz == 0)
+            if ((PyObject_RichCompareBool(strtab, 0, Py_EQ) == 1)
+                || (PyObject_RichCompareBool(strsz, 0, Py_EQ) == 1))
             {
                 ret = PyLong_FromLong(2);
             }
             else
             {
 
-                args2 = Py_BuildValue(
-                    "OO",
-                    program_table,
-                    PyLong_FromUnsignedLongLong(strtab));
+                args2 = Py_BuildValue("OOO", program_table, strtab, byteorder);
 
-                strtab = PyLong_AsUnsignedLongLong(
-                    convert_virtual_to_file(self, args2));
+                strtab = convert_virtual_to_file(self, args2);
 
                 Py_XDECREF(args2);
 
-                ret = PySequence_GetSlice(data_seq, strtab, strtab + strsz);
-            }
+                if (strtab == NULL)
+                {
+                    ret = NULL;
+                }
+                else
+                {
 
+                    ret = PySequence_GetSlice(
+                        data_seq,
+                        PyLong_AsUnsignedLongLong(strtab),
+                        PyLong_AsUnsignedLongLong(PyNumber_Add(strtab, strsz)));
+                }
+            }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1796,18 +2509,22 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
 
     PyObject * section_header = NULL;
     PyObject * header_bytes = NULL;
+
+    PyObject * endianness;
+
     char * header_bytes_char = NULL;
 
     Py_ssize_t table_len = 0;
-    long name_offset = 0;
-    long i = 0;
+    unsigned long long name_offset = 0;
+    unsigned long long i = 0;
 
     if (PyArg_ParseTuple(
         args,
-        "OOO",
+        "OOOO",
         &data_seq,
         &elf_section_header_table,
-        &ehdr_dict) == 0)
+        &ehdr_dict,
+        &endianness) == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -1819,7 +2536,7 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
     {
         if (PySequence_Check(data_seq) == 0
             || PyList_Check(elf_section_header_table) == 0
-            || PyDict_Check(ehdr_dict) == 0)
+            || PyDict_Check(ehdr_dict) == 0 || PyUnicode_Check(endianness) == 0)
         {
             PyErr_SetString(
                 PyExc_TypeError,
@@ -1858,17 +2575,26 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
                             PyDict_GetItem(
                                 section_header,
                                 PyUnicode_FromString("sh_name")),
-                            Py_True));
+                            endianness,
+                            Py_False));
 
                     PyList_Append(
                         ret,
                         PyUnicode_FromString(header_bytes_char + name_offset));
+
                 }
             }
 
             Py_XDECREF(header_bytes);
 
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -1888,12 +2614,14 @@ read_dynamic_section(PyObject *self, PyObject *args)
     PyObject * sub_data = NULL;
     char * sub_data_char = NULL;
 
-    long current_index = 0;
-    long one_value_size = 0;
+    PyObject * current_index = NULL;
+    PyObject * v1 = NULL;
+
+    PyObject * endianness = NULL;
+
+    unsigned long long one_value_size = 0;
     long bitness_l = 0;
-    long index_l = 0;
-    long v1 = 0;
-    long end = 0;
+    unsigned long long end = 0;
 
     union
     {
@@ -1901,7 +2629,8 @@ read_dynamic_section(PyObject *self, PyObject *args)
         Elf64_Dyn u64;
     } u;
 
-    if (PyArg_ParseTuple(args, "OOO", &data_seq, &index, &bitness) == 0)
+    if (PyArg_ParseTuple(args, "OOOO", &data_seq, &index, &bitness, &endianness)
+        == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -1912,7 +2641,7 @@ read_dynamic_section(PyObject *self, PyObject *args)
     else
     {
         if (PySequence_Check(data_seq) == 0 || PyLong_Check(index) == 0
-            || PyLong_Check(bitness) == 0)
+            || PyLong_Check(bitness) == 0 || PyUnicode_Check(endianness) == 0)
         {
             PyErr_SetString(
                 PyExc_TypeError,
@@ -1923,9 +2652,8 @@ read_dynamic_section(PyObject *self, PyObject *args)
         else
         {
 
-            if (PyLong_AsLongLong(index) < 0
-                || (PyLong_AsLongLong(bitness) != 32
-                    && PyLong_AsLongLong(bitness) != 64))
+            if (PyLong_AsLong(index) < 0
+                || (PyLong_AsLong(bitness) != 32 && PyLong_AsLong(bitness) != 64))
             {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -1945,101 +2673,243 @@ read_dynamic_section(PyObject *self, PyObject *args)
                         one_value_size = sizeof(Elf64_Dyn);
                         break;
                     default:
+                        PyErr_SetString(
+                            PyExc_TypeError,
+                            "Wrong bitness number in read_dynamic_section");
+
+                        ret = NULL;
                         one_value_size = 0;
                         break;
                 }
 
-                ret = PyList_New(0);
-                current_index = 0;
-                index_l = PyLong_AsLong(index);
-                end = 0;
-                while (1)
+                if (one_value_size == 0)
+                {
+                    ret = NULL;
+                }
+                else
                 {
 
-                    memset(&u, 0, sizeof(Elf64_Dyn));
+                    ret = PyList_New(0);
 
-                    v1 = index_l + (current_index * one_value_size);
+                    current_index = PyLong_FromLong(0);
 
-                    sub_data = PySequence_GetSlice(
-                        data_seq,
-                        v1,
-                        v1 + one_value_size);
+                    end = 0;
 
-                    sub_data_char = PyBytes_AsString(sub_data);
-
-                    switch (bitness_l)
+                    while (1)
                     {
-                        case 32:
-                            memcpy(&u.u32, sub_data_char, sizeof(Elf32_Dyn));
+
+                        memset(&u, 0, sizeof(u));
+
+                        v1 = PyNumber_Add(
+                            index,
+                            PyNumber_Multiply(
+                                current_index,
+                                PyLong_FromUnsignedLongLong(one_value_size)));
+
+                        sub_data = PySequence_GetSlice(
+                            data_seq,
+                            PyLong_AsSsize_t(v1),
+                            PyLong_AsSsize_t(
+                                PyNumber_Add(
+                                    v1,
+                                    PyLong_FromUnsignedLongLong(
+                                        one_value_size))));
+
+                        Py_XDECREF(v1);
+
+                        sub_data_char = PyBytes_AsString(sub_data);
+
+                        switch (bitness_l)
+                        {
+                            case 32:
+                                memcpy(
+                                    &u.u32,
+                                    sub_data_char,
+                                    sizeof(Elf32_Dyn));
+                                break;
+                            case 64:
+                                memcpy(
+                                    &u.u64,
+                                    sub_data_char,
+                                    sizeof(Elf64_Dyn));
+                                break;
+                            default:
+                                PyErr_SetString(
+                                    PyExc_TypeError,
+                                    "Wrong bitness number in read_dynamic_section");
+
+                                ret = NULL;
+                                break;
+                        }
+
+                        if (PyErr_Occurred() != NULL)
+                        {
+                            ret = NULL;
                             break;
-                        case 64:
-                            memcpy(&u.u64, sub_data_char, sizeof(Elf64_Dyn));
+                        }
+
+                        Py_XDECREF(sub_data);
+
+                        switch (bitness_l)
+                        {
+                            case 32:
+                                if (u.u32.d_tag == 0)
+                                {
+                                    end = 1;
+                                }
+                                break;
+                            case 64:
+                                if (u.u64.d_tag == 0)
+                                {
+                                    end = 1;
+                                }
+                                break;
+                            default:
+                                PyErr_SetString(
+                                    PyExc_TypeError,
+                                    "Wrong bitness number in read_dynamic_section");
+
+                                ret = NULL;
+                                break;
+                        }
+
+                        if (PyErr_Occurred() != NULL)
+                        {
+                            ret = NULL;
                             break;
+                        }
+
+                        if (end == 1)
+                        {
+                            break;
+                        }
+
+                        new_dyn_dict = PyDict_New();
+
+                        switch (bitness_l)
+                        {
+                            case 32:
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_tag"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf32_Dyn, d_tag)),
+                                            member_size(Elf32_Dyn, d_tag) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf32_Dyn, d_tag) ),
+                                        endianness,
+                                        Py_False));
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_val"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf32_Dyn, d_un)),
+                                            member_size(Elf32_Dyn, d_un) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf32_Dyn, d_un) ),
+                                        endianness,
+                                        Py_False));
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_ptr"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf32_Dyn, d_un)),
+                                            member_size(Elf32_Dyn, d_un) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf32_Dyn, d_un) ),
+                                        endianness,
+                                        Py_False));
+
+                                break;
+                            case 64:
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_tag"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf64_Dyn, d_tag)),
+                                            member_size(Elf64_Dyn, d_tag) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf64_Dyn, d_tag) ),
+                                        endianness,
+                                        Py_False));
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_val"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf64_Dyn, d_un)),
+                                            member_size(Elf64_Dyn, d_un) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf64_Dyn, d_un) ),
+                                        endianness,
+                                        Py_False));
+
+                                PyDict_SetItem(
+                                    new_dyn_dict,
+                                    PyUnicode_FromString("d_ptr"),
+                                    ReadLong(
+                                        PyBytes_FromStringAndSize(
+                                            (char *) ((char *) &u
+                                                + offsetof(Elf64_Dyn, d_un)),
+                                            member_size(Elf64_Dyn, d_un) ),
+                                        PyLong_FromLong(0),
+                                        PyLong_FromLong(
+                                            member_size(Elf64_Dyn, d_un) ),
+                                        endianness,
+                                        Py_False));
+                                break;
+                            default:
+                                PyErr_SetString(
+                                    PyExc_TypeError,
+                                    "Wrong bitness number in read_dynamic_section");
+
+                                ret = NULL;
+                                break;
+                        }
+
+                        if (PyErr_Occurred() != NULL)
+                        {
+                            ret = NULL;
+                            break;
+                        }
+
+                        PyList_Append(ret, new_dyn_dict);
+
+                        current_index = PyNumber_Add(
+                            current_index,
+                            PyLong_FromLong(1));
                     }
 
-                    Py_XDECREF(sub_data);
-
-                    switch (bitness_l)
-                    {
-                        case 32:
-                            if (u.u32.d_tag == 0)
-                            {
-                                end = 1;
-                            }
-                            break;
-                        case 64:
-                            if (u.u64.d_tag == 0)
-                            {
-                                end = 1;
-                            }
-                            break;
-                    }
-
-                    if (end == 1)
-                    {
-                        break;
-                    }
-
-                    new_dyn_dict = PyDict_New();
-
-                    switch (bitness_l)
-                    {
-                        case 32:
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_tag"),
-                                PyLong_FromLong(u.u32.d_tag));
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_val"),
-                                PyLong_FromLong(u.u32.d_un.d_val));
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_ptr"),
-                                PyLong_FromLong(u.u32.d_un.d_ptr));
-                            break;
-                        case 64:
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_tag"),
-                                PyLong_FromLong(u.u64.d_tag));
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_val"),
-                                PyLong_FromLong(u.u64.d_un.d_val));
-                            PyDict_SetItem(
-                                new_dyn_dict,
-                                PyUnicode_FromString("d_ptr"),
-                                PyLong_FromLong(u.u64.d_un.d_ptr));
-                            break;
-                    }
-
-                    PyList_Append(ret, new_dyn_dict);
-
-                    current_index++;
+                    Py_DECREF(current_index);
                 }
             }
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -2053,7 +2923,8 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
     PyObject * dinamics_table = NULL;
     PyObject * data_seq = NULL;
     PyObject * elf_section_header_table = NULL;
-    PyObject * ehdr_dict = NULL;
+    PyObject * byteorder = NULL;
+
     PyObject * program_table = NULL;
 
     PyObject * args2 = NULL;
@@ -2074,7 +2945,7 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
         &program_table,
         &dinamics_table,
         &elf_section_header_table,
-        &ehdr_dict) == 0)
+        &byteorder) == 0)
     {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -2087,7 +2958,7 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
         if (PySequence_Check(data_seq) == 0 || PyList_Check(program_table) == 0
             || PyList_Check(dinamics_table) == 0
             || PyList_Check(elf_section_header_table) == 0
-            || PyDict_Check(ehdr_dict) == 0)
+            || PyUnicode_Check(byteorder) == 0)
         {
             PyErr_SetString(
                 PyExc_TypeError,
@@ -2099,48 +2970,64 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
         {
 
             args2 = Py_BuildValue(
-                "OOO",
+                "OOOO",
                 data_seq,
                 program_table,
-                dinamics_table);
+                dinamics_table,
+                byteorder);
 
             header_bytes = get_dyn_string_table_slice(self, args2);
 
-            if (PyBytes_Check(header_bytes) == 0)
+            if (header_bytes == NULL)
             {
-                ret = PyLong_FromLong(2);
+                ret = NULL;
             }
             else
             {
-                header_bytes_chars = PyBytes_AsString(header_bytes);
 
-                dinamics_table_size = PySequence_Length(dinamics_table);
-
-                ret = PyList_New(0);
-
-                for (i = 0; i != dinamics_table_size; i++)
+                if (PyBytes_Check(header_bytes) == 0)
                 {
-                    item = PySequence_GetItem(dinamics_table, i);
+                    ret = PyLong_FromLong(2);
+                }
+                else
+                {
+                    header_bytes_chars = PyBytes_AsString(header_bytes);
 
-                    if (PyLong_AsLong(
-                        PyDict_GetItem(item, PyUnicode_FromString("d_tag")))
-                        == DT_NEEDED)
+                    dinamics_table_size = PySequence_Length(dinamics_table);
+
+                    ret = PyList_New(0);
+
+                    for (i = 0; i != dinamics_table_size; i++)
                     {
-                        offset = PyLong_AsLong(
-                            PyDict_GetItem(
-                                item,
-                                PyUnicode_FromString("d_ptr")));
+                        item = PySequence_GetItem(dinamics_table, i);
 
-                        name = PyUnicode_FromString(
-                            header_bytes_chars + offset);
+                        if (PyLong_AsLong(
+                            PyDict_GetItem(item, PyUnicode_FromString("d_tag")))
+                            == DT_NEEDED)
+                        {
+                            offset = PyLong_AsLong(
+                                PyDict_GetItem(
+                                    item,
+                                    PyUnicode_FromString("d_ptr")));
 
-                        PyList_Append(ret, name);
+                            name = PyUnicode_FromString(
+                                header_bytes_chars + offset);
+
+                            PyList_Append(ret, name);
+                        }
                     }
                 }
             }
 
             Py_XDECREF(header_bytes);
         }
+    }
+
+    if (PyErr_Occurred() != NULL)
+    {
+        PyErr_Print();
+        Py_XDECREF(ret);
+        ret = NULL;
     }
 
     return ret;
@@ -2153,36 +3040,49 @@ static PyMethodDef elf_bin_methods[] =
             read_e_ident,
             METH_VARARGS,
             "read e_ident from bytes object" },
+
         {
             "is_elf",
             is_elf,
             METH_VARARGS,
             "check is bytes varibale is elf. var length must be == 4 bytes" },
+
         {
             "e_ident_bitness",
             e_ident_bitness,
             METH_VARARGS,
             "return elf bitness by e_ident" },
+
+        {
+            "e_ident_endianness",
+            e_ident_endianness,
+            METH_VARARGS,
+            "return elf endianness by e_ident" },
+
         {
             "e_ident_to_dict",
             e_ident_to_dict,
             METH_VARARGS,
             "convert e_ident to Python dict" },
+
         {
             "read_elf_ehdr",
             read_elf_ehdr,
             METH_VARARGS,
             "reads elf header using e_ident to know bitness" },
+
         {
             "read_elf_ehdr_x",
             read_elf_ehdr_x,
             METH_VARARGS,
             "read elf section header by given bitness" },
+
         {
             "read_elf_shdr",
             read_elf_shdr,
             METH_VARARGS,
             "reads elf section header using e_ident to know bitness" },
+
         {
             "read_elf_shdr_x",
             read_elf_shdr_x,
@@ -2194,6 +3094,7 @@ static PyMethodDef elf_bin_methods[] =
             read_elf_phdr,
             METH_VARARGS,
             "reads elf section header using e_ident to know bitness" },
+
         {
             "read_elf_phdr_x",
             read_elf_phdr_x,
@@ -2259,11 +3160,7 @@ static PyMethodDef elf_bin_methods[] =
             read_elf_section_header_table_names,
             METH_VARARGS,
             "get section headers names" },
-        {
-            "PyLong_FromPyBytes",
-            ExpPyLong_FromPyBytes,
-            METH_VARARGS,
-            "convert bytes to PyLong" },
+
         {
             "read_dynamic_section",
             read_dynamic_section,
@@ -2276,6 +3173,12 @@ static PyMethodDef elf_bin_methods[] =
             METH_VARARGS,
             "Get dianmic libs names required by elf file" },
 
+        {
+            "convert_virtual_to_file",
+            convert_virtual_to_file,
+            METH_VARARGS,
+            "Converts address from virtual to offset" },
+
         { NULL, NULL, 0, NULL } };
 
 static struct PyModuleDef elf_bin_module =
@@ -2286,3 +3189,5 @@ PyInit_elf_bin(void)
 {
     return PyModule_Create(&elf_bin_module);
 }
+
+#undef member_size

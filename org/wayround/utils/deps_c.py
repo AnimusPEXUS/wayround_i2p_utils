@@ -5,17 +5,7 @@ import os.path
 import org.wayround.utils.path
 import org.wayround.utils.file
 
-def elf_deps(filename):
 
-    """
-    Return list of elf file shared lib requirements
-    """
-
-    import org.wayround.utils.format.elf
-
-    ret = org.wayround.utils.format.elf.get_libs_list(filename)
-
-    return ret
 
 def find_so_problems_in_linux_system(verbose=False):
 
@@ -39,6 +29,8 @@ def find_so_problems_in_linux_system_by_given_so_and_elfs(
     Look for dependency problems in current system
     """
 
+    import org.wayround.utils.format.elf
+
     if verbose:
         so_files.sort()
         elf_files.sort()
@@ -54,7 +46,9 @@ def find_so_problems_in_linux_system_by_given_so_and_elfs(
 
     for i in elf_files:
 
-        libs_elf_linked_to = org.wayround.utils.format.elf.get_libs_list(i)
+        e = org.wayround.utils.format.elf.ELF(i)
+
+        libs_elf_linked_to = e.needed_libs_list
 
         if not isinstance(libs_elf_linked_to, list):
             logging.error(
@@ -106,6 +100,8 @@ def build_dependency_tree_by_given_so_and_elfs(
     Build dependency tree by given so and elf lists
     """
 
+    import org.wayround.utils.format.elf
+
     if verbose:
         so_files.sort()
         elf_files.sort()
@@ -121,7 +117,9 @@ def build_dependency_tree_by_given_so_and_elfs(
 
     for i in elf_files:
 
-        libs_elf_linked_to = org.wayround.utils.format.elf.get_libs_list(i)
+        e = org.wayround.utils.format.elf.ELF(i)
+
+        libs_elf_linked_to = e.needed_libs_list
 
         if not isinstance(libs_elf_linked_to, list):
             logging.error(
@@ -157,11 +155,17 @@ def library_paths():
     LD_LIBRARY_PATH.append('/lib')
     LD_LIBRARY_PATH.append('/usr/lib')
 
+    LD_LIBRARY_PATH = org.wayround.utils.path.realpaths(LD_LIBRARY_PATH)
+
     return LD_LIBRARY_PATH
 
 def elf_paths():
 
-    return os.environ['PATH'].split(':') + library_paths()
+    ret = os.environ['PATH'].split(':') + library_paths()
+
+    ret = org.wayround.utils.path.realpaths(ret)
+
+    return ret
 
 
 def get_so_and_elf_files(verbose=False):
@@ -226,9 +230,10 @@ def find_so_files(directory, verbose=False):
 
             if os.path.isfile(full_name):
                 if full_name.find('.so') != -1:
+                    elf = org.wayround.utils.format.elf.ELF(full_name)
                     if (
-                        org.wayround.utils.format.elf.is_elf_file(full_name)
-                        and org.wayround.utils.format.elf.get_elf_file_type(full_name) == ET_DYN
+                        elf.is_elf_file
+                        and elf.elf_type_name == 'ET_DYN'
                         ):
                         ret.add(i)
                         sos += 1
@@ -264,8 +269,7 @@ def find_all_elf_files(paths, verbose=False):
     for i in paths:
         elf_files += find_elf_files(i, verbose)
 
-    for i in range(len(elf_files)):
-        elf_files[i] = os.path.realpath(elf_files[i])
+    elf_files = org.wayround.utils.path.realpaths(elf_files)
 
     elf_files = list(set(elf_files))
 
@@ -295,8 +299,10 @@ def find_elf_files(directory, verbose=False):
         for i in files:
             full_name = os.path.join(directory, i)
 
+            elf = org.wayround.utils.format.elf.ELF(full_name)
+
             if os.path.isfile(full_name):
-                if org.wayround.utils.format.elf.is_elf_file(full_name):
+                if elf.is_elf:
                     ret.add(full_name)
                     elfs += 1
 
