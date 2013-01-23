@@ -11,9 +11,6 @@ PyObject *
 PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign);
 
 PyObject *
-Object_Copy(PyObject *object);
-
-PyObject *
 ReadLong(
     PyObject * data,
     PyObject * offset,

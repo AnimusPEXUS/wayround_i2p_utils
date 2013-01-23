@@ -51,20 +51,22 @@ PyObjectAddToDelQueue(PyObject ** queue, PyObject * obj)
 void
 PyObjectDelQueue(PyObject ** queue)
 {
-
     PyObject * t;
 
-    while (PySequence_Length(*queue) != 0)
+    if (*queue != NULL)
     {
-        t = PyList_GetItem(*queue, 0);
-        PySequence_DelItem(*queue, 0);
+        while (PySequence_Length(*queue) != 0)
+        {
+            t = PyList_GetItem(*queue, 0);
+            PySequence_DelItem(*queue, 0);
 
-        Py_XDECREF(t);
+            Py_XDECREF(t);
+        }
+
+        Py_XDECREF(*queue);
+
+        *queue = NULL;
     }
-
-    Py_XDECREF(*queue);
-
-    *queue = NULL;
 
     return;
 }
@@ -233,76 +235,6 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
                 }
 
             }
-        }
-    }
-
-    PyObjectDelQueue(&q);
-
-    if (PyErr_Occurred() != NULL)
-    {
-        PyErr_Print();
-        Py_XDECREF(ret);
-        ret = NULL;
-    }
-
-    return ret;
-}
-
-/*
- * Make a copy of object
- */
-PyObject *
-Object_Copy(PyObject *object)
-{
-
-    PyObject * builtins = NULL;
-    PyObject * from_bytes = NULL;
-    PyObject * ret = NULL;
-
-    PyObject * args2 = NULL;
-    PyObject * ret2 = NULL;
-
-    PyObject * q = NULL;
-
-    builtins = PyImport_ImportModule("copy");
-
-    PyObjectAddToDelQueue(&q, builtins);
-
-    if (builtins == NULL)
-    {
-        ret = NULL;
-    }
-    else
-    {
-
-        from_bytes = PyObject_GetAttr(
-            builtins,
-            PyObjectAddToDelQueue(&q, PyUnicode_FromString("copy")));
-
-        PyObjectAddToDelQueue(&q, from_bytes);
-
-        if (from_bytes == NULL)
-        {
-            ret = NULL;
-        }
-        else
-        {
-
-            args2 = Py_BuildValue("(O)", object);
-
-            PyObjectAddToDelQueue(&q, args2);
-
-            ret2 = PyObject_CallObject(from_bytes, args2);
-
-            if (ret2 == NULL)
-            {
-                ret = NULL;
-            }
-            else
-            {
-                ret = ret2;
-            }
-
         }
     }
 

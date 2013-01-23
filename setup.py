@@ -43,7 +43,7 @@ This package contains various useful modules functions and classes.
         Extension(
             "org.wayround.utils.format.elf_bin",
             ["org/wayround/utils/format/elf_bin.c"],
-            extra_compile_args=py_compil_args,
+            extra_compile_args=py_compil_args + ['-g'],
             extra_link_args=py_link_args
             )
         ]
