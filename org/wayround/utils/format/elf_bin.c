@@ -401,6 +401,10 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
             {
                 item = PyList_GetItem(program_section_table, i);
 
+                Py_XINCREF(item);
+
+                PyObjectAddToDelQueue(&q, item);
+
                 if (item == NULL)
                 {
                     ret = NULL;
@@ -409,9 +413,15 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
                 {
 
                     p_vaddr = PyLong_FromPyBytes(
-                        PyDict_GetItem(item, PyUnicode_FromString("p_vaddr")),
+                        PyDict_GetItem(
+                            item,
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("p_vaddr"))),
                         byteorder,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, p_vaddr);
 
                     if (p_vaddr == NULL)
                     {
@@ -424,25 +434,39 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
                             == 1)
                             && (PyObject_RichCompareBool(
                                 value,
-                                (PyNumber_Add(
-                                    p_vaddr,
-                                    PyLong_FromPyBytes(
-                                        PyDict_GetItem(
-                                            item,
-                                            PyUnicode_FromString("p_memsz")),
-                                        byteorder,
-                                        Py_False))),
+                                (PyObjectAddToDelQueue(
+                                    &q,
+                                    PyNumber_Add(
+                                        p_vaddr,
+                                        PyObjectAddToDelQueue(
+                                            &q,
+                                            PyLong_FromPyBytes(
+                                                PyDict_GetItem(
+                                                    item,
+                                                    PyObjectAddToDelQueue(
+                                                        &q,
+                                                        PyUnicode_FromString(
+                                                            "p_memsz"))),
+                                                byteorder,
+                                                Py_False))))),
                                 Py_LT)))
 
                         {
                             shift = PyNumber_Add(
-                                PyNumber_Subtract(value, p_vaddr),
-                                PyLong_FromPyBytes(
-                                    PyDict_GetItem(
-                                        item,
-                                        PyUnicode_FromString("p_offset")),
-                                    byteorder,
-                                    Py_False));
+                                PyObjectAddToDelQueue(
+                                    &q,
+                                    PyNumber_Subtract(value, p_vaddr)),
+                                PyObjectAddToDelQueue(
+                                    &q,
+                                    PyLong_FromPyBytes(
+                                        PyDict_GetItem(
+                                            item,
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyUnicode_FromString(
+                                                    "p_offset"))),
+                                        byteorder,
+                                        Py_False)));
 
                             ret = shift;
                             break;
@@ -545,6 +569,7 @@ is_elf(PyObject *self, PyObject *args)
         ret = Py_False;
 
         bytes_data_slice = PySequence_GetSlice(bytes_data, 0, SELFMAG);
+        PyObjectAddToDelQueue(&q, bytes_data_slice);
 
         if (PySequence_Length(bytes_data_slice) < SELFMAG)
         {
@@ -568,7 +593,6 @@ is_elf(PyObject *self, PyObject *args)
             }
         }
 
-        Py_XDECREF(bytes_data_slice);
     }
 
     PyObjectDelQueue(&q);
@@ -626,7 +650,6 @@ e_ident_bitness(PyObject *self, PyObject *args)
             {
                 t = (unsigned char *) (PyBytes_AsString(e_ident));
 
-//                printf("1: %d\n", t[EI_CLASS]);
                 ret = class_switch(t[EI_CLASS]);
             }
         }
@@ -673,18 +696,13 @@ e_ident_dict_bitness(PyObject *self, PyObject *args)
         else
         {
 
-//            printf(
-//                "2: %ld\n",
-//                PyLong_AsLong(
-//                    PyDict_GetItem(
-//                        e_ident_dict,
-//                        PyUnicode_FromString("e_i_s_class"))));
             ret = class_switch(
                 PyLong_AsLong(
                     PyDict_GetItem(
                         e_ident_dict,
-                        PyUnicode_FromString("e_i_s_class"))));
-            Py_XINCREF(ret);
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyUnicode_FromString("e_i_s_class")))));
         }
     }
 
@@ -793,7 +811,9 @@ e_ident_dict_endianness(PyObject *self, PyObject *args)
                 PyLong_AsLong(
                     PyDict_GetItem(
                         e_ident_dict,
-                        PyUnicode_FromString("e_i_s_data"))));
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyUnicode_FromString("e_i_s_data")))));
         }
     }
 
@@ -823,6 +843,8 @@ e_ident_to_dict(PyObject *self, PyObject *args)
     int i = 0;
 
     e_ident_bytes = read_e_ident(self, args);
+
+    PyObjectAddToDelQueue(&q, e_ident_bytes);
 
     if (PySequence_Check(e_ident_bytes) == 0)
     {
@@ -857,16 +879,16 @@ e_ident_to_dict(PyObject *self, PyObject *args)
 
                 PyDict_SetItem(
                     ret,
-                    PyUnicode_FromString(e_indent_names[i]),
-                    PyLong_FromUnsignedLong(t[i]));
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PyUnicode_FromString(e_indent_names[i])),
+                    PyObjectAddToDelQueue(&q, PyLong_FromUnsignedLong(t[i])));
 
                 i++;
             }
 
         }
     }
-
-    Py_XDECREF(e_ident_bytes);
 
     PyObjectDelQueue(&q);
 
@@ -952,7 +974,10 @@ read_elf_ehdr_x(PyObject *self, PyObject *args)
                     ret = PySequence_GetSlice(
                         data,
                         PyLong_AsSize_t(index),
-                        PyLong_AsSize_t(PyLong_FromLong(elf_x_ehdr_i_size)));
+                        PyLong_AsSize_t(
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyLong_FromLong(elf_x_ehdr_i_size))));
                 }
             }
         }
@@ -1019,9 +1044,11 @@ read_elf_ehdr(PyObject *self, PyObject *args)
 
                 args2 = Py_BuildValue("(O)", e_ident);
 
+                PyObjectAddToDelQueue(&q, args2);
+
                 x = e_ident_dict_bitness(self, args2);
 
-                Py_XDECREF(args2);
+                PyObjectAddToDelQueue(&q, x);
 
                 if (x == NULL)
                 {
@@ -1029,13 +1056,11 @@ read_elf_ehdr(PyObject *self, PyObject *args)
                 }
                 else
                 {
-
                     args2 = Py_BuildValue("(OOO)", data, index, x);
 
-                    ret = read_elf_ehdr_x(self, args2);
+                    PyObjectAddToDelQueue(&q, args2);
 
-                    Py_XDECREF(args2);
-                    Py_XDECREF(x);
+                    ret = read_elf_ehdr_x(self, args2);
                 }
             }
         }
@@ -1056,11 +1081,11 @@ read_elf_ehdr(PyObject *self, PyObject *args)
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q,PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q,PySequence_GetSlice( \
         data2, \
         PyLong_AsLong(index)+offsetof(Elf32_Ehdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf32_Ehdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf32_Ehdr, v)+t)));
 
 PyObject *
 elf32_ehdr_to_dict(PyObject *self, PyObject *args)
@@ -1110,34 +1135,39 @@ elf32_ehdr_to_dict(PyObject *self, PyObject *args)
                     PyLong_AsLong(index),
                     PyLong_AsLong(index) + sizeof(Elf32_Ehdr));
 
+                PyObjectAddToDelQueue(&q, data2);
+
                 ret = PyDict_New();
 
                 PyDict_SetItem(
                     ret,
-                    PyUnicode_FromString("e_ident"),
-                    PySequence_GetSlice(
-                        data2,
-                        offsetof(Elf32_Ehdr, e_ident),
-                        offsetof(Elf32_Ehdr, e_ident) + EI_NIDENT));
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("e_ident")),
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PySequence_GetSlice(
+                            data2,
+                            offsetof(Elf32_Ehdr, e_ident),
+                            offsetof(Elf32_Ehdr, e_ident) + EI_NIDENT)));
 
-                PYDICT_SETITEM(e_type, Elf32_Half)
-                PYDICT_SETITEM(e_machine, Elf32_Half)
-                PYDICT_SETITEM(e_version, Elf32_Word)
-                PYDICT_SETITEM(e_entry, Elf32_Addr)
-                PYDICT_SETITEM(e_phoff, Elf32_Off)
-                PYDICT_SETITEM(e_shoff, Elf32_Off)
-                PYDICT_SETITEM(e_flags, Elf32_Word)
-                PYDICT_SETITEM(e_ehsize, Elf32_Half)
-                PYDICT_SETITEM(e_phentsize, Elf32_Half)
-                PYDICT_SETITEM(e_phnum, Elf32_Half)
-                PYDICT_SETITEM(e_shentsize, Elf32_Half)
-                PYDICT_SETITEM(e_shnum, Elf32_Half)
-                PYDICT_SETITEM(e_shstrndx, Elf32_Half)
-
-                Py_XDECREF(data2);
+                PYDICT_SETITEM(e_type, member_size(Elf32_Ehdr, e_type))
+                PYDICT_SETITEM(e_machine, member_size(Elf32_Ehdr, e_machine))
+                PYDICT_SETITEM(e_version, member_size(Elf32_Ehdr, e_version))
+                PYDICT_SETITEM(e_entry, member_size(Elf32_Ehdr, e_entry))
+                PYDICT_SETITEM(e_phoff, member_size(Elf32_Ehdr, e_phoff))
+                PYDICT_SETITEM(e_shoff, member_size(Elf32_Ehdr, e_shoff))
+                PYDICT_SETITEM(e_flags, member_size(Elf32_Ehdr, e_flags))
+                PYDICT_SETITEM(e_ehsize, member_size(Elf32_Ehdr, e_ehsize))
+                PYDICT_SETITEM(
+                    e_phentsize,
+                    member_size(Elf32_Ehdr, e_phentsize))
+                PYDICT_SETITEM(e_phnum, member_size(Elf32_Ehdr, e_phnum))
+                PYDICT_SETITEM(
+                    e_shentsize,
+                    member_size(Elf32_Ehdr, e_shentsize))
+                PYDICT_SETITEM(e_shnum, member_size(Elf32_Ehdr, e_shnum))
+                PYDICT_SETITEM(e_shstrndx, member_size(Elf32_Ehdr, e_shstrndx))
             }
         }
-
     }
 
     PyObjectDelQueue(&q);
@@ -1157,11 +1187,11 @@ elf32_ehdr_to_dict(PyObject *self, PyObject *args)
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q,PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q,PySequence_GetSlice( \
         data2, \
         PyLong_AsLong(index)+offsetof(Elf64_Ehdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf64_Ehdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf64_Ehdr, v)+t)));
 
 PyObject *
 elf64_ehdr_to_dict(PyObject *self, PyObject *args)
@@ -1211,34 +1241,39 @@ elf64_ehdr_to_dict(PyObject *self, PyObject *args)
                     PyLong_AsLong(index),
                     PyLong_AsLong(index) + sizeof(Elf64_Ehdr));
 
+                PyObjectAddToDelQueue(&q, data2);
+
                 ret = PyDict_New();
 
                 PyDict_SetItem(
                     ret,
-                    PyUnicode_FromString("e_ident"),
-                    PySequence_GetSlice(
-                        data2,
-                        offsetof(Elf64_Ehdr, e_ident),
-                        offsetof(Elf64_Ehdr, e_ident) + EI_NIDENT));
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("e_ident")),
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PySequence_GetSlice(
+                            data2,
+                            offsetof(Elf64_Ehdr, e_ident),
+                            offsetof(Elf64_Ehdr, e_ident) + EI_NIDENT)));
 
-                PYDICT_SETITEM(e_type, Elf64_Half)
-                PYDICT_SETITEM(e_machine, Elf64_Half)
-                PYDICT_SETITEM(e_version, Elf64_Word)
-                PYDICT_SETITEM(e_entry, Elf64_Addr)
-                PYDICT_SETITEM(e_phoff, Elf64_Off)
-                PYDICT_SETITEM(e_shoff, Elf64_Off)
-                PYDICT_SETITEM(e_flags, Elf64_Word)
-                PYDICT_SETITEM(e_ehsize, Elf64_Half)
-                PYDICT_SETITEM(e_phentsize, Elf64_Half)
-                PYDICT_SETITEM(e_phnum, Elf64_Half)
-                PYDICT_SETITEM(e_shentsize, Elf64_Half)
-                PYDICT_SETITEM(e_shnum, Elf64_Half)
-                PYDICT_SETITEM(e_shstrndx, Elf64_Half)
-
-                Py_XDECREF(data2);
+                PYDICT_SETITEM(e_type, member_size(Elf64_Ehdr, e_type))
+                PYDICT_SETITEM(e_machine, member_size(Elf64_Ehdr, e_machine))
+                PYDICT_SETITEM(e_version, member_size(Elf64_Ehdr, e_version))
+                PYDICT_SETITEM(e_entry, member_size(Elf64_Ehdr, e_entry))
+                PYDICT_SETITEM(e_phoff, member_size(Elf64_Ehdr, e_phoff))
+                PYDICT_SETITEM(e_shoff, member_size(Elf64_Ehdr, e_shoff))
+                PYDICT_SETITEM(e_flags, member_size(Elf64_Ehdr, e_flags))
+                PYDICT_SETITEM(e_ehsize, member_size(Elf64_Ehdr, e_ehsize))
+                PYDICT_SETITEM(
+                    e_phentsize,
+                    member_size(Elf64_Ehdr, e_phentsize))
+                PYDICT_SETITEM(e_phnum, member_size(Elf64_Ehdr, e_phnum))
+                PYDICT_SETITEM(
+                    e_shentsize,
+                    member_size(Elf64_Ehdr, e_shentsize))
+                PYDICT_SETITEM(e_shnum, member_size(Elf64_Ehdr, e_shnum))
+                PYDICT_SETITEM(e_shstrndx, member_size(Elf64_Ehdr, e_shstrndx))
             }
         }
-
     }
 
     PyObjectDelQueue(&q);
@@ -1303,9 +1338,11 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
             {
                 args2 = Py_BuildValue("(O)", e_ident);
 
+                PyObjectAddToDelQueue(&q, args2);
+
                 x = e_ident_dict_bitness(self, args2);
 
-                Py_XDECREF(args2);
+                PyObjectAddToDelQueue(&q, x);
 
                 if (x == NULL)
                 {
@@ -1315,6 +1352,8 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
                 {
 
                     args2 = Py_BuildValue("OO", data, index);
+
+                    PyObjectAddToDelQueue(&q, args2);
 
                     switch (PyLong_AsLong(x))
                     {
@@ -1335,9 +1374,6 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
                             ret = NULL;
                             break;
                     }
-
-                    Py_XDECREF(args2);
-                    Py_XDECREF(x);
                 }
             }
         }
@@ -1427,7 +1463,10 @@ read_elf_shdr_x(PyObject *self, PyObject *args)
                     ret = PySequence_GetSlice(
                         data,
                         PyLong_AsSize_t(index),
-                        PyLong_AsSize_t(PyLong_FromLong(elf_x_shdr_i_size)));
+                        PyLong_AsSize_t(
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyLong_FromLong(elf_x_shdr_i_size))));
                 }
             }
         }
@@ -1481,7 +1520,6 @@ read_elf_shdr(PyObject *self, PyObject *args)
         }
         else
         {
-
             if (PyLong_AsLongLong(index) < 0)
             {
                 PyErr_SetString(
@@ -1491,12 +1529,13 @@ read_elf_shdr(PyObject *self, PyObject *args)
             }
             else
             {
-
                 args2 = Py_BuildValue("(O)", e_ident);
+
+                PyObjectAddToDelQueue(&q, args2);
 
                 x = e_ident_dict_bitness(self, args2);
 
-                Py_XDECREF(args2);
+                PyObjectAddToDelQueue(&q, x);
 
                 if (x == NULL)
                 {
@@ -1504,14 +1543,11 @@ read_elf_shdr(PyObject *self, PyObject *args)
                 }
                 else
                 {
-
                     args2 = Py_BuildValue("(OOO)", data, index, x);
 
+                    PyObjectAddToDelQueue(&q, args2);
+
                     ret = read_elf_shdr_x(self, args2);
-
-                    Py_XDECREF(args2);
-
-                    Py_XDECREF(x);
                 }
             }
         }
@@ -1532,11 +1568,11 @@ read_elf_shdr(PyObject *self, PyObject *args)
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q,PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q,PySequence_GetSlice( \
         data_seq, \
         PyLong_AsLong(index)+offsetof(Elf32_Shdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf32_Shdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf32_Shdr, v)+t)));
 
 PyObject *
 shdr32_to_dict(PyObject *self, PyObject *args)
@@ -1580,16 +1616,18 @@ shdr32_to_dict(PyObject *self, PyObject *args)
             {
                 ret = PyDict_New();
 
-                PYDICT_SETITEM(sh_name, Elf32_Word)
-                PYDICT_SETITEM(sh_type, Elf32_Word)
-                PYDICT_SETITEM(sh_flags, Elf32_Word)
-                PYDICT_SETITEM(sh_addr, Elf32_Addr)
-                PYDICT_SETITEM(sh_offset, Elf32_Off)
-                PYDICT_SETITEM(sh_size, Elf32_Word)
-                PYDICT_SETITEM(sh_link, Elf32_Word)
-                PYDICT_SETITEM(sh_info, Elf32_Word)
-                PYDICT_SETITEM(sh_addralign, Elf32_Word)
-                PYDICT_SETITEM(sh_entsize, Elf32_Word)
+                PYDICT_SETITEM(sh_name, member_size(Elf32_Shdr, sh_name))
+                PYDICT_SETITEM(sh_type, member_size(Elf32_Shdr, sh_type))
+                PYDICT_SETITEM(sh_flags, member_size(Elf32_Shdr, sh_flags))
+                PYDICT_SETITEM(sh_addr, member_size(Elf32_Shdr, sh_addr))
+                PYDICT_SETITEM(sh_offset, member_size(Elf32_Shdr, sh_offset))
+                PYDICT_SETITEM(sh_size, member_size(Elf32_Shdr, sh_size))
+                PYDICT_SETITEM(sh_link, member_size(Elf32_Shdr, sh_link))
+                PYDICT_SETITEM(sh_info, member_size(Elf32_Shdr, sh_info))
+                PYDICT_SETITEM(
+                    sh_addralign,
+                    member_size(Elf32_Shdr, sh_addralign))
+                PYDICT_SETITEM(sh_entsize, member_size(Elf32_Shdr, sh_entsize))
             }
         }
     }
@@ -1607,14 +1645,15 @@ shdr32_to_dict(PyObject *self, PyObject *args)
 }
 
 #undef PYDICT_SETITEM
+
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q,PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q,PySequence_GetSlice( \
         data_seq, \
         PyLong_AsLong(index)+offsetof(Elf64_Shdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf64_Shdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf64_Shdr, v)+t)));
 
 PyObject *
 shdr64_to_dict(PyObject *self, PyObject *args)
@@ -1658,16 +1697,18 @@ shdr64_to_dict(PyObject *self, PyObject *args)
             {
                 ret = PyDict_New();
 
-                PYDICT_SETITEM(sh_name, Elf64_Word)
-                PYDICT_SETITEM(sh_type, Elf64_Word)
-                PYDICT_SETITEM(sh_flags, Elf64_Word)
-                PYDICT_SETITEM(sh_addr, Elf64_Addr)
-                PYDICT_SETITEM(sh_offset, Elf64_Off)
-                PYDICT_SETITEM(sh_size, Elf64_Word)
-                PYDICT_SETITEM(sh_link, Elf64_Word)
-                PYDICT_SETITEM(sh_info, Elf64_Word)
-                PYDICT_SETITEM(sh_addralign, Elf64_Word)
-                PYDICT_SETITEM(sh_entsize, Elf64_Word)
+                PYDICT_SETITEM(sh_name, member_size(Elf64_Shdr, sh_name))
+                PYDICT_SETITEM(sh_type, member_size(Elf64_Shdr, sh_type))
+                PYDICT_SETITEM(sh_flags, member_size(Elf64_Shdr, sh_flags))
+                PYDICT_SETITEM(sh_addr, member_size(Elf64_Shdr, sh_addr))
+                PYDICT_SETITEM(sh_offset, member_size(Elf64_Shdr, sh_offset))
+                PYDICT_SETITEM(sh_size, member_size(Elf64_Shdr, sh_size))
+                PYDICT_SETITEM(sh_link, member_size(Elf64_Shdr, sh_link))
+                PYDICT_SETITEM(sh_info, member_size(Elf64_Shdr, sh_info))
+                PYDICT_SETITEM(
+                    sh_addralign,
+                    member_size(Elf64_Shdr, sh_addralign))
+                PYDICT_SETITEM(sh_entsize, member_size(Elf64_Shdr, sh_entsize))
             }
         }
     }
@@ -1737,9 +1778,11 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
 
             args2 = Py_BuildValue("(O)", e_ident_dict);
 
+            PyObjectAddToDelQueue(&q, args2);
+
             bits = e_ident_dict_bitness(self, args2);
 
-            Py_XDECREF(args2);
+            PyObjectAddToDelQueue(&q, bits);
 
             if (bits == NULL)
             {
@@ -1752,7 +1795,11 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
                     PyLong_AsLong(
                         PyDict_GetItem(
                             e_ident_dict,
-                            PyUnicode_FromString("e_i_s_data"))));
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_i_s_data")))));
+
+                PyObjectAddToDelQueue(&q, endianness);
 
                 if (endianness == NULL)
                 {
@@ -1763,71 +1810,66 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
                     sheader_size = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_shentsize")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_shentsize"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, sheader_size);
 
                     offset = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_shoff")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_shoff"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, offset);
 
                     sheaders_count = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_shnum")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_shnum"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, sheaders_count);
 
                     ret = PyList_New(0);
 
                     for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
                     {
-                        switch (PyLong_AsLong(bits))
-                        {
-
-                            case 32:
-                            {
-                                index = PyNumber_Add(
-                                    offset,
+                        index = PyObjectAddToDelQueue(
+                            &q,
+                            PyNumber_Add(
+                                offset,
+                                PyObjectAddToDelQueue(
+                                    &q,
                                     PyNumber_Multiply(
                                         sheader_size,
-                                        PyLong_FromUnsignedLongLong(i)));
+                                        PyObjectAddToDelQueue(
+                                            &q,
+                                            PyLong_FromUnsignedLongLong(i))))));
 
-                                args2 = Py_BuildValue("OO", data_seq, index);
+                        args2 = Py_BuildValue("OO", data_seq, index);
 
+                        PyObjectAddToDelQueue(&q, args2);
+
+                        switch (PyLong_AsLong(bits))
+                        {
+                            case 32:
+                            {
                                 td = shdr32_to_dict(self, args2);
-
-                                if (td == NULL)
-                                {
-                                    ret = NULL;
-                                }
-
-                                Py_XDECREF(args2);
-
                                 break;
                             }
                             case 64:
                             {
-                                index = PyNumber_Add(
-                                    offset,
-                                    PyNumber_Multiply(
-                                        sheader_size,
-                                        PyLong_FromUnsignedLongLong(i)));
-
-                                args2 = Py_BuildValue("OO", data_seq, index);
-
                                 td = shdr64_to_dict(self, args2);
-
-                                if (td == NULL)
-                                {
-                                    ret = NULL;
-                                }
-
-                                Py_XDECREF(args2);
-
                                 break;
                             }
                             default:
@@ -1836,6 +1878,13 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
                                     "Wrong bitness in function read_elf_section_header_table");
 
                                 ret = NULL;
+                        }
+
+                        PyObjectAddToDelQueue(&q, td);
+
+                        if (td == NULL)
+                        {
+                            ret = NULL;
                         }
 
                         if (td == NULL)
@@ -1847,16 +1896,9 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
                         {
                             PyList_Append(ret, td);
                         }
-
                     }
-
-                    Py_XDECREF(sheader_size);
-                    Py_XDECREF(offset);
-                    Py_XDECREF(sheaders_count);
                 }
             }
-
-            Py_XDECREF(bits);
         }
     }
 
@@ -1909,11 +1951,18 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
         else
         {
 
-            if ((PyObject_RichCompareBool(index, PyLong_FromLong(0), Py_LT) == 1)
-                || (((PyObject_RichCompareBool(x, PyLong_FromLong(32), Py_NE))
-                    == 1)
-                    && ((PyObject_RichCompareBool(x, PyLong_FromLong(64), Py_NE))
-                        == 1)))
+            if ((PyObject_RichCompareBool(
+                index,
+                PyObjectAddToDelQueue(&q, PyLong_FromLong(0)),
+                Py_LT) == 1)
+                || (((PyObject_RichCompareBool(
+                    x,
+                    PyObjectAddToDelQueue(&q, PyLong_FromLong(32)),
+                    Py_NE)) == 1)
+                    && ((PyObject_RichCompareBool(
+                        x,
+                        PyObjectAddToDelQueue(&q, PyLong_FromLong(64)),
+                        Py_NE)) == 1)))
             {
                 PyErr_SetString(
                     PyExc_ValueError,
@@ -1941,7 +1990,10 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
                     ret = PySequence_GetSlice(
                         data,
                         PyLong_AsSize_t(index),
-                        PyLong_AsSize_t(PyLong_FromLong(elf_x_phdr_i_size)));
+                        PyLong_AsSize_t(
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyLong_FromLong(elf_x_phdr_i_size))));
                 }
             }
         }
@@ -2007,7 +2059,11 @@ read_elf_phdr(PyObject *self, PyObject *args)
             {
                 args2 = Py_BuildValue("(O)", e_ident);
 
+                PyObjectAddToDelQueue(&q, args2);
+
                 x = e_ident_dict_bitness(self, args2);
+
+                PyObjectAddToDelQueue(&q, x);
 
                 if (x == NULL)
                 {
@@ -2015,15 +2071,12 @@ read_elf_phdr(PyObject *self, PyObject *args)
                 }
                 else
                 {
-
                     args2 = Py_BuildValue("(OOO)", data, index, x);
 
-                    ret = read_elf_phdr_x(self, args2);
+                    PyObjectAddToDelQueue(&q, args2);
 
-                    Py_XDECREF(args2);
-                    Py_XDECREF(x);
+                    ret = read_elf_phdr_x(self, args2);
                 }
-                Py_XDECREF(args2);
             }
         }
     }
@@ -2043,11 +2096,11 @@ read_elf_phdr(PyObject *self, PyObject *args)
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q, PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q, PySequence_GetSlice( \
         data_seq, \
         PyLong_AsLong(index)+offsetof(Elf32_Phdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf32_Phdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf32_Phdr, v)+t)));
 
 PyObject *
 phdr32_to_dict(PyObject *self, PyObject *args)
@@ -2092,14 +2145,14 @@ phdr32_to_dict(PyObject *self, PyObject *args)
 
                 ret = PyDict_New();
 
-                PYDICT_SETITEM(p_type, Elf32_Word)
-                PYDICT_SETITEM(p_offset, Elf32_Off)
-                PYDICT_SETITEM(p_vaddr, Elf32_Addr)
-                PYDICT_SETITEM(p_paddr, Elf32_Addr)
-                PYDICT_SETITEM(p_filesz, Elf32_Word)
-                PYDICT_SETITEM(p_memsz, Elf32_Word)
-                PYDICT_SETITEM(p_flags, Elf32_Word)
-                PYDICT_SETITEM(p_align, Elf32_Word)
+                PYDICT_SETITEM(p_type, member_size(Elf32_Phdr, p_type))
+                PYDICT_SETITEM(p_offset, member_size(Elf32_Phdr, p_offset))
+                PYDICT_SETITEM(p_vaddr, member_size(Elf32_Phdr, p_vaddr))
+                PYDICT_SETITEM(p_paddr, member_size(Elf32_Phdr, p_paddr))
+                PYDICT_SETITEM(p_filesz, member_size(Elf32_Phdr, p_filesz))
+                PYDICT_SETITEM(p_memsz, member_size(Elf32_Phdr, p_memsz))
+                PYDICT_SETITEM(p_flags, member_size(Elf32_Phdr, p_flags))
+                PYDICT_SETITEM(p_align, member_size(Elf32_Phdr, p_align))
             }
         }
     }
@@ -2117,14 +2170,15 @@ phdr32_to_dict(PyObject *self, PyObject *args)
 }
 
 #undef PYDICT_SETITEM
+
 #define PYDICT_SETITEM(v, t) \
 PyDict_SetItem( \
     ret, \
-    PyUnicode_FromString(#v), \
-    PySequence_GetSlice( \
+    PyObjectAddToDelQueue(&q, PyUnicode_FromString(#v)), \
+    PyObjectAddToDelQueue(&q, PySequence_GetSlice( \
         data_seq, \
         PyLong_AsLong(index)+offsetof(Elf64_Phdr, v), \
-        PyLong_AsLong(index)+offsetof(Elf64_Phdr, v)+sizeof(t)));
+        PyLong_AsLong(index)+offsetof(Elf64_Phdr, v)+t)));
 
 PyObject *
 phdr64_to_dict(PyObject *self, PyObject *args)
@@ -2166,16 +2220,17 @@ phdr64_to_dict(PyObject *self, PyObject *args)
             }
             else
             {
+
                 ret = PyDict_New();
 
-                PYDICT_SETITEM(p_type, Elf64_Word)
-                PYDICT_SETITEM(p_offset, Elf64_Off)
-                PYDICT_SETITEM(p_vaddr, Elf64_Addr)
-                PYDICT_SETITEM(p_paddr, Elf64_Addr)
-                PYDICT_SETITEM(p_filesz, Elf64_Word)
-                PYDICT_SETITEM(p_memsz, Elf64_Word)
-                PYDICT_SETITEM(p_flags, Elf64_Word)
-                PYDICT_SETITEM(p_align, Elf64_Word)
+                PYDICT_SETITEM(p_type, member_size(Elf64_Phdr, p_type))
+                PYDICT_SETITEM(p_offset, member_size(Elf64_Phdr, p_offset))
+                PYDICT_SETITEM(p_vaddr, member_size(Elf64_Phdr, p_vaddr))
+                PYDICT_SETITEM(p_paddr, member_size(Elf64_Phdr, p_paddr))
+                PYDICT_SETITEM(p_filesz, member_size(Elf64_Phdr, p_filesz))
+                PYDICT_SETITEM(p_memsz, member_size(Elf64_Phdr, p_memsz))
+                PYDICT_SETITEM(p_flags, member_size(Elf64_Phdr, p_flags))
+                PYDICT_SETITEM(p_align, member_size(Elf64_Phdr, p_align))
             }
         }
     }
@@ -2245,9 +2300,11 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
         {
             args2 = Py_BuildValue("(O)", e_ident_dict);
 
+            PyObjectAddToDelQueue(&q, args2);
+
             bits = e_ident_dict_bitness(self, args2);
 
-            Py_XDECREF(args2);
+            PyObjectAddToDelQueue(&q, bits);
 
             if (bits == NULL)
             {
@@ -2259,7 +2316,11 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
                     PyLong_AsLong(
                         PyDict_GetItem(
                             e_ident_dict,
-                            PyUnicode_FromString("e_i_s_data"))));
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_i_s_data")))));
+
+                PyObjectAddToDelQueue(&q, endianness);
 
                 if (endianness == NULL)
                 {
@@ -2271,70 +2332,81 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
                     sheader_size = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_phentsize")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_phentsize"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, sheader_size);
 
                     offset = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_phoff")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_phoff"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, offset);
 
                     sheaders_count = PyLong_FromPyBytes(
                         PyDict_GetItem(
                             ehdr_dict,
-                            PyUnicode_FromString("e_phnum")),
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString("e_phnum"))),
                         endianness,
                         Py_False);
+
+                    PyObjectAddToDelQueue(&q, sheaders_count);
 
                     ret = PyList_New(0);
 
                     for (i = 0; i != PyLong_AsLong(sheaders_count); i++)
                     {
-                        switch (PyLong_AsLong(bits))
-                        {
-
-                            case 32:
-                            {
-                                index = PyNumber_Add(
-                                    offset,
+                        index = PyObjectAddToDelQueue(
+                            &q,
+                            PyNumber_Add(
+                                offset,
+                                PyObjectAddToDelQueue(
+                                    &q,
                                     PyNumber_Multiply(
                                         sheader_size,
-                                        PyLong_FromLong(i)));
-                                args2 = Py_BuildValue("OO", data_seq, index);
+                                        PyObjectAddToDelQueue(
+                                            &q,
+                                            PyLong_FromLong(i))))));
+
+                        args2 = Py_BuildValue("OO", data_seq, index);
+
+                        PyObjectAddToDelQueue(&q, args2);
+
+                        switch (PyLong_AsLong(bits))
+                        {
+                            case 32:
+                            {
                                 td = phdr32_to_dict(self, args2);
-                                if (td == NULL)
-                                {
-                                    ret = NULL;
-                                }
-                                Py_XDECREF(args2);
                                 break;
                             }
                             case 64:
                             {
-                                index = PyNumber_Add(
-                                    offset,
-                                    PyNumber_Multiply(
-                                        sheader_size,
-                                        PyLong_FromLong(i)));
-
-                                args2 = Py_BuildValue("OO", data_seq, index);
                                 td = phdr64_to_dict(self, args2);
-                                if (td == NULL)
-                                {
-                                    ret = NULL;
-                                }
-                                Py_XDECREF(args2);
                                 break;
                             }
                             default:
+                            {
                                 PyErr_SetString(
                                     PyExc_ValueError,
                                     "Wrong bitness number in read_elf_program_header_table");
 
                                 ret = NULL;
+                            }
+                        }
+
+                        if (td == NULL)
+                        {
+                            ret = NULL;
                         }
 
                         if (td == NULL)
@@ -2347,14 +2419,8 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
                             PyList_Append(ret, td);
                         }
                     }
-
-                    Py_XDECREF(sheader_size);
-                    Py_XDECREF(offset);
-                    Py_XDECREF(sheaders_count);
                 }
             }
-
-            Py_XDECREF(bits);
         }
     }
 
@@ -2421,38 +2487,46 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
             string_table_record = PySequence_GetItem(
                 elf_section_header_table,
                 PyLong_AsSsize_t(
-                    PyLong_FromPyBytes(
-                        PyDict_GetItem(
-                            ehdr_dict,
-                            PyUnicode_FromString("e_shstrndx")),
-                        endianness,
-                        Py_False)));
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PyLong_FromPyBytes(
+                            PyDict_GetItem(
+                                ehdr_dict,
+                                PyObjectAddToDelQueue(
+                                    &q,
+                                    PyUnicode_FromString("e_shstrndx"))),
+                            endianness,
+                            Py_False))));
+
+            PyObjectAddToDelQueue(&q, string_table_record);
 
             string_table_offset = PyLong_FromPyBytes(
                 PyDict_GetItem(
                     string_table_record,
-                    PyUnicode_FromString("sh_offset")),
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PyUnicode_FromString("sh_offset"))),
                 endianness,
                 Py_False);
+
+            PyObjectAddToDelQueue(&q, string_table_offset);
 
             string_table_size = PyLong_FromPyBytes(
                 PyDict_GetItem(
                     string_table_record,
-                    PyUnicode_FromString("sh_size")),
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("sh_size"))),
                 endianness,
                 Py_False);
+
+            PyObjectAddToDelQueue(&q, string_table_size);
 
             header_bytes = PySequence_GetSlice(
                 data_seq,
                 PyLong_AsSsize_t(string_table_offset),
-                PyLong_AsSsize_t(string_table_offset)
-                    + PyLong_AsSsize_t(string_table_size));
+                PyLong_AsSsize_t(
+                    PyNumber_Add(string_table_offset, string_table_size)));
 
             ret = header_bytes;
-
-            Py_XDECREF(string_table_record);
-            Py_XDECREF(string_table_offset);
-            Py_XDECREF(string_table_size);
         }
     }
 
@@ -2528,26 +2602,36 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
             {
                 item = PyList_GetItem(dinamics_table, i);
 
+                Py_XINCREF(item);
+
+                PyObjectAddToDelQueue(&q, item);
+
                 long_value = PyDict_GetItem(
                     item,
-                    PyUnicode_FromString("d_tag"));
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("d_tag")));
 
                 if (PyObject_RichCompareBool(
                     long_value,
-                    PyLong_FromLong(DT_STRTAB),
+                    PyObjectAddToDelQueue(&q, PyLong_FromLong(DT_STRTAB)),
                     Py_EQ) == 1)
                 {
                     strtab = PyDict_GetItem(
                         item,
-                        PyUnicode_FromString("d_ptr"));
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyUnicode_FromString("d_ptr")));
                 }
 
                 if (PyObject_RichCompareBool(
                     long_value,
-                    PyLong_FromLong(DT_STRSZ),
+                    PyObjectAddToDelQueue(&q, PyLong_FromLong(DT_STRSZ)),
                     Py_EQ) == 1)
                 {
-                    strsz = PyDict_GetItem(item, PyUnicode_FromString("d_val"));
+                    strsz = PyDict_GetItem(
+                        item,
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyUnicode_FromString("d_val")));
                 }
             }
 
@@ -2561,9 +2645,11 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
 
                 args2 = Py_BuildValue("OOO", program_table, strtab, byteorder);
 
+                PyObjectAddToDelQueue(&q, args2);
+
                 strtab = convert_virtual_to_file(self, args2);
 
-                Py_XDECREF(args2);
+                PyObjectAddToDelQueue(&q, strtab);
 
                 if (strtab == NULL)
                 {
@@ -2575,7 +2661,10 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
                     ret = PySequence_GetSlice(
                         data_seq,
                         PyLong_AsUnsignedLongLong(strtab),
-                        PyLong_AsUnsignedLongLong(PyNumber_Add(strtab, strsz)));
+                        PyLong_AsUnsignedLongLong(
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyNumber_Add(strtab, strsz))));
                 }
             }
         }
@@ -2646,6 +2735,8 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
 
             header_bytes = get_ehdr_string_table_slice(self, args);
 
+            PyObjectAddToDelQueue(&q, header_bytes);
+
             if (PyBytes_Check(header_bytes) == 0)
             {
                 PyErr_SetString(
@@ -2667,23 +2758,29 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
                         elf_section_header_table,
                         i);
 
+                    PyObjectAddToDelQueue(&q, section_header);
+
                     name_offset = PyLong_AsLong(
-                        PyLong_FromPyBytes(
-                            PyDict_GetItem(
-                                section_header,
-                                PyUnicode_FromString("sh_name")),
-                            endianness,
-                            Py_False));
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyLong_FromPyBytes(
+                                PyDict_GetItem(
+                                    section_header,
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("sh_name"))),
+                                endianness,
+                                Py_False)));
 
                     PyList_Append(
                         ret,
-                        PyUnicode_FromString(header_bytes_char + name_offset));
+                        PyObjectAddToDelQueue(
+                            &q,
+                            PyUnicode_FromString(
+                                header_bytes_char + name_offset)));
 
                 }
             }
-
-            Py_XDECREF(header_bytes);
-
         }
     }
 
@@ -2794,6 +2891,8 @@ read_dynamic_section(PyObject *self, PyObject *args)
 
                     current_index = PyLong_FromLong(0);
 
+                    PyObjectAddToDelQueue(&q, current_index);
+
                     end = 0;
 
                     while (1)
@@ -2803,20 +2902,31 @@ read_dynamic_section(PyObject *self, PyObject *args)
 
                         v1 = PyNumber_Add(
                             index,
-                            PyNumber_Multiply(
-                                current_index,
-                                PyLong_FromUnsignedLongLong(one_value_size)));
+                            PyObjectAddToDelQueue(
+                                &q,
+                                PyNumber_Multiply(
+                                    current_index,
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyLong_FromUnsignedLongLong(
+                                            one_value_size)))));
+
+                        PyObjectAddToDelQueue(&q, v1);
 
                         sub_data = PySequence_GetSlice(
                             data_seq,
                             PyLong_AsSsize_t(v1),
                             PyLong_AsSsize_t(
-                                PyNumber_Add(
-                                    v1,
-                                    PyLong_FromUnsignedLongLong(
-                                        one_value_size))));
+                                PyObjectAddToDelQueue(
+                                    &q,
+                                    PyNumber_Add(
+                                        v1,
+                                        PyObjectAddToDelQueue(
+                                            &q,
+                                            PyLong_FromUnsignedLongLong(
+                                                one_value_size))))));
 
-                        Py_XDECREF(v1);
+                        PyObjectAddToDelQueue(&q, sub_data);
 
                         sub_data_char = PyBytes_AsString(sub_data);
 
@@ -2848,8 +2958,6 @@ read_dynamic_section(PyObject *self, PyObject *args)
                             ret = NULL;
                             break;
                         }
-
-                        Py_XDECREF(sub_data);
 
                         switch (bitness_l)
                         {
@@ -2887,103 +2995,170 @@ read_dynamic_section(PyObject *self, PyObject *args)
 
                         new_dyn_dict = PyDict_New();
 
+                        PyObjectAddToDelQueue(&q, new_dyn_dict);
+
                         switch (bitness_l)
                         {
                             case 32:
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_tag"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf32_Dyn, d_tag)),
-                                            member_size(Elf32_Dyn, d_tag) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf32_Dyn, d_tag) ),
-                                        endianness,
-                                        Py_False));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_tag")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf32_Dyn,
+                                                            d_tag)),
+                                                    member_size(Elf32_Dyn, d_tag) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf32_Dyn, d_tag) )),
+                                            endianness,
+                                            Py_False)));
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_val"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf32_Dyn, d_un)),
-                                            member_size(Elf32_Dyn, d_un) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf32_Dyn, d_un) ),
-                                        endianness,
-                                        Py_False));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_val")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf32_Dyn,
+                                                            d_un)),
+                                                    member_size(Elf32_Dyn, d_un) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf32_Dyn, d_un) )),
+                                            endianness,
+                                            Py_False)));
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_ptr"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf32_Dyn, d_un)),
-                                            member_size(Elf32_Dyn, d_un) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf32_Dyn, d_un) ),
-                                        endianness,
-                                        Py_False));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_ptr")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf32_Dyn,
+                                                            d_un)),
+                                                    member_size(Elf32_Dyn, d_un) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf32_Dyn, d_un) )),
+                                            endianness,
+                                            Py_False)));
 
                                 break;
                             case 64:
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_tag"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf64_Dyn, d_tag)),
-                                            member_size(Elf64_Dyn, d_tag) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf64_Dyn, d_tag) ),
-                                        endianness,
-                                        Py_False));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_tag")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf64_Dyn,
+                                                            d_tag)),
+                                                    member_size(Elf64_Dyn, d_tag) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf64_Dyn, d_tag) )),
+                                            endianness,
+                                            Py_False)));
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_val"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf64_Dyn, d_un)),
-                                            member_size(Elf64_Dyn, d_un) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf64_Dyn, d_un) ),
-                                        endianness,
-                                        Py_False));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_val")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf64_Dyn,
+                                                            d_un)),
+                                                    member_size(Elf64_Dyn, d_un) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf64_Dyn, d_un) )),
+                                            endianness,
+                                            Py_False)));
 
                                 PyDict_SetItem(
                                     new_dyn_dict,
-                                    PyUnicode_FromString("d_ptr"),
-                                    ReadLong(
-                                        PyBytes_FromStringAndSize(
-                                            (char *) ((char *) &u
-                                                + offsetof(Elf64_Dyn, d_un)),
-                                            member_size(Elf64_Dyn, d_un) ),
-                                        PyLong_FromLong(0),
-                                        PyLong_FromLong(
-                                            member_size(Elf64_Dyn, d_un) ),
-                                        endianness,
-                                        Py_False));
-                                break;
-                            default:
-                                PyErr_SetString(
-                                    PyExc_TypeError,
-                                    "Wrong bitness number in read_dynamic_section");
-
-                                ret = NULL;
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_ptr")),
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        ReadLong(
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyBytes_FromStringAndSize(
+                                                    (char *) ((char *) &u
+                                                        + offsetof(
+                                                            Elf64_Dyn,
+                                                            d_un)),
+                                                    member_size(Elf64_Dyn, d_un) )),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(0)),
+                                            PyObjectAddToDelQueue(
+                                                &q,
+                                                PyLong_FromLong(
+                                                    member_size(Elf64_Dyn, d_un) )),
+                                            endianness,
+                                            Py_False)));
                                 break;
                         }
 
@@ -2995,12 +3170,12 @@ read_dynamic_section(PyObject *self, PyObject *args)
 
                         PyList_Append(ret, new_dyn_dict);
 
-                        current_index = PyNumber_Add(
-                            current_index,
-                            PyLong_FromLong(1));
+                        current_index = PyObjectAddToDelQueue(
+                            &q,
+                            PyNumber_Add(
+                                current_index,
+                                PyObjectAddToDelQueue(&q, PyLong_FromLong(1))));
                     }
-
-                    Py_DECREF(current_index);
                 }
             }
         }
@@ -3081,7 +3256,11 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
                 dinamics_table,
                 byteorder);
 
+            PyObjectAddToDelQueue(&q, args2);
+
             header_bytes = get_dyn_string_table_slice(self, args2);
+
+            PyObjectAddToDelQueue(&q, header_bytes);
 
             if (header_bytes == NULL)
             {
@@ -3106,25 +3285,33 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
                     {
                         item = PySequence_GetItem(dinamics_table, i);
 
+                        PyObjectAddToDelQueue(&q, item);
+
                         if (PyLong_AsLong(
-                            PyDict_GetItem(item, PyUnicode_FromString("d_tag")))
+                            PyDict_GetItem(
+                                item,
+                                PyObjectAddToDelQueue(
+                                    &q,
+                                    PyUnicode_FromString("d_tag"))))
                             == DT_NEEDED)
                         {
                             offset = PyLong_AsLong(
                                 PyDict_GetItem(
                                     item,
-                                    PyUnicode_FromString("d_ptr")));
+                                    PyObjectAddToDelQueue(
+                                        &q,
+                                        PyUnicode_FromString("d_ptr"))));
 
-                            name = PyUnicode_FromString(
-                                header_bytes_chars + offset);
+                            name = PyObjectAddToDelQueue(
+                                &q,
+                                PyUnicode_FromString(
+                                    header_bytes_chars + offset));
 
                             PyList_Append(ret, name);
                         }
                     }
                 }
             }
-
-            Py_XDECREF(header_bytes);
         }
     }
 
