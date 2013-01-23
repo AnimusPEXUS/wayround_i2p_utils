@@ -30,25 +30,74 @@ const char *e_indent_names[] =
         NULL };
 
 PyObject *
-endianness_to_name(unsigned char in)
+PyObjectAddToDelQueue(PyObject ** queue, PyObject * obj)
+{
+    if (obj != NULL)
+    {
+        if (*queue == NULL)
+        {
+            *queue = PyList_New(0);
+        }
+
+        if (PySequence_Contains(*queue, obj) == 0)
+        {
+            PyList_Append(*queue, obj);
+        }
+    }
+
+    return obj;
+}
+
+void
+PyObjectDelQueue(PyObject ** queue)
+{
+
+    PyObject * t;
+
+    while (PySequence_Length(*queue) != 0)
+    {
+        t = PyList_GetItem(*queue, 0);
+        PySequence_DelItem(*queue, 0);
+
+        Py_XDECREF(t);
+    }
+
+    Py_XDECREF(*queue);
+
+    *queue = NULL;
+
+    return;
+}
+
+PyObject *
+endianness_to_name(long in)
 {
     PyObject * ret = NULL;
 
     switch (in)
     {
         case ELFDATANONE:
+        {
             PyErr_SetString(PyExc_ValueError, "EI_DATA is ELFDATANONE");
             ret = NULL;
             break;
+        }
         case ELFDATA2LSB:
+        {
             ret = PyUnicode_FromString("little");
             break;
+        }
         case ELFDATA2MSB:
+        {
             ret = PyUnicode_FromString("big");
             break;
+        }
         default:
+        {
             PyErr_SetString(PyExc_ValueError, "EI_DATA value is unknown");
             ret = NULL;
+            break;
+        }
     }
 
     if (PyErr_Occurred() != NULL)
@@ -66,22 +115,28 @@ class_switch(long val)
 {
     PyObject * ret = NULL;
 
-    printf("val: %ld\n", val);
+//    printf("val: %ld\n", val);
 
     switch (val)
     {
         case ELFCLASS32:
+        {
             ret = PyLong_FromLong(32);
             break;
+        }
         case ELFCLASS64:
+        {
             ret = PyLong_FromLong(64);
             break;
+        }
         default:
+        {
             PyErr_SetString(
                 PyExc_ValueError,
                 "Wrong parameter value to function class_switch");
             ret = NULL;
             break;
+        }
     }
 
     if (PyErr_Occurred() != NULL)
@@ -109,7 +164,11 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
     PyObject * kwargs2 = NULL;
     PyObject * ret2 = NULL;
 
+    PyObject * q = NULL;
+
     builtins = PyImport_ImportModule("builtins");
+
+    PyObjectAddToDelQueue(&q, builtins);
 
     if (builtins == NULL)
     {
@@ -117,8 +176,11 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
     }
     else
     {
+        from_bytes = PyObject_GetAttr(
+            builtins,
+            PyObjectAddToDelQueue(&q, PyUnicode_FromString("int")));
 
-        from_bytes = PyObject_GetAttr(builtins, PyUnicode_FromString("int"));
+        PyObjectAddToDelQueue(&q, from_bytes);
 
         if (from_bytes == NULL)
         {
@@ -126,9 +188,12 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
         }
         else
         {
+
             from_bytes = PyObject_GetAttr(
                 from_bytes,
                 PyUnicode_FromString("from_bytes"));
+
+            PyObjectAddToDelQueue(&q, from_bytes);
 
             if (from_bytes == NULL)
             {
@@ -139,18 +204,24 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
 
                 kwargs2 = PyDict_New();
 
+                PyObjectAddToDelQueue(&q, kwargs2);
+
                 PyDict_SetItem(
                     kwargs2,
-                    PyUnicode_FromString("byteorder"),
+                    PyObjectAddToDelQueue(
+                        &q,
+                        PyUnicode_FromString("byteorder")),
                     byteorder);
-                PyDict_SetItem(kwargs2, PyUnicode_FromString("signed"), sign);
+                PyDict_SetItem(
+                    kwargs2,
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("signed")),
+                    sign);
 
                 args2 = Py_BuildValue("(O)", bytes);
 
-                ret2 = PyObject_Call(from_bytes, args2, kwargs2);
+                PyObjectAddToDelQueue(&q, args2);
 
-                Py_XDECREF(args2);
-                Py_XDECREF(kwargs2);
+                ret2 = PyObject_Call(from_bytes, args2, kwargs2);
 
                 if (ret2 == NULL)
                 {
@@ -164,6 +235,8 @@ PyLong_FromPyBytes(PyObject *bytes, PyObject *byteorder, PyObject *sign)
             }
         }
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -189,7 +262,11 @@ Object_Copy(PyObject *object)
     PyObject * args2 = NULL;
     PyObject * ret2 = NULL;
 
+    PyObject * q = NULL;
+
     builtins = PyImport_ImportModule("copy");
+
+    PyObjectAddToDelQueue(&q, builtins);
 
     if (builtins == NULL)
     {
@@ -198,7 +275,11 @@ Object_Copy(PyObject *object)
     else
     {
 
-        from_bytes = PyObject_GetAttr(builtins, PyUnicode_FromString("copy"));
+        from_bytes = PyObject_GetAttr(
+            builtins,
+            PyObjectAddToDelQueue(&q, PyUnicode_FromString("copy")));
+
+        PyObjectAddToDelQueue(&q, from_bytes);
 
         if (from_bytes == NULL)
         {
@@ -209,9 +290,9 @@ Object_Copy(PyObject *object)
 
             args2 = Py_BuildValue("(O)", object);
 
-            ret2 = PyObject_CallObject(from_bytes, args2);
+            PyObjectAddToDelQueue(&q, args2);
 
-            Py_XDECREF(args2);
+            ret2 = PyObject_CallObject(from_bytes, args2);
 
             if (ret2 == NULL)
             {
@@ -224,6 +305,8 @@ Object_Copy(PyObject *object)
 
         }
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -248,6 +331,8 @@ ReadLong(
     PyObject * data_length = NULL;
     PyObject * ts = NULL;
 
+    PyObject * q = NULL;
+
     if (PySequence_Check(data) == 0 || PyLong_Check(offset) == 0
         || PyLong_Check(end) == 0 || PyUnicode_Check(endianness) == 0
         || PyBool_Check(sign) == 0)
@@ -261,6 +346,8 @@ ReadLong(
     else
     {
         data_length = PyLong_FromSsize_t(PySequence_Length(data));
+
+        PyObjectAddToDelQueue(&q, data_length);
 
         if (PyObject_RichCompareBool(offset, data_length, Py_GT) == 1)
         {
@@ -285,11 +372,11 @@ ReadLong(
             {
                 if ((PyObject_RichCompareBool(
                     endianness,
-                    PyUnicode_FromString("little"),
+                    PyObjectAddToDelQueue(&q, PyUnicode_FromString("little")),
                     Py_NE) == 1)
                     && (PyObject_RichCompareBool(
                         endianness,
-                        PyUnicode_FromString("big"),
+                        PyObjectAddToDelQueue(&q, PyUnicode_FromString("big")),
                         Py_NE) == 1))
                 {
                     PyErr_SetString(
@@ -304,15 +391,15 @@ ReadLong(
                         PyLong_AsSsize_t(offset),
                         PyLong_AsSsize_t(end));
 
-                    ret = PyLong_FromPyBytes(ts, endianness, sign);
+                    PyObjectAddToDelQueue(&q, ts);
 
-                    Py_XDECREF(ts);
+                    ret = PyLong_FromPyBytes(ts, endianness, sign);
                 }
             }
         }
-
-        Py_XDECREF(data_length);
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -341,6 +428,8 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
     PyObject * p_vaddr = NULL;
 
     PyObject * shift = NULL;
+
+    PyObject * q = NULL;
 
     unsigned long long i = 0;
     unsigned long long program_section_table_size = 0;
@@ -432,6 +521,8 @@ convert_virtual_to_file(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -451,6 +542,8 @@ read_e_ident(PyObject *self, PyObject *args)
     PyObject * ret = NULL;
 
     PyObject * bytes_data = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "O", &bytes_data) == 0)
     {
@@ -485,6 +578,8 @@ read_e_ident(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -503,6 +598,8 @@ is_elf(PyObject *self, PyObject *args)
     PyObject * bytes_data = NULL;
     PyObject * bytes_data_slice = NULL;
     char * bytes_data_c = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "O", &bytes_data) == 0)
     {
@@ -542,6 +639,8 @@ is_elf(PyObject *self, PyObject *args)
         Py_XDECREF(bytes_data_slice);
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -560,7 +659,9 @@ e_ident_bitness(PyObject *self, PyObject *args)
 
     PyObject * e_ident = NULL;
 
-    PyObject * endianness = NULL;
+    PyObject * q = NULL;
+
+    unsigned char * t;
 
     if (PyArg_ParseTuple(args, "O", &e_ident) == 0)
     {
@@ -582,27 +683,24 @@ e_ident_bitness(PyObject *self, PyObject *args)
         }
         else
         {
-            endianness = e_ident_endianness(self, args);
-
-            if (endianness == NULL)
+            if (PySequence_Length(e_ident) != EI_NIDENT)
             {
+                PyErr_SetString(
+                    PyExc_ValueError,
+                    "Wrong length of e_ident in e_ident_bitness");
                 ret = NULL;
             }
             else
             {
+                t = (unsigned char *) (PyBytes_AsString(e_ident));
 
-                ret = class_switch(
-                    PyLong_AsLong(
-                        PyLong_FromPyBytes(
-                            PySequence_GetItem(
-                                e_ident,
-                                PyLong_AsSsize_t(PyLong_FromLong(EI_CLASS))),
-                            endianness,
-                            Py_False)));
-
+//                printf("1: %d\n", t[EI_CLASS]);
+                ret = class_switch(t[EI_CLASS]);
             }
         }
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -621,6 +719,8 @@ e_ident_dict_bitness(PyObject *self, PyObject *args)
     PyObject * ret = NULL;
 
     PyObject * e_ident_dict = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "O", &e_ident_dict) == 0)
     {
@@ -656,6 +756,8 @@ e_ident_dict_bitness(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -674,7 +776,9 @@ e_ident_endianness(PyObject *self, PyObject *args)
 
     PyObject * e_ident = NULL;
 
-    char * t;
+    PyObject * q = NULL;
+
+    unsigned char * t;
 
     if (PyArg_ParseTuple(args, "O", &e_ident) == 0)
     {
@@ -696,22 +800,23 @@ e_ident_endianness(PyObject *self, PyObject *args)
         }
         else
         {
-            t = PyBytes_AsString(
-                PySequence_GetSlice(
-                    e_ident,
-                    PyLong_AsSize_t(PyLong_FromLong(EI_DATA)),
-                    PyLong_AsSize_t(PyLong_FromLong(EI_DATA + 1))));
-
-            if (t == NULL)
+            if (PySequence_Length(e_ident) != EI_NIDENT)
             {
+                PyErr_SetString(
+                    PyExc_ValueError,
+                    "Wrong length of e_ident in e_ident_endianness");
                 ret = NULL;
             }
             else
             {
-                ret = endianness_to_name(t[0]);
+                t = (unsigned char *) PyBytes_AsString(e_ident);
+
+                ret = endianness_to_name(t[EI_DATA]);
             }
         }
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -730,6 +835,8 @@ e_ident_dict_endianness(PyObject *self, PyObject *args)
     PyObject * ret = NULL;
 
     PyObject * e_ident_dict = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "O", &e_ident_dict) == 0)
     {
@@ -758,6 +865,8 @@ e_ident_dict_endianness(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -775,9 +884,11 @@ e_ident_to_dict(PyObject *self, PyObject *args)
 
     PyObject * e_ident_bytes = NULL;
 
-    PyObject * endianness = NULL;
+    PyObject * q = NULL;
 
-    long i = 0;
+    unsigned char * t;
+
+    int i = 0;
 
     e_ident_bytes = read_e_ident(self, args);
 
@@ -791,57 +902,41 @@ e_ident_to_dict(PyObject *self, PyObject *args)
     else
     {
 
-        if (PySequence_Length(e_ident_bytes) < EI_NIDENT)
+        if (PySequence_Length(e_ident_bytes) != EI_NIDENT)
         {
             PyErr_SetString(
                 PyExc_TypeError,
-                "Input data sequence too short to function e_ident_to_dict");
+                "Wrong input data sequence length in function e_ident_to_dict");
             ret = NULL;
         }
         else
         {
-            endianness = endianness_to_name(
-                (unsigned char) PyBytes_AsString(
-                    PySequence_GetSlice(e_ident_bytes, EI_DATA, EI_DATA + 1))[0]);
+            t = (unsigned char *) PyBytes_AsString(e_ident_bytes);
 
-            if (endianness == NULL)
+            ret = PyDict_New();
+
+            i = 0;
+            while (1)
             {
-                ret = NULL;
-            }
-            else
-            {
-
-                ret = PyDict_New();
-
-                i = 0;
-                while (1)
+                if (e_indent_names[i] == NULL)
                 {
-                    if (e_indent_names[i] == NULL)
-                    {
-                        break;
-                    }
-
-                    PyDict_SetItem(
-                        ret,
-                        PyUnicode_FromString(e_indent_names[i]),
-                        PyLong_FromPyBytes(
-                            PySequence_GetSlice(
-                                e_ident_bytes,
-                                PyLong_AsSize_t(PyLong_FromLong(i)),
-                                PyLong_AsSize_t(PyLong_FromLong(i + 1))),
-                            endianness,
-                            Py_False));
-
-                    i++;
+                    break;
                 }
 
-                Py_XDECREF(endianness);
+                PyDict_SetItem(
+                    ret,
+                    PyUnicode_FromString(e_indent_names[i]),
+                    PyLong_FromUnsignedLong(t[i]));
 
+                i++;
             }
+
         }
     }
 
     Py_XDECREF(e_ident_bytes);
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {
@@ -862,6 +957,8 @@ read_elf_ehdr_x(PyObject *self, PyObject *args)
     PyObject * data = NULL;
     PyObject * index = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     long elf_x_ehdr_i_size = 0;
 
@@ -929,6 +1026,8 @@ read_elf_ehdr_x(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -951,6 +1050,8 @@ read_elf_ehdr(PyObject *self, PyObject *args)
 
     PyObject * args2 = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OOO", &data, &index, &e_ident) == 0)
     {
@@ -1008,6 +1109,8 @@ read_elf_ehdr(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1036,6 +1139,8 @@ elf32_ehdr_to_dict(PyObject *self, PyObject *args)
     PyObject * index = NULL;
 
     PyObject * data2 = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data, &index) == 0)
     {
@@ -1103,6 +1208,8 @@ elf32_ehdr_to_dict(PyObject *self, PyObject *args)
 
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1133,6 +1240,8 @@ elf64_ehdr_to_dict(PyObject *self, PyObject *args)
     PyObject * index = NULL;
 
     PyObject * data2 = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data, &index) == 0)
     {
@@ -1200,6 +1309,8 @@ elf64_ehdr_to_dict(PyObject *self, PyObject *args)
 
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1223,6 +1334,8 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
 
     PyObject * args2 = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OOO", &data, &index, &e_ident) == 0)
     {
@@ -1298,6 +1411,8 @@ elf_ehdr_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1316,6 +1431,8 @@ read_elf_shdr_x(PyObject *self, PyObject *args)
     PyObject * data = NULL;
     PyObject * index = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     long elf_x_shdr_i_size = 0;
 
@@ -1384,6 +1501,8 @@ read_elf_shdr_x(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1406,6 +1525,8 @@ read_elf_shdr(PyObject *self, PyObject *args)
 
     PyObject * args2 = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OOO", &data, &index, &e_ident) == 0)
     {
@@ -1464,6 +1585,8 @@ read_elf_shdr(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1490,6 +1613,8 @@ shdr32_to_dict(PyObject *self, PyObject *args)
 
     PyObject * data_seq = NULL;
     PyObject * index = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data_seq, &index) == 0)
     {
@@ -1537,6 +1662,8 @@ shdr32_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1564,6 +1691,8 @@ shdr64_to_dict(PyObject *self, PyObject *args)
 
     PyObject * data_seq = NULL;
     PyObject * index = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data_seq, &index) == 0)
     {
@@ -1611,6 +1740,8 @@ shdr64_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1644,6 +1775,8 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
     PyObject * offset = NULL;
 
     PyObject * endianness = NULL;
+
+    PyObject * q = NULL;
 
     unsigned long long i = 0;
 
@@ -1795,6 +1928,8 @@ read_elf_section_header_table(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1815,6 +1950,8 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
     PyObject * index = NULL;
 
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     unsigned long long elf_x_phdr_i_size = 0;
 
@@ -1878,6 +2015,8 @@ read_elf_phdr_x(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1900,6 +2039,8 @@ read_elf_phdr(PyObject *self, PyObject *args)
 
     PyObject * args2 = NULL;
     PyObject * x = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OOO", &data, &index, &e_ident) == 0)
     {
@@ -1955,6 +2096,8 @@ read_elf_phdr(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -1981,6 +2124,8 @@ phdr32_to_dict(PyObject *self, PyObject *args)
 
     PyObject * data_seq = NULL;
     PyObject * index = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data_seq, &index) == 0)
     {
@@ -2027,6 +2172,8 @@ phdr32_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2054,6 +2201,8 @@ phdr64_to_dict(PyObject *self, PyObject *args)
 
     PyObject * data_seq = NULL;
     PyObject * index = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(args, "OO", &data_seq, &index) == 0)
     {
@@ -2099,6 +2248,8 @@ phdr64_to_dict(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2133,6 +2284,8 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
     PyObject * offset = NULL;
 
     PyObject * endianness = NULL;
+
+    PyObject * q = NULL;
 
     long i = 0;
 
@@ -2273,6 +2426,8 @@ read_elf_program_header_table(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2299,6 +2454,8 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
     PyObject * header_bytes = NULL;
 
     PyObject * endianness = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(
         args,
@@ -2367,6 +2524,8 @@ get_ehdr_string_table_slice(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2399,6 +2558,8 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
     PyObject * long_value = NULL;
 
     PyObject * byteorder = NULL;
+
+    PyObject * q = NULL;
 
     if (PyArg_ParseTuple(
         args,
@@ -2488,6 +2649,8 @@ get_dyn_string_table_slice(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2511,6 +2674,8 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
     PyObject * header_bytes = NULL;
 
     PyObject * endianness;
+
+    PyObject * q = NULL;
 
     char * header_bytes_char = NULL;
 
@@ -2590,6 +2755,8 @@ read_elf_section_header_table_names(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2618,6 +2785,8 @@ read_dynamic_section(PyObject *self, PyObject *args)
     PyObject * v1 = NULL;
 
     PyObject * endianness = NULL;
+
+    PyObject * q = NULL;
 
     unsigned long long one_value_size = 0;
     long bitness_l = 0;
@@ -2905,6 +3074,8 @@ read_dynamic_section(PyObject *self, PyObject *args)
         }
     }
 
+    PyObjectDelQueue(&q);
+
     if (PyErr_Occurred() != NULL)
     {
         PyErr_Print();
@@ -2933,6 +3104,8 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
 
     PyObject * item = NULL;
     PyObject * name = NULL;
+
+    PyObject * q = NULL;
 
     long i = 0;
     long offset = 0;
@@ -3022,6 +3195,8 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
             Py_XDECREF(header_bytes);
         }
     }
+
+    PyObjectDelQueue(&q);
 
     if (PyErr_Occurred() != NULL)
     {

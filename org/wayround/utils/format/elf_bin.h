@@ -2,7 +2,7 @@
 #define ELF_BIN_H
 
 PyObject *
-endianness_to_name(unsigned char in);
+endianness_to_name(long in);
 
 PyObject *
 class_switch(long val);

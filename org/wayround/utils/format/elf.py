@@ -431,9 +431,14 @@ def dynamic_section_text(dinamics_table, endianness):
 
 class ELF:
 
-    def __init__(self, filename):
+    def __init__(self, filename, verbose=False, debug=False):
 
-        self.verbose = False
+        if debug or verbose:
+            print("File `{}'".format(filename))
+
+        self.debug = debug
+
+        self.verbose = verbose
 
         self.opened = False
 
@@ -460,7 +465,8 @@ class ELF:
         self.libs_list_text = None
 
         if not os.path.isfile(filename):
-            logging.error("Not a file: `{}'".format(filename))
+            if debug or verbose:
+                logging.error("Not a file: `{}'".format(filename))
         else:
 
             try:
@@ -468,7 +474,7 @@ class ELF:
             except KeyboardInterrupt:
                 raise
             except:
-                if self.verbose:
+                if debug or verbose:
                     logging.exception("Couldn't open file for read: `{}'".format(filename))
             else:
 
@@ -482,7 +488,7 @@ class ELF:
                 except KeyboardInterrupt:
                     raise
                 except:
-                    if self.verbose:
+                    if debug or verbose:
                         logging.exception("Couldn't map file: `{}'".format(filename))
                 else:
                     try:
@@ -490,166 +496,231 @@ class ELF:
 
                         self.is_elf = is_elf(m)
 
-                        self.e_ident = read_e_ident(m)
+                        if self.is_elf:
 
-#                        print(
-#                            "py bitness: {}".format(
-#                                int.from_bytes(self.e_ident[EI_CLASS], 'little', False)
-#                                )
-#                            )
-                        if self.e_ident:
-                            self.bitness = e_ident_bitness(self.e_ident)
+                            self.e_ident = read_e_ident(m)
 
-                        if self.e_ident:
-                            self.endianness = e_ident_endianness(self.e_ident)
+                            if debug:
+                                print("e_ident == {}".format(self.e_ident))
 
-                        if self.e_ident:
-                            self.e_ident_dict = e_ident_to_dict(self.e_ident)
+                            if self.e_ident:
+                                self.bitness = e_ident_bitness(self.e_ident)
 
-                        if self.e_ident_dict:
-                            self.e_ident_text = e_ident_text(
-                                self.e_ident_dict
-                                )
+                            if debug:
+                                print("bitness == {}".format(self.bitness))
 
-                        if self.e_ident_dict:
-                            self.elf_ehdr = read_elf_ehdr(
-                                m,
-                                0,
-                                self.e_ident_dict
-                                )
+                            if self.e_ident:
+                                self.endianness = e_ident_endianness(self.e_ident)
 
-                        if self.e_ident_dict:
-                            self.elf_ehdr_dict = elf_ehdr_to_dict(
-                                m,
-                                0,
-                                self.e_ident_dict
-                                )
+                            if debug:
+                                print("endianness == {}".format(self.endianness))
 
-                        if self.elf_ehdr_dict and self.endianness:
-                            self.elf_x_ehdr_text = elf_x_ehdr_text(
-                                self.elf_ehdr_dict,
-                                self.endianness
-                                )
+                            if self.e_ident:
+                                self.e_ident_dict = e_ident_to_dict(self.e_ident)
 
-                        if self.elf_ehdr_dict and self.endianness:
-                            self.elf_type_name = int.from_bytes(
-                                self.elf_ehdr_dict['e_type'],
-                                self.endianness
-                                )
+                            if debug:
+                                print("e_ident_dict == {}".format(self.e_ident_dict))
 
-                            for i in [
-                                'ET_NONE',
-                                'ET_REL',
-                                'ET_EXEC',
-                                'ET_DYN',
-                                'ET_CORE',
-                                'ET_NUM',
-                                'ET_LOOS',
-                                'ET_HIOS',
-                                'ET_LOPROC',
-                                'ET_HIPROC'
-                                ]:
+                            if self.e_ident_dict:
+                                self.e_ident_text = e_ident_text(
+                                    self.e_ident_dict
+                                    )
 
-                                if self.elf_type_name == eval(i):
-                                    self.elf_type_name = i
-                                    break
+                            if debug:
+                                print("e_ident_text == {}".format(self.e_ident_text))
 
-
-                        if self.e_ident_dict and self.elf_ehdr_dict:
-                            self.section_table = read_elf_section_header_table(
-                                m,
-                                self.e_ident_dict,
-                                self.elf_ehdr_dict
-                                )
-
-                        if (self.section_table
-                            and self.elf_ehdr_dict
-                            and self.endianness):
-                            self.section_names = (
-                                read_elf_section_header_table_names(
+                            if self.e_ident_dict:
+                                self.elf_ehdr = read_elf_ehdr(
                                     m,
-                                    self.section_table,
+                                    0,
+                                    self.e_ident_dict
+                                    )
+
+                            if debug:
+                                print("elf_ehdr == {}".format(self.elf_ehdr))
+
+                            if self.e_ident_dict:
+                                self.elf_ehdr_dict = elf_ehdr_to_dict(
+                                    m,
+                                    0,
+                                    self.e_ident_dict
+                                    )
+
+                            if debug:
+                                print("elf_ehdr_dict == {}".format(self.elf_ehdr_dict))
+
+                            if self.elf_ehdr_dict and self.endianness:
+                                self.elf_x_ehdr_text = elf_x_ehdr_text(
                                     self.elf_ehdr_dict,
                                     self.endianness
                                     )
-                                )
 
-                        if self.e_ident_dict and self.elf_ehdr_dict:
-                            self.program_table = read_elf_program_header_table(
-                                m,
-                                self.e_ident_dict,
-                                self.elf_ehdr_dict
-                                )
+                            if debug:
+                                print("elf_x_ehdr_text == {}".format(self.elf_x_ehdr_text))
 
-                        if (self.section_table
-                            and self.elf_ehdr_dict
-                            and self.endianness):
-                            self.section_header_table_text = (
-                                section_header_table_text(
-                                    m,
-                                    self.section_table,
-                                    self.elf_ehdr_dict,
+                            if self.elf_ehdr_dict and self.endianness:
+                                self.elf_type_name = int.from_bytes(
+                                    self.elf_ehdr_dict['e_type'],
                                     self.endianness
                                     )
-                                )
 
-                        if self.program_table and self.endianness:
-                            self.program_header_table_text = (
-                                program_header_table_text(
+                                for i in [
+                                    'ET_NONE',
+                                    'ET_REL',
+                                    'ET_EXEC',
+                                    'ET_DYN',
+                                    'ET_CORE',
+                                    'ET_NUM',
+                                    'ET_LOOS',
+                                    'ET_HIOS',
+                                    'ET_LOPROC',
+                                    'ET_HIPROC'
+                                    ]:
+
+                                    if self.elf_type_name == eval(i):
+                                        self.elf_type_name = i
+                                        break
+
+                            if debug:
+                                print("elf_type_name == {}".format(self.elf_type_name))
+
+                            if self.e_ident_dict and self.elf_ehdr_dict:
+                                self.section_table = read_elf_section_header_table(
+                                    m,
+                                    self.e_ident_dict,
+                                    self.elf_ehdr_dict
+                                    )
+
+                            if debug:
+                                print("section_table == {}".format(self.section_table))
+
+                            if (self.section_table
+                                and self.elf_ehdr_dict
+                                and self.endianness):
+                                self.section_names = (
+                                    read_elf_section_header_table_names(
+                                        m,
+                                        self.section_table,
+                                        self.elf_ehdr_dict,
+                                        self.endianness
+                                        )
+                                    )
+
+                            if debug:
+                                print("section_names == {}".format(self.section_names))
+
+                            if self.e_ident_dict and self.elf_ehdr_dict:
+                                self.program_table = read_elf_program_header_table(
+                                    m,
+                                    self.e_ident_dict,
+                                    self.elf_ehdr_dict
+                                    )
+
+                            if debug:
+                                print("program_table == {}".format(self.program_table))
+
+                            if (self.section_table
+                                and self.elf_ehdr_dict
+                                and self.endianness):
+                                self.section_header_table_text = (
+                                    section_header_table_text(
+                                        m,
+                                        self.section_table,
+                                        self.elf_ehdr_dict,
+                                        self.endianness
+                                        )
+                                    )
+
+                            if debug:
+                                print("section_header_table_text == {}".format(self.section_header_table_text))
+
+                            if self.program_table and self.endianness:
+                                self.program_header_table_text = (
+                                    program_header_table_text(
+                                        self.program_table,
+                                        self.endianness
+                                        )
+                                    )
+
+                            if debug:
+                                print("program_header_table_text == {}".format(self.program_header_table_text))
+
+                            dyn_sect_index = None
+                            if (
+                                self.section_names
+                                and '.dynamic' in self.section_names
+                                and self.section_table
+                                and int.from_bytes(
+                                    self.section_table[self.section_names.index('.dynamic')]['sh_type'], 
+                                    self.endianness, 
+                                    signed=False
+                                    ) == SHT_DYNAMIC
+                                ):
+                                dyn_sect_index = self.section_names.index('.dynamic')
+
+                            if debug:
+                                print("dyn_sect_index == {}".format(dyn_sect_index))
+
+                            dyn_sect_offset = None
+                            if (self.section_table
+                                and dyn_sect_index
+                                and self.endianness
+                                and 'sh_offset' in self.section_table[dyn_sect_index]):
+                                dyn_sect_offset = int.from_bytes(
+                                    self.section_table[dyn_sect_index]['sh_offset'],
+                                    self.endianness
+                                    )
+
+                            if debug:
+                                print("dyn_sect_offset == {}".format(dyn_sect_offset))
+
+                            if dyn_sect_offset and self.bitness and self.endianness:
+                                self.dynamic_section = read_dynamic_section(
+                                    m,
+                                    dyn_sect_offset,
+                                    self.bitness,
+                                    self.endianness
+                                    )
+
+                            if debug:
+                                print("dynamic_section == {}".format(self.dynamic_section))
+
+                            if self.dynamic_section and self.endianness:
+                                self.dynamic_section_text = dynamic_section_text(
+                                    self.dynamic_section,
+                                    self.endianness
+                                    )
+
+                            if debug:
+                                print("dynamic_section_text == {}".format(self.dynamic_section_text))
+
+                            if (self.program_table
+                                and self.dynamic_section
+                                and self.section_table
+                                and self.endianness):
+                                self.needed_libs_list = get_dynamic_libs_names(
+                                    m,
                                     self.program_table,
+                                    self.dynamic_section,
+                                    self.section_table,
                                     self.endianness
                                     )
-                                )
 
-                        dyn_sect_index = None
-                        if (self.section_names
-                            and '.dynamic' in self.section_names):
-                            dyn_sect_index = self.section_names.index('.dynamic')
+                            if debug:
+                                print("needed_libs_list == {}".format(self.needed_libs_list))
 
-                        dyn_sect_offset = None
-                        if (self.section_table
-                            and dyn_sect_index
-                            and self.endianness
-                            and 'sh_offset' in self.section_table[dyn_sect_index]):
-                            dyn_sect_offset = int.from_bytes(
-                                self.section_table[dyn_sect_index]['sh_offset'],
-                                self.endianness
-                                )
+                            if self.needed_libs_list:
+                                self.libs_list_text = "{}.".format(
+                                    ', '.join(self.needed_libs_list)
+                                    )
 
-                        if dyn_sect_offset and self.bitness and self.endianness:
-                            self.dynamic_section = read_dynamic_section(
-                                m,
-                                dyn_sect_offset,
-                                self.bitness,
-                                self.endianness
-                                )
+                            if debug:
+                                print("libs_list_text == {}".format(self.libs_list_text))
 
-                        if self.dynamic_section and self.endianness:
-                            self.dynamic_section_text = dynamic_section_text(
-                                self.dynamic_section,
-                                self.endianness
-                                )
-
-                        if (self.program_table
-                            and self.dynamic_section
-                            and self.section_table
-                            and self.endianness):
-                            self.needed_libs_list = get_dynamic_libs_names(
-                                m,
-                                self.program_table,
-                                self.dynamic_section,
-                                self.section_table,
-                                self.endianness
-                                )
-
-                        if self.needed_libs_list:
-                            self.libs_list_text = "{}.".format(
-                                ', '.join(self.needed_libs_list)
-                                )
                     except KeyboardInterrupt:
                         raise
                     except:
-                        if self.verbose:
+                        if debug or verbose:
                             logging.exception("Some error while populating instance")
 
                     finally:

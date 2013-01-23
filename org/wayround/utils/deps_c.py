@@ -299,9 +299,9 @@ def find_elf_files(directory, verbose=False):
         for i in files:
             full_name = os.path.join(directory, i)
 
-            elf = org.wayround.utils.format.elf.ELF(full_name)
-
             if os.path.isfile(full_name):
+                elf = org.wayround.utils.format.elf.ELF(full_name)
+
                 if elf.is_elf:
                     ret.add(full_name)
                     elfs += 1
