@@ -39,10 +39,7 @@ PyObjectAddToDelQueue(PyObject ** queue, PyObject * obj)
             *queue = PyList_New(0);
         }
 
-        if (PySequence_Contains(*queue, obj) == 0)
-        {
-            PyList_Append(*queue, obj);
-        }
+        PyList_Append(*queue, obj);
     }
 
     return obj;

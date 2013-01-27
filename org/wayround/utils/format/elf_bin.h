@@ -2,6 +2,12 @@
 #define ELF_BIN_H
 
 PyObject *
+PyObjectAddToDelQueue(PyObject ** queue, PyObject * obj);
+
+void
+PyObjectDelQueue(PyObject ** queue);
+
+PyObject *
 endianness_to_name(long in);
 
 PyObject *

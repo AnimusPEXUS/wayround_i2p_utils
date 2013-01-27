@@ -119,6 +119,7 @@ def build_dependency_tree_by_given_so_and_elfs(
 
         e = org.wayround.utils.format.elf.ELF(i)
 
+
         libs_elf_linked_to = e.needed_libs_list
 
         if not isinstance(libs_elf_linked_to, list):

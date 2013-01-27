@@ -7,7 +7,7 @@ import org.wayround.utils.terminal
 
 def columned_list_print(
     lst, width=None, columns=None,
-    margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
+    margin_right=' | ', margin_left=' | ', spacing=' | ',
     fd=1
     ):
     print(
@@ -20,7 +20,7 @@ def columned_list_print(
 
 def return_columned_list(
     lst, width=None, columns=None,
-    margin_right=' │ ', margin_left=' │ ', spacing=' │ ',
+    margin_right=' | ', margin_left=' | ', spacing=' | ',
     fd=1
     ):
 

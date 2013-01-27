@@ -581,9 +581,12 @@ def extract_low(
 
     if log:
         log.info("Extracting {}".format(os.path.basename(tarball)))
+
     extr_error = extract(
         tarball, tmpdir
         )
+
+    ret = extr_error
 
     if extr_error != 0:
         if log:
@@ -616,11 +619,17 @@ def extract_low(
                     if rename_dir:
                         n = outdir + os.path.sep + str(rename_dir)
                         if log:
-                            log.info("moving extracted dir as `{}'".format(n))
+                            log.info("moving extracted {}\n    as `{}'".format(i2, n))
                         shutil.move(i2, n)
                     else:
                         if log:
-                            log.info("moving extracted dir to `{}'".format(outdir))
+                            log.info("moving extracted {}\n    to `{}'".format(i2, outdir))
+
+                        if os.path.isfile(i2):
+                            new_file_name = os.path.join(outdir, os.path.basename(i2))
+                            if os.path.isfile(new_file_name):
+                                os.unlink(new_file_name)
+
                         shutil.move(i2, outdir)
 
     return ret
