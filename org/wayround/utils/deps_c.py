@@ -233,7 +233,7 @@ def find_so_files(directory, verbose=False):
                 if full_name.find('.so') != -1:
                     elf = org.wayround.utils.format.elf.ELF(full_name)
                     if (
-                        elf.is_elf_file
+                        elf.is_elf
                         and elf.elf_type_name == 'ET_DYN'
                         ):
                         ret.add(i)

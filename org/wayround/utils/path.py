@@ -13,6 +13,26 @@ def _remove_double_sep(str_in):
 
     return str_in
 
+def _remove_tariling_slash(str_in):
+
+    ret = str_in
+
+    while ret.endswith('/'):
+        ret = ret[:-1]
+
+    return ret
+
+def join(*args):
+
+    ret = ''
+
+    for i in args:
+        ret += i + S_SEP
+
+    ret = _remove_double_sep(ret)
+    ret = _remove_tariling_slash(ret)
+
+    return ret
 
 def normpath(path):
     return _remove_double_sep(os.path.normpath(path))

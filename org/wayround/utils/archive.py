@@ -131,6 +131,44 @@ def extract(file_name, output_dir):
 
     return ret
 
+def determine_compressor_by_filename(file_name, mute=False):
+
+    ret = None
+
+    if file_name.endswith('.lzma'):
+        ret = 'xz'
+
+    elif file_name.endswith('.bz2'):
+        ret = 'bzip2'
+
+    elif file_name.endswith('.gz'):
+        ret = 'gzip'
+
+    elif file_name.endswith('.xz'):
+        ret = 'xz'
+
+    else:
+        if not mute:
+            logging.error("Unknown compressor {}".format(file_name))
+
+    return ret
+
+def determine_extension_by_filename(file_name, mute=False):
+
+    ret = None
+
+    for i in ['.lzma', '.bz2', '.gz', '.xz']:
+
+        if file_name.endswith(i):
+            ret = i
+            break
+
+    if not ret:
+        if not mute:
+            logging.error("Unknown compressor extension {}".format(file_name))
+
+    return ret
+
 #def canonical_compressor_files(
 #    compressor,
 #    infile,
