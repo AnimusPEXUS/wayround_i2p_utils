@@ -127,7 +127,12 @@ def copytree(
             ret = 2
         else:
             if _copytree(src_dir, dst_dir, overwrite_files=overwrite_files) != 0:
-                logging.error("Some errors occurred while copying `{}' to `{}'".format(src_dir, dst_dir))
+                logging.error(
+                    "Some errors occurred while copying `{}' to `{}'".format(
+                        src_dir,
+                        dst_dir
+                    )
+                )
                 ret = 3
 
     return ret

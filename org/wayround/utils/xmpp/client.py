@@ -15,7 +15,7 @@ import org.wayround.utils.xml
 import org.wayround.utils.xmpp.core
 
 
-class SampleC2SClient:
+class C2SClient:
 
     def __init__(self, socket, connection_info, jid):
 
