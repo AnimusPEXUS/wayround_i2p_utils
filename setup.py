@@ -5,7 +5,6 @@ import subprocess
 from distutils.core import setup
 from distutils.extension import Extension
 
-
 py_compil_args = None
 py_link_args = None
 
@@ -19,7 +18,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='org_wayround_utils',
-    version='0.4',
+    version='0.5',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
@@ -44,7 +43,8 @@ This package contains various useful modules functions and classes.
             "org.wayround.utils.format.elf_bin",
             ["org/wayround/utils/format/elf_bin.c"],
             extra_compile_args=py_compil_args,
-            extra_link_args=py_link_args
+            extra_link_args=py_link_args,
             )
-        ]
+        ],
+    package_data={'org.wayround.utils.format': ['*.c', '*.h']}
     )

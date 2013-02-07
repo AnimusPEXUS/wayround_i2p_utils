@@ -32,7 +32,10 @@ org/wayround/utils/time.py
 org/wayround/utils/uri.py
 org/wayround/utils/xml.py
 org/wayround/utils/format/__init__.py
-org/wayround/utils/format/elf.pyx
+org/wayround/utils/format/elf.py
+org/wayround/utils/format/elf_bin.c
+org/wayround/utils/format/elf_bin.h
+org/wayround/utils/format/elf_enum.py
 org/wayround/utils/xmpp/__init__.py
 org/wayround/utils/xmpp/client.py
 org/wayround/utils/xmpp/core.py
