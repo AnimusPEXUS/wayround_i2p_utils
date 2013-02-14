@@ -30,7 +30,6 @@ This package contains various useful modules functions and classes.
     url='http://wiki.wayround.org/soft/org_wayround_utils',
     packages=[
         'org.wayround.utils',
-        'org.wayround.utils.xmpp',
         'org.wayround.utils.format'
         ],
     classifiers=[
