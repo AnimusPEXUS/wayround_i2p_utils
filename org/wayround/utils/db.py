@@ -85,7 +85,7 @@ class BasicDB:
 #            default=True
 #            )
 
-    def __init__(self, config, echo=False):
+    def __init__(self, config, echo=False, create_all=False):
 
         self._db_engine = (
                 sqlalchemy.create_engine(
@@ -96,7 +96,8 @@ class BasicDB:
 
         self.Base.metadata.bind = self._db_engine
 
-        self.Base.metadata.create_all()
+        if create_all:
+            self.Base.metadata.create_all()
 
         self.sess = sqlalchemy.orm.Session(bind=self._db_engine)
 
