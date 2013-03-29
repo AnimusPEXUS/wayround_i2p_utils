@@ -1,7 +1,11 @@
 
+import sys
 import struct
 import termios
 import fcntl
+import pprint
+
+import org.wayround.utils.error
 
 def get_terminal_size(fd=1):
     res = None
@@ -31,3 +35,34 @@ def get_terminal_size(fd=1):
             }
 
     return res
+
+def prompt(g=None, l=None, prompt='-> '):
+
+    import readline
+
+    bk = False
+
+    while not bk:
+
+        try:
+            cmd = input(prompt)
+            try:
+                e = eval(cmd, g, l)
+                if isinstance(e, dict):
+                    pprint.pprint(e, indent=2)
+                else:
+                    print(repr(e))
+            except SyntaxError:
+                exec(cmd, g, l)
+
+        except EOFError:
+            bk = True
+        except:
+            print(
+                org.wayround.utils.error.return_exception_info(
+                    sys.exc_info(),
+                    tb=True
+                    )
+                )
+
+    print('')

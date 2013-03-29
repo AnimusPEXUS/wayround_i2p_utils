@@ -13,29 +13,29 @@ class CatTerminationFlagFound(Exception): pass
 def cat(
     stdin,
     stdout,
-    bs = (2 * 1024 ** 2),
-    count = None,
-    threaded = False,
-    thread_name = 'Thread',
-    verbose = False,
-    convert_to_str = None,
-    read_method_name = 'read',
-    write_method_name = 'write',
-    exit_on_input_eof = True,
-    flush_after_every_write = False,
-    flush_on_input_eof = False,
-    close_output_on_eof = False,
-    waiting_for_input = False,
-    waiting_for_output = False,
-    descriptor_to_wait_for_input = None,
-    descriptor_to_wait_for_output = None,
-    apply_input_seek = True,
-    apply_output_seek = True,
-    standard_write_method_result = True,
-    termination_event = None,
-    on_exit_callback = None,
-    on_input_read_error = None,
-    on_output_write_error = None
+    bs=(2 * 1024 ** 2),
+    count=None,
+    threaded=False,
+    thread_name='Thread',
+    verbose=False,
+    convert_to_str=None,
+    read_method_name='read',
+    write_method_name='write',
+    exit_on_input_eof=True,
+    flush_after_every_write=False,
+    flush_on_input_eof=False,
+    close_output_on_eof=False,
+    waiting_for_input=False,
+    waiting_for_output=False,
+    descriptor_to_wait_for_input=None,
+    descriptor_to_wait_for_output=None,
+    apply_input_seek=True,
+    apply_output_seek=True,
+    standard_write_method_result=True,
+    termination_event=None,
+    on_exit_callback=None,
+    on_input_read_error=None,
+    on_output_write_error=None
     ):
 
     if not read_method_name.isidentifier():
@@ -73,34 +73,34 @@ def cat(
 
 #        return multiprocessing.Process(
         return threading.Thread(
-            target = cat,
-            args = (stdin, stdout),
-            kwargs = dict(
-                bs = bs,
-                count = count,
-                threaded = False,
-                thread_name = thread_name,
-                verbose = verbose,
-                convert_to_str = convert_to_str,
-                read_method_name = read_method_name,
-                write_method_name = write_method_name,
-                exit_on_input_eof = exit_on_input_eof,
-                flush_after_every_write = flush_after_every_write,
-                flush_on_input_eof = flush_on_input_eof,
-                close_output_on_eof = close_output_on_eof,
-                waiting_for_input = waiting_for_input,
-                waiting_for_output = waiting_for_output,
-                descriptor_to_wait_for_input = descriptor_to_wait_for_input,
-                descriptor_to_wait_for_output = descriptor_to_wait_for_output,
-                apply_input_seek = apply_input_seek,
-                apply_output_seek = apply_output_seek,
-                standard_write_method_result = standard_write_method_result,
-                termination_event = termination_event,
-                on_exit_callback = on_exit_callback,
-                on_input_read_error = on_input_read_error,
-                on_output_write_error = on_output_write_error
+            target=cat,
+            args=(stdin, stdout),
+            kwargs=dict(
+                bs=bs,
+                count=count,
+                threaded=False,
+                thread_name=thread_name,
+                verbose=verbose,
+                convert_to_str=convert_to_str,
+                read_method_name=read_method_name,
+                write_method_name=write_method_name,
+                exit_on_input_eof=exit_on_input_eof,
+                flush_after_every_write=flush_after_every_write,
+                flush_on_input_eof=flush_on_input_eof,
+                close_output_on_eof=close_output_on_eof,
+                waiting_for_input=waiting_for_input,
+                waiting_for_output=waiting_for_output,
+                descriptor_to_wait_for_input=descriptor_to_wait_for_input,
+                descriptor_to_wait_for_output=descriptor_to_wait_for_output,
+                apply_input_seek=apply_input_seek,
+                apply_output_seek=apply_output_seek,
+                standard_write_method_result=standard_write_method_result,
+                termination_event=termination_event,
+                on_exit_callback=on_exit_callback,
+                on_input_read_error=on_input_read_error,
+                on_output_write_error=on_output_write_error
                 ),
-            name = thread_name
+            name=thread_name
             )
 
     else:
@@ -194,8 +194,8 @@ def cat(
                 except:
                     if on_input_read_error:
                         threading.Thread(
-                            target = on_input_read_error,
-                            name = "{} Input Read Error Thread".format(thread_name)
+                            target=on_input_read_error,
+                            name="{} Input Read Error Thread".format(thread_name)
                             ).start()
 
                     break
@@ -230,7 +230,7 @@ def cat(
                     logging.debug("buff data(255 bytes max): {}".format(repr(buff[:255])))
 
                     if convert_to_str != None:
-                        buff = str(buff, encoding = convert_to_str)
+                        buff = str(buff, encoding=convert_to_str)
 
                     written_total = 0
                     this_time_written = 0
@@ -270,8 +270,8 @@ def cat(
                                 )
                             if on_output_write_error:
                                 threading.Thread(
-                                    target = on_output_write_error,
-                                    name = "`{}' Output Error Thread".format(thread_name)
+                                    target=on_output_write_error,
+                                    name="`{}' Output Error Thread".format(thread_name)
                                     ).start()
 
                             raise
@@ -292,8 +292,8 @@ def cat(
                             if this_time_written == 0:
                                 if on_output_write_error:
                                     threading.Thread(
-                                        target = on_output_write_error,
-                                        name = "`{}' Output Error Thread".format(thread_name)
+                                        target=on_output_write_error,
+                                        name="`{}' Output Error Thread".format(thread_name)
                                         ).start()
                                 break
                             else:
@@ -376,8 +376,8 @@ def cat(
 
         if on_exit_callback:
             threading.Thread(
-                target = on_exit_callback,
-                name = "{} Exited Callback Thread".format(thread_name)
+                target=on_exit_callback,
+                name="{} Exited Callback Thread".format(thread_name)
                 ).start()
 
         return
@@ -385,16 +385,16 @@ def cat(
 
     return
 
-def lbl_write(stdin, stdout, threaded = False, typ = 'info'):
+def lbl_write(stdin, stdout, threaded=False, typ='info'):
 
     if not typ in ['info', 'error', 'warning']:
         raise ValueError("Wrong `typ' value")
 
     if threaded:
         return threading.Thread(
-            target = lbl_write,
-            args = (stdin, stdout),
-            kwargs = dict(threaded = False)
+            target=lbl_write,
+            args=(stdin, stdout),
+            kwargs=dict(threaded=False)
             )
     else:
 
@@ -428,16 +428,23 @@ class SocketStreamer:
     def __init__(
         self,
         sock,
-        socket_transfer_size = 4096,
-        on_connection_event = None
+        socket_transfer_size=4096,
+        on_connection_event=None
         ):
+
+        import ssl
+
+        if not isinstance(sock, (socket.socket, ssl.SSLSocket)):
+            raise TypeError(
+                "sock must be of type socket.socket or ssl.SSLSocket"
+                )
 
         self.socket = sock
         self._socket_transfer_size = socket_transfer_size
 
         self._on_connection_event = on_connection_event
 
-        self._clear(init = True)
+        self._clear(init=True)
 
         self.connection = False
 
@@ -445,7 +452,7 @@ class SocketStreamer:
 
         self._clear()
 
-    def _clear(self , init = False):
+    def _clear(self , init=False):
 
         if not init:
             if not self.stat() == 'stopped':
@@ -521,49 +528,49 @@ class SocketStreamer:
             self._stat = 'soft starting threads'
 
             self._in_thread = cat(
-                stdin = self._strin,
-                stdout = self.socket,
-                threaded = True,
-                write_method_name = 'send',
-                close_output_on_eof = False,
-                thread_name = 'strin -> socket',
-                bs = self._socket_transfer_size,
-                convert_to_str = None,
-                read_method_name = 'read',
-                exit_on_input_eof = True,
-                waiting_for_input = True,
-                descriptor_to_wait_for_input = self._strin.fileno(),
-                waiting_for_output = True,
-                descriptor_to_wait_for_output = self.socket.fileno(),
-                apply_input_seek = False,
-                apply_output_seek = False,
-                flush_on_input_eof = False,
-                on_exit_callback = self._on_in_thread_exit,
-                on_output_write_error = self._on_socket_write_error,
-                termination_event = self._in_thread_stop_event
+                stdin=self._strin,
+                stdout=self.socket,
+                threaded=True,
+                write_method_name='send',
+                close_output_on_eof=False,
+                thread_name='strin -> socket',
+                bs=self._socket_transfer_size,
+                convert_to_str=None,
+                read_method_name='read',
+                exit_on_input_eof=True,
+                waiting_for_input=True,
+                descriptor_to_wait_for_input=self._strin.fileno(),
+                waiting_for_output=True,
+                descriptor_to_wait_for_output=self.socket.fileno(),
+                apply_input_seek=False,
+                apply_output_seek=False,
+                flush_on_input_eof=False,
+                on_exit_callback=self._on_in_thread_exit,
+                on_output_write_error=self._on_socket_write_error,
+                termination_event=self._in_thread_stop_event
                 )
 
             self._out_thread = cat(
-                stdin = self.socket,
-                stdout = self._strout,
-                threaded = True,
-                write_method_name = 'write',
-                close_output_on_eof = False,
-                thread_name = 'socket -> strout',
-                bs = self._socket_transfer_size,
-                convert_to_str = None,
-                read_method_name = 'recv',
-                exit_on_input_eof = True,
-                waiting_for_input = True,
-                descriptor_to_wait_for_input = self.socket.fileno(),
-                waiting_for_output = True,
-                descriptor_to_wait_for_output = self._strout.fileno(),
-                apply_input_seek = False,
-                apply_output_seek = False,
-                flush_on_input_eof = True,
-                on_exit_callback = self._on_out_thread_exit,
-                on_input_read_error = self._on_socket_read_error,
-                termination_event = self._out_thread_stop_event
+                stdin=self.socket,
+                stdout=self._strout,
+                threaded=True,
+                write_method_name='write',
+                close_output_on_eof=False,
+                thread_name='socket -> strout',
+                bs=self._socket_transfer_size,
+                convert_to_str=None,
+                read_method_name='recv',
+                exit_on_input_eof=True,
+                waiting_for_input=True,
+                descriptor_to_wait_for_input=self.socket.fileno(),
+                waiting_for_output=True,
+                descriptor_to_wait_for_output=self._strout.fileno(),
+                apply_input_seek=False,
+                apply_output_seek=False,
+                flush_on_input_eof=True,
+                on_exit_callback=self._on_out_thread_exit,
+                on_input_read_error=self._on_socket_read_error,
+                termination_event=self._out_thread_stop_event
                 )
 
             self._in_thread.start()
@@ -599,9 +606,9 @@ class SocketStreamer:
                 self._connection_stop_signalled = True
                 if self._on_connection_event:
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('stop', self.socket,),
-                        name = "Connection Stopped Thread"
+                        target=self._on_connection_event,
+                        args=('stop', self.socket,),
+                        name="Connection Stopped Thread"
                         ).start()
 
     def _send_connection_error_event(self):
@@ -610,9 +617,9 @@ class SocketStreamer:
                 self._connection_error_signalled = True
                 if self._on_connection_event:
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('error', self.socket,),
-                        name = "Connection Error Thread"
+                        target=self._on_connection_event,
+                        args=('error', self.socket,),
+                        name="Connection Error Thread"
                         ).start()
 
 
@@ -624,9 +631,9 @@ class SocketStreamer:
 
         if self._on_connection_event:
             threading.Thread(
-                target = self._on_connection_event,
-                args = ('restart', self.socket,),
-                name = "Connection Restarted Thread"
+                target=self._on_connection_event,
+                args=('restart', self.socket,),
+                name="Connection Restarted Thread"
                 ).start()
 
 
@@ -640,24 +647,24 @@ class SocketStreamer:
             self._stop_flag = False
 
             self._socket_status_printer = org.wayround.utils.file.FDStatusWatcher(
-                on_status_changed = org.wayround.utils.file.print_status_change
+                on_status_changed=org.wayround.utils.file.print_status_change
                 )
 
             self._pipe_outside = os.pipe()
             self._pipe_inside = os.pipe()
 
-            self._strout = open(self._pipe_outside[1], 'wb', buffering = 0)
-            self.strout = open(self._pipe_outside[0], 'rb', buffering = 0)
+            self._strout = open(self._pipe_outside[1], 'wb', buffering=0)
+            self.strout = open(self._pipe_outside[0], 'rb', buffering=0)
 
 
-            self._strin = open(self._pipe_inside[0], 'rb', buffering = 0)
-            self.strin = open(self._pipe_inside[1], 'wb', buffering = 0)
+            self._strin = open(self._pipe_inside[0], 'rb', buffering=0)
+            self.strin = open(self._pipe_inside[1], 'wb', buffering=0)
 
             self._start_threads()
 
             self._output_availability_watcher_thread = threading.Thread(
-                target = self._output_availability_watcher,
-                name = "Socket Output Availability Watcher Thread"
+                target=self._output_availability_watcher,
+                name="Socket Output Availability Watcher Thread"
                 )
 
             self._output_availability_watcher_thread.start()
@@ -740,9 +747,9 @@ class SocketStreamer:
                 logging.exception("ssl wrap error")
                 if self._on_connection_event:
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('ssl wrap error', self.socket,),
-                        name = "Connection SSL Wrap Error Thread"
+                        target=self._on_connection_event,
+                        args=('ssl wrap error', self.socket,),
+                        name="Connection SSL Wrap Error Thread"
                         ).start()
             else:
                 logging.info(
@@ -753,7 +760,7 @@ cipher:
 {}
 compression:
 {}""".format(
-                        repr(s.getpeercert(binary_form = False)),
+                        repr(s.getpeercert(binary_form=False)),
                         repr(s.cipher()),
                         repr(s.compression())
                         )
@@ -770,9 +777,9 @@ compression:
 
                 if self._on_connection_event:
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('ssl wrapped', self.socket,),
-                        name = "Connection SSL Wrapped Thread"
+                        target=self._on_connection_event,
+                        args=('ssl wrapped', self.socket,),
+                        name="Connection SSL Wrapped Thread"
                         ).start()
 
             self._wrapping = False
@@ -786,9 +793,9 @@ compression:
                 logging.debug("Connection already gone. Unwrapping is pointless (and erroneous)")
                 if self._on_connection_event:
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('ssl unwrapless', self.socket,),
-                        name = "Connection SSL Unwrapped Thread"
+                        target=self._on_connection_event,
+                        args=('ssl unwrapable', self.socket,),
+                        name="Connection SSL Unwrapped Thread"
                         ).start()
 
             else:
@@ -806,9 +813,9 @@ compression:
                     logging.exception("ssl unwrap error")
                     if self._on_connection_event:
                         threading.Thread(
-                            target = self._on_connection_event,
-                            args = ('ssl unwrap error', self.socket,),
-                            name = "Connection SSL Unwrap Error Thread"
+                            target=self._on_connection_event,
+                            args=('ssl unwrap error', self.socket,),
+                            name="Connection SSL Unwrap Error Thread"
                             ).start()
 
                 else:
@@ -822,9 +829,9 @@ compression:
 
                     if self._on_connection_event:
                         threading.Thread(
-                            target = self._on_connection_event,
-                            args = ('ssl unwrapped', self.socket,),
-                            name = "Connection SSL Unwrapped Thread"
+                            target=self._on_connection_event,
+                            args=('ssl unwrapped', self.socket,),
+                            name="Connection SSL Unwrapped Thread"
                             ).start()
 
             self._wrapping = False
@@ -837,6 +844,8 @@ compression:
 
 
     def is_ssl_working(self):
+
+        import ssl
 
         return isinstance(self.socket, ssl.SSLSocket)
 
@@ -868,7 +877,7 @@ compression:
 
         return ret
 
-    def wait(self, what = 'stopped'):
+    def wait(self, what='stopped'):
 
         allowed_what = ['stopped', 'working']
 
@@ -938,9 +947,9 @@ compression:
                     self.connection = True
 
                     threading.Thread(
-                        target = self._on_connection_event,
-                        args = ('start', self.socket,),
-                        name = "Connection Started Thread"
+                        target=self._on_connection_event,
+                        args=('start', self.socket,),
+                        name="Connection Started Thread"
                         ).start()
 
         self._output_availability_watcher_thread = None
