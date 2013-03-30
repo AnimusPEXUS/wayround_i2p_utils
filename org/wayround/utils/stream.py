@@ -227,7 +227,7 @@ def cat(
                             )
                         )
 
-                    logging.debug("buff data(255 bytes max): {}".format(repr(buff[:255])))
+                    logging.debug("buff data(1024 bytes max): {}".format(repr(buff[:1024])))
 
                     if convert_to_str != None:
                         buff = str(buff, encoding=convert_to_str)
