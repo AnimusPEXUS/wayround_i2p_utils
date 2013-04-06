@@ -24,9 +24,9 @@ def expat_parser_connect_target(parser, target):
 class DictTreeBuilder:
 
     def __init__(self):
-        self._clean(init = True)
+        self._clean(init=True)
 
-    def _clean(self, init = False):
+    def _clean(self, init=False):
 
         self._tree = None
         self._element_trac = []
@@ -35,18 +35,18 @@ class DictTreeBuilder:
     def start(self, name, attrs):
 
         new_elem = tag(
-            name = name,
-            attributes = attrs,
-            closed = False,
-            module = None,
-            uid = None,
-            required_css = None,
-            required_js = None,
-            content = [],
-            new_line_before_start = False,
-            new_line_before_content = False,
-            new_line_after_content = False,
-            new_line_after_end = False
+            name=name,
+            attributes=attrs,
+            closed=False,
+            module=None,
+            uid=None,
+            required_css=None,
+            required_js=None,
+            content=[],
+            new_line_before_start=False,
+            new_line_before_content=False,
+            new_line_after_content=False,
+            new_line_after_end=False
             )
 
         if len(self._element_trac) == 0:
@@ -139,7 +139,7 @@ def find_next_tag_end(text):
     ret = -1
 
     parser = xml.parsers.expat.ParserCreate(
-        encoding = encoding
+        encoding=encoding
         )
 
     esd = _ExpatTagEndFinder(parser)
@@ -170,9 +170,9 @@ class ExpatReadStream:
 
     def __init__(self,
         parser,
-        on_read_error = None,
-        on_stream_close = None,
-        on_xml_error = None
+        on_read_error=None,
+        on_stream_close=None,
+        on_xml_error=None
         ):
 
         self.parser = parser
@@ -246,29 +246,29 @@ def static(text):
         }
 
 def html_head(
-    title = '',
-    description = '',
-    keywords = []
+    title='',
+    description='',
+    keywords=[]
     ):
     return tag(
        'head',
-       content = {
+       content={
             '00010_title': tag(
                 'title',
-                content = title
+                content=title
                 ),
             '00020_description': tag(
                 'meta',
-                closed = True,
-                attributes = {
+                closed=True,
+                attributes={
                     'name': 'description',
                     'content': description
                     }
                 ),
             '00030_keywords': tag(
                 'meta',
-                closed = True,
-                attributes = {
+                closed=True,
+                attributes={
                     'name': 'keywords',
                     'content': ' '.join(list(keywords))
                     }
@@ -278,12 +278,12 @@ def html_head(
 
 
 def html(
-    head = None,
-    content = None,
-    body_module = None,
-    body_uid = None,
-    body_js = None,
-    body_css = None
+    head=None,
+    content=None,
+    body_module=None,
+    body_uid=None,
+    body_js=None,
+    body_css=None
     ):
 
     return {
@@ -291,27 +291,27 @@ def html(
         '00015_html_dtd': dtd('html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'),
         '00020_html': tag(
             'html',
-            attributes = {
+            attributes={
                 'version': '-//W3C//DTD XHTML 1.1//EN',
                 'xmlns': 'http://www.w3.org/1999/xhtml',
                 'xml:lang': 'en',
                 'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
                 'xsi:schemaLocation': 'http://www.w3.org/1999/xhtml http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
                 },
-            closed = False,
-            module = None,
-            uid = None,
-            required_css = [],
-            required_js = [],
-            content = {
+            closed=False,
+            module=None,
+            uid=None,
+            required_css=[],
+            required_js=[],
+            content={
                 '00010_head' : head,
                 '00020_body': tag(
                     'body',
-                    module = body_module,
-                    uid = body_uid,
-                    required_css = body_css,
-                    required_js = body_js,
-                    content = content
+                    module=body_module,
+                    uid=body_uid,
+                    required_css=body_css,
+                    required_js=body_js,
+                    content=content
                     )
                 }
             )
@@ -319,17 +319,17 @@ def html(
 
 def tag(
     name,
-    attributes = None,
-    closed = False,
-    module = None,
-    uid = None,
-    required_css = None,
-    required_js = None,
-    content = None,
-    new_line_before_start = None,
-    new_line_before_content = None,
-    new_line_after_content = None,
-    new_line_after_end = None
+    attributes=None,
+    closed=False,
+    module=None,
+    uid=None,
+    required_css=None,
+    required_js=None,
+    content=None,
+    new_line_before_start=None,
+    new_line_before_content=None,
+    new_line_after_content=None,
+    new_line_after_end=None
     ):
     ret = {
         'type': 'tag',
@@ -355,7 +355,7 @@ def tag(
 
     return ret
 
-def check_unit(indict, path = []):
+def check_unit(indict, path=[]):
 
     if isinstance(indict, str):
         return
@@ -544,7 +544,7 @@ def check_unit(indict, path = []):
 
     return
 
-def render_attributes(indict, path = [], tagname = '', xml_indent_size = 2):
+def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
     ret = ''
 
     inaddr_l = len(path)
@@ -645,12 +645,12 @@ class DictTreeToXMLRenderer:
 
     def __init__(
         self,
-        xml_indent_size = 2,
-        generate_css = False,
-        generate_js = False,
-        log_size = 100,
-        space_before_closing_slash = False,
-        css_and_js_holder = None
+        xml_indent_size=2,
+        generate_css=False,
+        generate_js=False,
+        log_size=100,
+        space_before_closing_slash=False,
+        css_and_js_holder=None
         ):
 
         # here linedup units are listed. key is path
@@ -697,7 +697,7 @@ class DictTreeToXMLRenderer:
         self.tree_dict = indict
 
 
-    def _lineup_tree(self, indict, already_added, path = []):
+    def _lineup_tree(self, indict, already_added, path=[]):
 
         logging.debug("_lineup_tree path {}".format('/'.join(path)))
 
@@ -764,7 +764,7 @@ class DictTreeToXMLRenderer:
                     if isinstance(unit['content'], (dict, list)):
 
                         if self._lineup_tree(
-                            unit['content'], already_added, path = path + [path_name]
+                            unit['content'], already_added, path=path + [path_name]
                             ) != 0:
                             ret = 2
 
@@ -775,7 +775,7 @@ class DictTreeToXMLRenderer:
         self.units = {}
         already_added = set()
         ret = self._lineup_tree(
-            self.tree_dict, already_added, path = []
+            self.tree_dict, already_added, path=[]
             )
         #print(repr(list(self.units.keys())))
 
@@ -801,7 +801,7 @@ class DictTreeToXMLRenderer:
                             'exc_info':
                                 org.wayround.utils.error.return_exception_info(
                                     sys.exc_info(),
-                                    tb = True
+                                    tb=True
                                     )
                             }
                         )
@@ -865,9 +865,9 @@ class DictTreeToXMLRenderer:
 
         return "css?module={module}&uid={uid}&file={file}".format_map(
             {
-                'module': urllib.parse.quote(module, encoding = 'utf-8', errors = 'strict'),
-                'uid': urllib.parse.quote(uid, encoding = 'utf-8', errors = 'strict'),
-                'file': urllib.parse.quote(file, encoding = 'utf-8', errors = 'strict')
+                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
+                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
+                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
                 }
             )
 
@@ -877,9 +877,9 @@ class DictTreeToXMLRenderer:
 
         return "js?module={module}&uid={uid}&file={file}".format_map(
             {
-                'module': urllib.parse.quote(module, encoding = 'utf-8', errors = 'strict'),
-                'uid': urllib.parse.quote(uid, encoding = 'utf-8', errors = 'strict'),
-                'file': urllib.parse.quote(file, encoding = 'utf-8', errors = 'strict')
+                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
+                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
+                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
                 }
             )
 
@@ -888,8 +888,8 @@ class DictTreeToXMLRenderer:
         i,
         placement_i,
         typ,
-        css_path_renderer = css_path_renderer,
-        js_path_renderer = js_path_renderer
+        css_path_renderer=css_path_renderer,
+        js_path_renderer=js_path_renderer
         ):
 
         if not typ in ['css', 'js']:
@@ -898,8 +898,8 @@ class DictTreeToXMLRenderer:
         if typ == 'css':
             new_val = tag(
                 'link',
-                closed = True,
-                attributes = {
+                closed=True,
+                attributes={
                     'type': 'text/css',
                     'href': css_path_renderer(self, i),
                     'rel' : 'stylesheet'
@@ -909,7 +909,7 @@ class DictTreeToXMLRenderer:
         elif typ == 'js':
             new_val = tag(
                 'script',
-                attributes = {
+                attributes={
                     'type': 'text/javascript',
                     'src': js_path_renderer(self, i),
                     }
@@ -932,8 +932,8 @@ class DictTreeToXMLRenderer:
 
     def place_found_css_and_js(
         self,
-        css_path_renderer = css_path_renderer,
-        js_path_renderer = js_path_renderer
+        css_path_renderer=css_path_renderer,
+        js_path_renderer=js_path_renderer
         ):
 
         if not isinstance(self.css_and_js_holder, dict):
@@ -951,8 +951,8 @@ class DictTreeToXMLRenderer:
                     i,
                     placement_i,
                     'css',
-                    css_path_renderer = css_path_renderer,
-                    js_path_renderer = js_path_renderer
+                    css_path_renderer=css_path_renderer,
+                    js_path_renderer=js_path_renderer
                     )
 
                 placement_i += 1
@@ -965,8 +965,8 @@ class DictTreeToXMLRenderer:
                     i,
                     placement_i,
                     'js',
-                    css_path_renderer = css_path_renderer,
-                    js_path_renderer = js_path_renderer
+                    css_path_renderer=css_path_renderer,
+                    js_path_renderer=js_path_renderer
                     )
 
                 placement_i += 1
@@ -1063,8 +1063,8 @@ class DictTreeToXMLRenderer:
                 attributes = render_attributes(
                     unit['tag_info']['attributes'],
                     path,
-                    tagname = unit['tag_info']['name'],
-                    xml_indent_size = self.xml_indent_size
+                    tagname=unit['tag_info']['name'],
+                    xml_indent_size=self.xml_indent_size
                     )
 
             closing_slash = ''
@@ -1099,7 +1099,7 @@ class DictTreeToXMLRenderer:
                 elif isinstance(unit['content'], (dict, list)):
 
                     content = self._render(
-                        root, unit['content'], path = path + [path_name]
+                        root, unit['content'], path=path + [path_name]
                         )
                 elif unit['content'] == None:
                     content = ''
@@ -1136,7 +1136,7 @@ class DictTreeToXMLRenderer:
 
         return ret
 
-    def _render(self, root, indict, path = []):
+    def _render(self, root, indict, path=[]):
 
         ret = ''
 
@@ -1180,8 +1180,8 @@ class DictTreeToXMLRenderer:
 
     def render(
         self,
-        css_path_renderer = css_path_renderer,
-        js_path_renderer = js_path_renderer
+        css_path_renderer=css_path_renderer,
+        js_path_renderer=js_path_renderer
         ):
 
         ret = ''
@@ -1199,12 +1199,12 @@ class DictTreeToXMLRenderer:
             if self.css_and_js_holder:
                 self.find_required_css_and_js()
                 self.place_found_css_and_js(
-                    css_path_renderer = css_path_renderer,
-                    js_path_renderer = js_path_renderer
+                    css_path_renderer=css_path_renderer,
+                    js_path_renderer=js_path_renderer
                     )
 
         if isinstance(ret, str):
-            ret = self._render(self.tree_dict, self.tree_dict, path = [])
+            ret = self._render(self.tree_dict, self.tree_dict, path=[])
 
         return ret
 
@@ -1244,7 +1244,7 @@ def test():
     # Dictatorship range's keys must point only on dict-s,
     # othervice it is an error.
 
-    logging.basicConfig(level = 'DEBUG')
+    logging.basicConfig(level='DEBUG')
 
     a = {
         '000_xml_pi': {
@@ -1340,7 +1340,7 @@ def test():
     return
 
 def test2():
-    logging.basicConfig(level = 'DEBUG')
+    logging.basicConfig(level='DEBUG')
     print("Dictator test #2")
     b = DictTreeToXMLRenderer(2, True, True)
     b.set_tree(html())
@@ -1348,5 +1348,4 @@ def test2():
     print(repr(b.units))
     b.print_log()
     print(ret)
-
 
