@@ -1,13 +1,13 @@
 
 def getopt(args):
     """
-    Parser for command line options
+    Parser as command line arguments and options
 
     It's not compatible with CPython getopt module.
 
     It's work differently in many ways.
 
-    Parameter must be list of strings -- Simple sys.argv will do.
+    Parameter must be list of strings -- Simple sys.argv will go.
 
     Example:
 
