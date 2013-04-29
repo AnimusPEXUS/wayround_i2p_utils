@@ -148,31 +148,32 @@ def remove_if_exists(file_or_dir):
 
     file_or_dir = org.wayround.utils.path.abspath(file_or_dir)
 
-    if not os.path.islink(file_or_dir):
+    if os.path.exists(file_or_dir):
+        if not os.path.islink(file_or_dir):
 
-        if os.path.isdir(file_or_dir):
-            try:
-                shutil.rmtree(file_or_dir)
-            except:
-                logging.exception(
-                    "Can't remove dir {}".format(file_or_dir)
-                    )
-                return 1
+            if os.path.isdir(file_or_dir):
+                try:
+                    shutil.rmtree(file_or_dir)
+                except:
+                    logging.exception(
+                        "Can't remove dir {}".format(file_or_dir)
+                        )
+                    return 1
+            else:
+                try:
+                    os.unlink(file_or_dir)
+                except:
+                    logging.exception(
+                        "      can't remove file {}".format(file_or_dir)
+                        )
+                    return 1
+
         else:
             try:
                 os.unlink(file_or_dir)
             except:
-                logging.exception(
-                    "      can't remove file {}".format(file_or_dir)
-                    )
+                logging.exception("      can't remove link {}".format(file_or_dir))
                 return 1
-
-    else:
-        try:
-            os.unlink(file_or_dir)
-        except:
-            logging.exception("      can't remove link {}".format(file_or_dir))
-            return 1
 
     return 0
 

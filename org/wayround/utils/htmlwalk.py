@@ -137,7 +137,7 @@ def html_text_get_links(html_text, base_url, tag_attr=[
 
 # def expand_links(lst=[], cwd=''):
 #     """
-#     Not complited
+#     Not completed
 #     """
 #     lst2 = []
 

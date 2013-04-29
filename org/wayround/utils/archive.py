@@ -22,7 +22,7 @@ def _extract_zip(file_name, output_dir):
     try:
         proc = org.wayround.utils.exec.simple_exec(
             'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr,
-            options=['-qq', file_name, '-d', output_dir],
+            options=['-qq', '-o', file_name, '-d', output_dir],
             )
     except:
         logging.exception("unzip start error")
