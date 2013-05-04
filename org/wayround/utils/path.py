@@ -57,6 +57,19 @@ def realpaths(lst):
 
     return lst
 
+# NOTE: does not work
+#def eval_abs_paths(lst, g, l):
+#
+#    """
+#    Ensure(make) listed variables are(be) absolute path
+#    """
+#
+#    for i in lst:
+#        if i in l:
+#            l[i] = abspath(l[i])
+#
+#    return
+
 def prepend_path(lst, base):
     """
     Removes any trailing sep from base, and inserts it in the start of every
@@ -80,3 +93,30 @@ def prepend_path(lst, base):
 
     return lst
 
+def insert_base(path, base_dir):
+
+    """
+    Parameters always absolute
+    Result is always absolute
+    """
+
+    path = abspath(path)
+    base_dir = abspath(base_dir)
+
+    return abspath(join(base_dir, path))
+
+def remove_base(path, base_dir):
+
+    """
+    Parameters always absolute
+    Result is always absolute
+    """
+    path = abspath(path)
+    base_dir = abspath(base_dir)
+
+    ret = path
+
+    if base_dir != '/' and ret.startswith(base_dir):
+        ret = ret[len(base_dir):]
+
+    return abspath(ret)
