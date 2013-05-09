@@ -106,21 +106,30 @@ class TagEngine:
         return list(ret)
 
 
-    def get_objects(self):
+    def get_objects(self, order=None):
 
-        q = self.sess.query(self.Tag).all()
+        if not order in [None, 'tag', 'object']:
+            raise ValueError("Wrong order selected")
 
-        ret = set()
+        q = None
+        if order == None:
+            q = self.sess.query(self.Tag).all()
+        elif order == 'tag':
+            q = self.sess.query(self.Tag).order_by(self.Tag.tag).all()
+        elif order == 'object':
+            q = self.sess.query(self.Tag).order_by(self.Tag.obj).all()
+
+        ret = list()
         for i in q:
-            ret.add(i.obj)
+            ret.append(i.obj)
 
-        return list(ret)
+        return ret
 
     def get_objects_and_tags_dict(self):
 
         ret = dict()
 
-        objs = self.get_objects()
+        objs = self.get_objects(order='object')
 
         for i in objs:
             ret[i] = self.get_tags(i)
