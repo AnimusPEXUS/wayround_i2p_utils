@@ -139,13 +139,14 @@ class TagEngine:
     get_all_object = get_objects
 
     def get_all_tags(self):
-        q = self.sess.query(self.Tag).all()
 
-        ret = set()
+        q = self.sess.query(sqlalchemy.distinct(self.Tag.tag)).all()
+
+        ret = []
         for i in q:
-            ret.add(i.tag)
+            ret.append(i[0])
 
-        return list(ret)
+        return ret
 
     def get_size(self):
 
@@ -153,6 +154,9 @@ class TagEngine:
         ret = self.sess.query(self.Tag).count()
 
         return ret
+
+    def get_objects_by_tag(self, tag):
+        return self.get_objects_by_tags([tag])
 
     def get_objects_by_tags(self, tags):
 
