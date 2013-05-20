@@ -3,6 +3,16 @@ import inspect
 
 def render_help(object_dic, order_list=None, only_titles=False, key=None):
 
+    # FIXME: complete doc
+    """
+    Render Python function __doc__ text to help
+
+    object_dic - dict with <'name':callable> structure.
+    order_list - order in whch outut must be created
+    only_titles - extract only titles(first lines) from callables __doc__ members
+    key -
+    """
+
     key_list = []
 
     if isinstance(order_list, list):

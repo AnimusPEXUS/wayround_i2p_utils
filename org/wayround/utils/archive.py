@@ -671,3 +671,36 @@ def extract_low(
                         shutil.move(i2, outdir)
 
     return ret
+
+def tarobj_check_member_sum(tarobj, sums, member_name):
+
+    """
+    Check tarball member checksum.
+
+    Sums must be supplied with sums parameter, which must be dict of building::
+
+        sums == {'filename':'checksum'}
+    """
+
+    ret = True
+
+    fobj = tar_member_get_extract_file(
+        tarobj,
+        member_name
+        )
+
+    if not isinstance(fobj, tarfile.ExFileObject):
+        ret = False
+    else:
+
+        sum = org.wayround.utils.checksum.make_fileobj_checksum(fobj)
+
+        if sum == sums[member_name]:
+            ret = True
+        else:
+            ret = False
+
+        fobj.close()
+
+    return ret
+
