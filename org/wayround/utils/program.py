@@ -77,6 +77,7 @@ def program(command_name, config, commands, loglevel='INFO'):
                             subcommand
                             )
                         )
+                    ret = 1
 
                 if not isinstance(ret, int):
                     logging.warning(
