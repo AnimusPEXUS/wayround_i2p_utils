@@ -71,6 +71,7 @@ def program(command_name, config, commands, loglevel='INFO'):
                 try:
                     ret = commands[command][subcommand](config, opts, args[2:])
                 except:
+                    print()
                     logging.exception(
                         "Error while executing command: {}::{}".format(
                             command,
