@@ -4,6 +4,7 @@ import subprocess
 
 from distutils.core import setup
 from distutils.extension import Extension
+from Cython.Distutils import build_ext
 
 py_compil_args = None
 py_link_args = None
@@ -43,6 +44,11 @@ This package contains various useful modules functions and classes.
             ["org/wayround/utils/format/elf_bin.c"],
             extra_compile_args=py_compil_args,
             extra_link_args=py_link_args,
+            ),
+        Extension(
+            "org.wayround.utils.version",
+            ["org/wayround/utils/version.pyx"],
+            # TODO: pkg-config
             )
         ],
     package_data={'org.wayround.utils.format': ['*.c', '*.h']}
