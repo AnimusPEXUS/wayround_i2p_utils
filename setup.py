@@ -45,11 +45,12 @@ This package contains various useful modules functions and classes.
             extra_compile_args=py_compil_args,
             extra_link_args=py_link_args,
             ),
-        Extension(
-            "org.wayround.utils.version",
-            ["org/wayround/utils/version.pyx"],
-            # TODO: pkg-config
-            )
+#        Extension(
+#            "org.wayround.utils.version",
+#            ["org/wayround/utils/version.pyx"],
+#            # TODO: pkg-config
+#            )
         ],
+#    cmdclass={'build_ext': build_ext},
     package_data={'org.wayround.utils.format': ['*.c', '*.h']}
     )
