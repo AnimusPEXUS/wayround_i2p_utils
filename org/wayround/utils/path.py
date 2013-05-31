@@ -2,8 +2,8 @@
 import copy
 import os.path
 
-D_SEP = os.path.sep * 2
 S_SEP = os.path.sep
+D_SEP = S_SEP * 2
 
 
 def _remove_double_sep(str_in):
@@ -17,20 +17,46 @@ def _remove_tariling_slash(str_in):
 
     ret = str_in
 
-    while ret.endswith('/'):
+    while ret.endswith(S_SEP):
         ret = ret[:-1]
+
+    if len(ret) == 0:
+        ret = S_SEP
 
     return ret
 
 def join(*args):
 
-    ret = ''
+    for i in args:
+        if not isinstance(i, (str, list,)):
+            raise ValueError("arguments must be strings or lists")
+
+    if len(args) == 0:
+        raise TypeError("missing 1 required positional argument")
+
+    abso = False
+    if len(args) != 0 and len(args[0]) != 0:
+        abso = args[0][0] == S_SEP
+
+    ret_l = []
 
     for i in args:
-        ret += i + S_SEP
 
-    ret = _remove_double_sep(ret)
-    ret = _remove_tariling_slash(ret)
+        if isinstance(i, list):
+
+            ret_l += join(*i).split(S_SEP)
+
+        else:
+            ret_l += i.split(S_SEP)
+
+
+    while '' in ret_l:
+        ret_l.remove('')
+
+    ret = S_SEP.join(ret_l)
+
+    if abso:
+        ret = S_SEP + ret
 
     return ret
 

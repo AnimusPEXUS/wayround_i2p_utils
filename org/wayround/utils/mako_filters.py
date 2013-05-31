@@ -1,3 +1,5 @@
+import urllib
+
 import mako.filters
 
 mako.filters.DEFAULT_ESCAPES['u_path'] = 'filters.u_path_escape'

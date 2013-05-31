@@ -101,6 +101,8 @@ def copytree(
     dst_must_be_empty=True
     ):
 
+    # TODO: think of symlinks
+
     src_dir = org.wayround.utils.path.abspath(src_dir)
     dst_dir = org.wayround.utils.path.abspath(dst_dir)
 
@@ -248,27 +250,98 @@ def inderictory_copy_file(directory, file1, file2):
 def files_recurcive_list(
     dirname,
     onerror=None,
-    followlinks=False
+    followlinks=False,
+    exclude_paths=None,
+    relative_to=None
     ):
+
+    if relative_to and not isinstance(relative_to, str):
+        raise ValueError("relative_to must be str or None")
+
+    dirname = org.wayround.utils.path.normpath(dirname)
+
+    absp = dirname.startswith('/')
+    dirname = org.wayround.utils.path.abspath(dirname)
 
     lst = []
 
-    for dir, dirs, files in os.walk(dirname, onerror=onerror, followlinks=followlinks):
+    if isinstance(exclude_paths, list):
+        exclude_paths2 = list()
+
+        for i in exclude_paths:
+
+            f_path = None
+
+            if i.startswith('/'):
+                f_path = org.wayround.utils.path.abspath(i)
+            else:
+                f_path = org.wayround.utils.path.abspath(
+                    org.wayround.utils.path.join(
+                        dirname, i
+                        )
+                    )
+
+#            print("f_apth: {}".format(f_path))
+#            print("dirname: {}".format(dirname))
+
+            if ((dirname == os.path.sep and f_path.startswith(os.path.sep)) or
+                (f_path + os.path.sep).startswith(dirname + os.path.sep)):
+                exclude_paths2.append(f_path)
+
+        exclude_paths = exclude_paths2
+
+#    print("exclude_paths == {}".format(exclude_paths))
+
+#    exit(0)
+    for dire, dirs, files in os.walk(
+        dirname,
+        onerror=onerror,
+        followlinks=followlinks
+        ):
+
+        if isinstance(exclude_paths, list):
+
+            for i in dirs[:]:
+
+                f_path = org.wayround.utils.path.abspath(
+                    org.wayround.utils.path.join(
+                        dire, i
+                        )
+                    )
+
+#                print(f_path)
+                if f_path in exclude_paths:
+#                    print("Excluding {}".format(i))
+                    while i in dirs:
+                        dirs.remove(i)
 
         for f in files:
 
-            if dirname.startswith('/'):
-                f_path = os.path.join(dir, f)
-            else:
-                f_path = os.path.join(dirname, dir, f)
+            f_path = org.wayround.utils.path.join(dire, f)
 
             lst.append(f_path)
+
+    ret = lst
+
+    if not relative_to:
+
+        if not absp:
+
+            p_path_s_l = len(dirname) + 1
+
+            for i in range(len(ret)):
+                ret[i] = ret[i][p_path_s_l:]
+
+    else:
+
+        for i in range(len(ret)):
+            ret[i] = org.wayround.utils.path.relpath(ret[i], relative_to)
 
     return lst
 
 
 def progress_write_finish():
-    sys.stdout.write("\n")
+    sys.stdout.write('\n')
     sys.stdout.flush()
     return
 
@@ -276,13 +349,13 @@ def progress_write(line_to_write, new_line=False):
 
     new_line_str = ''
 
-    if line_to_write.endswith("\n"):
+    if line_to_write.endswith('\n'):
         new_line = True
-        line_to_write = line_to_write.rstrip("\n")
+        line_to_write = line_to_write.rstrip('\n')
 
     if new_line:
         new_line = True
-        new_line_str = "\n"
+        new_line_str = '\n'
 
     width = 80
     ts = org.wayround.utils.terminal.get_terminal_size(sys.stdout.fileno())
@@ -291,7 +364,7 @@ def progress_write(line_to_write, new_line=False):
 
     line_to_write_l = len(line_to_write)
 
-    line_to_out = "\r{ltw}{spaces}{new_line}\r".format_map(
+    line_to_out = '\r{ltw}{spaces}{new_line}\r'.format_map(
         {
             'ltw': line_to_write,
             'spaces': org.wayround.utils.text.fill(
@@ -303,6 +376,8 @@ def progress_write(line_to_write, new_line=False):
 
     if len(line_to_out) > width:
         line_to_out = line_to_out[:width + 1] + new_line_str + '\r'
+
+    # TODO: put sys.stdout to parameters
 
     sys.stdout.write(line_to_out)
     sys.stdout.flush()
