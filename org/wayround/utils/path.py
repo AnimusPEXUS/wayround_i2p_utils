@@ -5,6 +5,7 @@ import os.path
 S_SEP = os.path.sep
 D_SEP = S_SEP * 2
 
+# TODO: documentation for all functions
 
 def _remove_double_sep(str_in):
 
@@ -32,7 +33,7 @@ def join(*args):
             raise ValueError("arguments must be strings or lists")
 
     if len(args) == 0:
-        raise TypeError("missing 1 required positional argument")
+        raise TypeError("missing 1 required positional argument: 'args'")
 
     abso = False
     if len(args) != 0 and len(args[0]) != 0:
@@ -59,6 +60,25 @@ def join(*args):
         ret = S_SEP + ret
 
     return ret
+
+def split(path):
+
+    absp = path.startswith('/')
+
+    path = _remove_double_sep(path)
+    path = _remove_tariling_slash(path)
+
+    ret = path.split('/')
+
+    while '' in ret:
+        ret.remove('')
+
+    if absp:
+
+        ret.insert(0, '/')
+
+    return ret
+
 
 def normpath(path):
     return _remove_double_sep(os.path.normpath(path))
@@ -99,7 +119,7 @@ def realpaths(lst):
 def prepend_path(lst, base):
     """
     Removes any trailing sep from base, and inserts it in the start of every
-    lst item. it item not starts with sep, inserts set between base and item
+    lst item. if item not starts with separator, inserts it between base and item
     """
 
     lst = copy.copy(lst)
@@ -119,30 +139,33 @@ def prepend_path(lst, base):
 
     return lst
 
-def insert_base(path, base_dir):
-
+def unprepend_path(lst, base):
     """
-    Parameters always absolute
-    Result is always absolute
+    Removes any trailing sep from base, and removes it from the start of every
+    lst item.
     """
 
-    path = abspath(path)
-    base_dir = abspath(base_dir)
+    while base.endswith(S_SEP):
+        base = base[:-1]
 
-    return abspath(join(base_dir, path))
+    for i in lst:
+        if not (i + S_SEP).startswith(base + S_SEP):
+            raise ValueError("Not all items in lst have base `{}'".format(base))
 
-def remove_base(path, base_dir):
+    lst = copy.copy(lst)
 
-    """
-    Parameters always absolute
-    Result is always absolute
-    """
-    path = abspath(path)
-    base_dir = abspath(base_dir)
+    base_l = len(base)
 
-    ret = path
+    for i in range(len(lst)):
 
-    if base_dir != '/' and ret.startswith(base_dir):
-        ret = ret[len(base_dir):]
+        lst[i] = lst[i][base_l:]
 
-    return abspath(ret)
+    lst = list(set(lst))
+
+    return lst
+
+def insert_base(path, base):
+    return prepend_path([path], base)[0]
+
+def remove_base(path, base):
+    return unprepend_path([path], base)[0]

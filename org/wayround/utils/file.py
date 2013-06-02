@@ -252,7 +252,9 @@ def files_recurcive_list(
     onerror=None,
     followlinks=False,
     exclude_paths=None,
-    relative_to=None
+    relative_to=None,
+    mute=True,
+    sort=False
     ):
 
     if relative_to and not isinstance(relative_to, str):
@@ -264,6 +266,11 @@ def files_recurcive_list(
     dirname = org.wayround.utils.path.abspath(dirname)
 
     lst = []
+
+    if not mute:
+        logging.info(
+            "Setting list of files in `{}' and it's subdirs".format(dirname)
+            )
 
     if isinstance(exclude_paths, list):
         exclude_paths2 = list()
@@ -281,23 +288,24 @@ def files_recurcive_list(
                         )
                     )
 
-#            print("f_apth: {}".format(f_path))
-#            print("dirname: {}".format(dirname))
-
             if ((dirname == os.path.sep and f_path.startswith(os.path.sep)) or
                 (f_path + os.path.sep).startswith(dirname + os.path.sep)):
                 exclude_paths2.append(f_path)
 
         exclude_paths = exclude_paths2
 
-#    print("exclude_paths == {}".format(exclude_paths))
+    if not mute:
+        logging.info("Walking...")
 
-#    exit(0)
     for dire, dirs, files in os.walk(
         dirname,
         onerror=onerror,
         followlinks=followlinks
         ):
+
+        if sort:
+            dirs.sort()
+            files.sort()
 
         if isinstance(exclude_paths, list):
 
@@ -309,9 +317,7 @@ def files_recurcive_list(
                         )
                     )
 
-#                print(f_path)
                 if f_path in exclude_paths:
-#                    print("Excluding {}".format(i))
                     while i in dirs:
                         dirs.remove(i)
 
@@ -320,6 +326,12 @@ def files_recurcive_list(
             f_path = org.wayround.utils.path.join(dire, f)
 
             lst.append(f_path)
+
+        if not mute:
+            progress_write("    ({} files): {}".format(len(lst), dire))
+
+    if not mute:
+        progress_write_finish()
 
     ret = lst
 

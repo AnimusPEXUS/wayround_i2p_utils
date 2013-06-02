@@ -1,4 +1,7 @@
 
+import logging
+import copy
+
 def getopt(args):
     """
     Parser as command line arguments and options
@@ -85,3 +88,50 @@ def getopt_keyed(args):
 
     return opts_k, args
 
+def _opt_strip(opt):
+    return opt.lstrip('!').rstrip('=')
+
+def _opts_strip(opts_list):
+
+    ret = []
+
+    for i in opts_list:
+        ret.append(_opt_strip(i))
+
+    return ret
+
+def check_options(opts, opts_list, mute=False):
+
+    ret = 0
+
+    for i in opts:
+        if not i in _opts_strip(opts_list):
+
+            if not mute:
+                logging.error("option not supported: {}".format(i))
+
+            ret += 1
+
+    for i in opts_list:
+
+        i_stripped = _opt_strip(i)
+
+        required = i.startswith('!')
+        value_required = i.endswith('=')
+
+        if required and not i_stripped in opts:
+
+            if not mute:
+                logging.error("required parameter absent: {}".format(i_stripped))
+
+            ret += 1
+
+        if i_stripped in opts:
+            if value_required and opts[i_stripped] == None:
+
+                if not mute:
+                    logging.error("parameter `{}' must have value".format(i_stripped))
+
+                ret += 1
+
+    return ret
