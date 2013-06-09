@@ -254,7 +254,10 @@ def files_recurcive_list(
     exclude_paths=None,
     relative_to=None,
     mute=True,
-    sort=False
+    sort=False,
+    acceptable_endings=None,
+    print_found=False,
+    list_symlincs=True
     ):
 
     if relative_to and not isinstance(relative_to, str):
@@ -325,10 +328,39 @@ def files_recurcive_list(
 
             f_path = org.wayround.utils.path.join(dire, f)
 
-            lst.append(f_path)
+            append = True
+
+            if not list_symlincs and os.path.islink(f_path):
+                append = False
+
+            if append:
+                if acceptable_endings:
+
+                    found = False
+
+                    for i in acceptable_endings:
+                        if f.endswith(i):
+                            found = True
+                            break
+
+                    if not found:
+                        append = False
+
+            if append:
+                if print_found and not mute:
+                    print("    {}".format(f_path))
+                lst.append(f_path)
+
+
 
         if not mute:
-            progress_write("    ({} files): {}".format(len(lst), dire))
+            pp = None
+            if not relative_to:
+                pp = dire
+            else:
+                pp = org.wayround.utils.path.relpath(dire, relative_to)
+
+            progress_write("    ({} files): {}".format(len(lst), pp))
 
     if not mute:
         progress_write_finish()

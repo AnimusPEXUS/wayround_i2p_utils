@@ -4,8 +4,11 @@ Tag Utils
 
 import logging
 
+import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
+
+import org.wayround.utils.file
 
 
 class TagEngine:
@@ -162,29 +165,82 @@ class TagEngine:
 
         ret = set()
 
-        for i in tags:
-            q = self.sess.query(self.Tag).filter_by(tag=i).all()
+        q = self.sess.query(self.Tag).filter(self.Tag.tag.in_(tags)).all()
 
-            for y in q:
-                ret.add(y.obj)
+        for i in q:
+            ret.add(i.obj)
 
         return list(ret)
 
     objects_by_tags = get_objects_by_tags
 
-    def del_object_tags(self, obj):
+    def del_object_tags(self, obj, synchronize_session='evaluate'):
 
-        self.sess.query(self.Tag).filter_by(obj=obj).delete()
-        #self.sess.commit()
+        if isinstance(obj, list):
+
+            for i in range(int(len(obj) / 100) + 1):
+                self.sess.query(self.Tag).filter(
+                        self.Tag.obj.in_(
+                            obj[i * 100:(i + 1) * 100])
+                            ).delete(
+                                synchronize_session=synchronize_session
+                                )
+
+        else:
+            self.sess.query(self.Tag).filter_by(obj=obj).delete(
+                synchronize_session=synchronize_session
+                )
 
         return
 
     def del_objects_by_tags(self, tags):
 
-        for i in tags:
-            self.sess.query(self.Tag).filter_by(tag=i).delete()
+        self.sess.query(self.Tag).filter(self.Tag.tag.in_(tags)).delete()
 
-        #self.sess.commit()
+        return
+
+    def remove_duplicated_objects(self, mute=True):
+
+        logging.info("Loading...")
+        objs = self.get_objects(order='object')
+        logging.info("Cleaning...")
+
+        changed = False
+        ii = 0
+        ic = len(objs)
+        removed = 0
+        for i in objs[:]:
+
+            if objs.count(i) > 1:
+
+                changed = True
+
+                while i in objs:
+                    objs.remove(i)
+
+                removed += self.sess.query(self.Tag).filter_by(obj=i).count()
+
+                self.sess.query(self.Tag).filter_by(obj=i).delete()
+
+
+
+            ii += 1
+
+            if not mute:
+                org.wayround.utils.file.progress_write(
+                    "    {} of {} ({:.2f}%, deleted {})".format(
+                        ii,
+                        ic,
+                        100 / (float(ic / ii)),
+                        removed
+                        )
+                    )
+
+        if not mute:
+            org.wayround.utils.file.progress_write_finish()
+
+        if changed:
+            self.sess.commit()
 
         return
 

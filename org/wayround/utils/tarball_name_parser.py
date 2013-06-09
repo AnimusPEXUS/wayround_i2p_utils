@@ -406,6 +406,9 @@ def parse_tarball_name(
     .. NOTE:: version numbers are always joined with \`.\'
     """
 
+    if not isinstance(filename, str):
+        raise TypeError("filename must be str")
+
     ret = _source_name_parse_delicate(filename, mute)
 
     if not isinstance(ret, dict):

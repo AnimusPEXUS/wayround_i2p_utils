@@ -169,3 +169,16 @@ def insert_base(path, base):
 
 def remove_base(path, base):
     return unprepend_path([path], base)[0]
+
+def bases(lst):
+
+    """
+    Removes dirnames from paths
+    """
+
+    ret = []
+
+    for i in lst:
+        ret.append(os.path.dirname(i))
+
+    return ret
