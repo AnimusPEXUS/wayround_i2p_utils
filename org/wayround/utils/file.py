@@ -257,11 +257,22 @@ def files_recurcive_list(
     sort=False,
     acceptable_endings=None,
     print_found=False,
-    list_symlincs=True
+    list_symlincs=True,
+    maxdepth=None
     ):
 
     if relative_to and not isinstance(relative_to, str):
         raise ValueError("relative_to must be str or None")
+
+    if maxdepth:
+
+        if not isinstance(maxdepth, int):
+            raise ValueError("maxdepth must be int or None")
+
+        else:
+            if maxdepth < 0:
+                raise ValueError("maxdepth can't be lesser when zero")
+
 
     dirname = org.wayround.utils.path.normpath(dirname)
 
@@ -274,6 +285,7 @@ def files_recurcive_list(
         logging.info(
             "Setting list of files in `{}' and it's subdirs".format(dirname)
             )
+
 
     if isinstance(exclude_paths, list):
         exclude_paths2 = list()
@@ -300,11 +312,22 @@ def files_recurcive_list(
     if not mute:
         logging.info("Walking...")
 
+    dirname_path_length = org.wayround.utils.path.path_length(dirname)
+
     for dire, dirs, files in os.walk(
         dirname,
         onerror=onerror,
         followlinks=followlinks
         ):
+
+        current_path_length = (
+            org.wayround.utils.path.path_length(dire) - dirname_path_length
+            ) + 1
+
+        if maxdepth:
+            if current_path_length == maxdepth:
+                while len(dirs) != 0:
+                    del(dirs[0])
 
         if sort:
             dirs.sort()

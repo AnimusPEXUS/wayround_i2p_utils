@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import lzma
 
 import org.wayround.utils.exec
 import org.wayround.utils.file
@@ -548,56 +549,107 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
 
 def xzcat(stdin, convert_to_str=None):
 
+    if convert_to_str == True:
+        convert_to_str = 'utf-8'
+    elif convert_to_str == False:
+        convert_to_str = None
+
     ret = 0
 
-    comprproc = None
-    try:
-        comprproc = org.wayround.utils.exec.simple_exec(
-            'xz',
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            options=['-d'],
-            bufsize=0,
-            stderr=sys.stderr
-            )
-    except:
-        ret = 1
+    dec = lzma.LZMADecompressor(memlimit=200 * 1024 ** 2)
+
+    outstr = None
+    if not convert_to_str:
+        outstr = io.BytesIO()
     else:
         outstr = io.StringIO()
 
+    dec_data = b''
+
+    while True:
+
+        if dec.eof:
+            break
+
         try:
-            cat_p1 = org.wayround.utils.stream.cat(
-                stdin,
-                comprproc.stdin,
-                threaded=True,
-                close_output_on_eof=True
-                )
-            cat_p1.start()
+            buff = stdin.read(2 * 1024 ** 2)
 
-            cat_p2 = org.wayround.utils.stream.cat(
-                comprproc.stdout,
-                outstr,
-                threaded=True,
-                close_output_on_eof=False,
-                convert_to_str=convert_to_str
-                )
-            cat_p2.start()
+            if len(buff) != 0:
 
-            comprproc.wait()
-            cat_p1.join()
-            cat_p2.join()
+                dec_data = dec.decompress(buff)
 
-            if comprproc.returncode != 0:
-                ret = comprproc.returncode
+                if not convert_to_str:
+                    outstr.write(dec_data)
+                else:
+                    outstr.write(str(dec_data, convert_to_str))
 
-            if ret == 0:
-                #outstr.seek(0)
-                ret = outstr.getvalue()
-        finally:
-            outstr.close()
-            del(outstr)
+        except:
+            logging.exception("Exception while decompressing LZMA data")
+            ret = 1
+            break
+
+    if ret == 0:
+        ret = outstr.getvalue()
+
+    outstr.close()
 
     return ret
+
+
+#def xzcat(stdin, convert_to_str=None):
+#
+#    ret = 0
+#
+#    comprproc = None
+#    try:
+#        comprproc = org.wayround.utils.exec.simple_exec(
+#            'xz',
+#            stdin=subprocess.PIPE,
+#            stdout=subprocess.PIPE,
+#            options=['-d'],
+#            bufsize=0,
+#            stderr=sys.stderr
+#            )
+#    except:
+#        ret = 1
+#    else:
+#
+#        make  BytesIO in case convert_to_str == None
+#        outstr = io.StringIO()
+#
+#        try:
+#            cat_p1 = org.wayround.utils.stream.cat(
+#                stdin,
+#                comprproc.stdin,
+#                threaded=True,
+#                close_output_on_eof=True
+#                )
+#            cat_p1.start()
+#
+#            cat_p2 = org.wayround.utils.stream.cat(
+#                comprproc.stdout,
+#                outstr,
+#                threaded=True,
+#                close_output_on_eof=False,
+#                convert_to_str=convert_to_str
+#                )
+#            cat_p2.start()
+#
+#            comprproc.wait()
+#            cat_p1.join()
+#            cat_p2.join()
+#
+#            if comprproc.returncode != 0:
+#                ret = comprproc.returncode
+#
+#            if ret == 0:
+#                #outstr.seek(0)
+#                ret = outstr.getvalue()
+#        finally:
+#            outstr.close()
+#            del(outstr)
+#
+#    return ret
 
 def extract_low(
     log,

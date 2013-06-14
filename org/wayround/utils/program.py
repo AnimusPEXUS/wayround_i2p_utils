@@ -75,9 +75,11 @@ def program(command_name, config, commands, loglevel='INFO'):
                 try:
                     ret = commands[command][subcommand](config, opts, args[2:])
                 except BrokenPipeError:
+                    print()
                     logging.error("BrokenPipeError")
                     ret = 1
                 except KeyboardInterrupt:
+                    print()
                     logging.error("Interrupted With Keyboard")
                     ret = 1
                 except:
