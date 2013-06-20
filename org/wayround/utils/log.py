@@ -29,7 +29,7 @@ def process_output_logger(process, log):
 
 class Log:
 
-    def __init__(self, log_dir, logname, echo=True):
+    def __init__(self, log_dir, logname, echo=True, timestamp=None):
 
         ret = 0
         self.code = 0
@@ -57,7 +57,8 @@ class Log:
                 ret = 2
 
         if ret == 0:
-            timestamp = org.wayround.utils.time.currenttime_stamp()
+            if timestamp == None:
+                timestamp = org.wayround.utils.time.currenttime_stamp()
             filename = org.wayround.utils.path.abspath(
                 os.path.join(
                     log_dir,
