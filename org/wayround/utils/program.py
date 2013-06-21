@@ -6,7 +6,7 @@ import logging
 import org.wayround.utils.getopt
 import org.wayround.utils.program_help
 
-def logging_setup():
+def logging_setup(loglevel='INFO'):
 
     # Logging settings
     for i in [
@@ -23,7 +23,7 @@ def logging_setup():
     opts, args = org.wayround.utils.getopt.getopt_keyed(sys.argv[1:])
 
     # Setup logging level and format
-    log_level = 'INFO'
+    log_level = loglevel
 
     if '--loglevel' in opts:
         log_level_u = opts['--loglevel'].upper()
@@ -41,7 +41,7 @@ def logging_setup():
         level=log_level
         )
 
-def program(command_name, config, commands, loglevel='INFO'):
+def program(command_name, config, commands):
 
     opts, args = org.wayround.utils.getopt.getopt_keyed(sys.argv[1:])
 
