@@ -263,7 +263,8 @@ def cat(
                             raise
                         except:
                             logging.error(
-                                "Can't use object's `{}' `{}' method".format(
+                                "Can't use object's `{}' `{}' method.\n"
+                                "    (Output process closed it's input. It can be not an error)".format(
                                     stdout,
                                     write_method_name
                                     )
@@ -342,7 +343,10 @@ def cat(
         except CatTerminationFlagFound:
             logging.debug("Termination flag caught")
         except:
-            raise
+#            if not threaded:
+#                raise
+#            else:
+            logging.exception("Exception in cat thread")
 
         if apply_output_seek and hasattr(stdout, 'seek'):
             try:
