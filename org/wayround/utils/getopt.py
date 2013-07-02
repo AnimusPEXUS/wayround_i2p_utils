@@ -102,6 +102,13 @@ def _opts_strip(opts_list):
 
 def check_options(opts, opts_list, mute=False):
 
+    """
+    opts - list of opts returned by getopt (i.e.)
+    opts_list - list of acceptable options:
+          starting with '!' - required option
+          ending with '=' - must have parameter
+    """
+
     ret = 0
 
     for i in opts:

@@ -407,11 +407,13 @@ def files_recurcive_list(
     return lst
 
 
+# TODO: output descriptor selector
 def progress_write_finish():
     sys.stdout.write('\n')
     sys.stdout.flush()
     return
 
+# TODO: output descriptor selector
 def progress_write(line_to_write, new_line=False):
 
     new_line_str = ''

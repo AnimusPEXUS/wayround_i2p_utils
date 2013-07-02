@@ -298,7 +298,6 @@ class ProcessStream:
 
             self.in_cat = None
             self.out_cat = None
-            self.out_cat_write_error = False
 
             if not init:
                 if self.stop_flag:
@@ -307,8 +306,6 @@ class ProcessStream:
             self.stop_flag = threading.Event()
 
             self.returncode = None
-
-            self.proc_watcher = None
 
 
         return ret
@@ -622,112 +619,6 @@ def process_stream(
         ret = 222
 
     return ret
-
-
-#def process_stream(
-#    program,
-#    stdin,
-#    stdout,
-#    stderr,
-#    options=[],
-#    proc_bufsize=0,
-#    cat_bufsize=(2 * 1024 ** 2),
-#    cwd=None,
-#    verbose=False,
-#    close_output_on_eof=False
-#    ):
-#    """
-#    Starts `program' and uses it to process stdin to stdout
-#
-#    Streams are workedout using own-fashioned threading mechanisms
-#    """
-#
-#    ret = 0
-#
-#    try:
-#        proc = simple_exec(
-#            program,
-#            stdin=subprocess.PIPE,
-#            stdout=subprocess.PIPE,
-#            stderr=stderr,
-#            options=options,
-#            bufsize=proc_bufsize,
-#            cwd=cwd
-#            )
-#    except:
-#        logging.exception("Error starting process `{}'".format(program))
-#        ret = 1
-#    else:
-#
-#        try:
-#            thread_name = ''
-#
-#            if verbose:
-#                thread_name = 'in >> {}'.format(proc.pid)
-#            else:
-#                thread_name = 'Thread'
-#
-#            cat1 = org.wayround.utils.stream.cat(
-#                stdin,
-#                proc.stdin,
-#                threaded=True,
-#                close_output_on_eof=True,
-#                bs=cat_bufsize,
-#                thread_name=thread_name
-#                )
-#
-#            if verbose:
-#                thread_name = '{} >> out'.format(proc.pid)
-#            else:
-#                thread_name = 'Thread'
-#
-#            cat2 = org.wayround.utils.stream.cat(
-#                proc.stdout,
-#                stdout,
-#                threaded=True,
-#                close_output_on_eof=close_output_on_eof,
-#                bs=cat_bufsize,
-#                thread_name=thread_name
-#                )
-#
-#            cat1.start()
-#            cat2.start()
-#
-#            try:
-#                while True:
-#
-#                    try:
-#                        proc.wait(1)
-#                    except subprocess.TimeoutExpired:
-#                        pass
-#                    except:
-#                        break
-#
-#                    else:
-#
-#                        pass
-#
-#
-#            except:
-#                logging.exception(
-#                    "Exception while waiting for process exit: {}".format(
-#                        proc.pid
-#                        )
-#                    )
-#
-#            cat1.join()
-#            cat2.join()
-#        finally:
-#            if proc.returncode == None:
-#                try:
-#                    proc.terminate()
-#                except:
-#                    logging.exception(
-#                        "Exception while terminating "
-#                        "possibly alive process: {}".format(proc.pid)
-#                        )
-#
-#    return ret
 
 
 def process_file(
