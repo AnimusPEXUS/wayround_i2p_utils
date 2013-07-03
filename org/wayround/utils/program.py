@@ -6,10 +6,13 @@ import copy
 import inspect
 
 import org.wayround.utils.getopt
+import org.wayround.utils.error
 
 NO_DOCUMENTATION = '(No documentation)'
 
 def logging_setup(loglevel='INFO'):
+
+    loglevel = loglevel.upper()
 
     # Logging settings
     for i in [
@@ -154,42 +157,52 @@ def command_processor(command_name, commands, opts_and_args_list, additional_dat
                         message="Interrupted With Keyboard"
                         )
                 except:
+                    e = sys.exc_info()
+
+                    ex_txt = org.wayround.utils.error.return_exception_info(
+                        e,
+                        tb=True
+                        )
+
                     ret = dict(
                         code=1,
-                        message="Error while executing command: {}::{}".format(
+                        message="Error while executing command: {}::{}\n{}".format(
                             command,
-                            subcommand
+                            subcommand,
+                            ex_txt
                             )
-                        )
-
-                if isinstance(res, int):
-                    txt = None
-
-                    if res == 0:
-                        txt = 'No errors'
-                    else:
-                        txt = 'Some error (Read documentation).'
-
-                    ret = dict(
-                        code=res,
-                        message=txt
-                        )
-                elif isinstance(res, dict):
-
-                    ret = dict(
-                        code=res['code'],
-                        message=res['message']
                         )
 
                 else:
-                    ret = dict(
-                        code=1,
-                        message="Command returned not integer and not dict (resetting to 1)."
-                            " It has returned(type:{}):\n{}".format(
-                            type(res),
-                            res
+
+                    if isinstance(res, int):
+                        txt = None
+
+                        if res == 0:
+                            txt = 'No errors'
+                        else:
+                            txt = 'Some error (Read documentation).'
+
+                        ret = dict(
+                            code=res,
+                            message=txt
                             )
-                        )
+                    elif isinstance(res, dict):
+
+                        ret = dict(
+                            code=res['code'],
+                            message=res['message']
+                            )
+
+                    else:
+                        ret = dict(
+                            code=1,
+                            message="Command returned not integer and not dict (resetting to 1)."
+                                " It has returned(type:{}):\n{}".format(
+                                type(res),
+                                res
+                                )
+                            )
 
 
     else:

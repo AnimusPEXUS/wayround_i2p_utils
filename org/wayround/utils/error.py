@@ -3,13 +3,13 @@ import sys
 import traceback
 import pprint
 
-def return_exception_info(e, tb=False):
+def return_exception_info(exc_info, tb=False):
     txt = """
 EXCEPTION: {type}
     VALUE: {val}
 """.format(
-        type=repr(e[0].__name__),
-        val=repr(e[1])
+        type=repr(exc_info[0].__name__),
+        val=repr(exc_info[1])
         )
 
     if tb:
@@ -18,8 +18,8 @@ TRACEBACK:
 {tb}
 {feo}
     """.format(
-            tb=''.join(traceback.format_list(traceback.extract_tb(e[2]))),
-            feo=''.join(traceback.format_exception_only(e[0], e[1]))
+            tb=''.join(traceback.format_list(traceback.extract_tb(exc_info[2]))),
+            feo=''.join(traceback.format_exception_only(exc_info[0], exc_info[1]))
             )
 
     return txt
