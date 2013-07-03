@@ -104,13 +104,20 @@ def parse_wavefront_obj_text(text, mute_errors=False, filename=None):
 
             func_found = False
             for func_data in [
-                ('v', 3, 4),
-                ('vp', 2, 3),
-                ('vn', 3, 3),
-                ('vt', 1, 3),
-                ('ctype', 1, 2),
-                ('deg', 2, 2),
-                ('bmat', None, None)
+                ('v', 3, 4,),
+                ('vp', 2, 3,),
+                ('vn', 3, 3,),
+                ('vt', 1, 3,),
+                ('cstype', 1, 2,),
+                ('deg', 2, 2,),
+                ('bmat', None, None,),
+                ('step', 2, 2,),
+                ('p', None, None,),
+                ('l', None, None,),
+                ('f', None, None,),
+                ('curv', None, None,),
+                ('curv2', None, None,),
+                ('surf', None, None,),
                 ]:
 
                 if func == func_data[0]:
@@ -129,6 +136,12 @@ def parse_wavefront_obj_text(text, mute_errors=False, filename=None):
                             _wrong_data_msg(mute_errors, filename, lines_i)
                             ret = 6
                             res = None
+                        else:
+                            if not isinstance(res, dict):
+                                _wrong_data_msg(mute_errors, filename, lines_i)
+                                ret = 7
+                                res = None
+
 
             if not func_found:
                 _wrong_data_msg(
@@ -148,6 +161,16 @@ def parse_wavefront_obj_text(text, mute_errors=False, filename=None):
     return ret
 
 
+def parse_vertex_sequence(in_str):
+
+    str_values = in_str.split('/')
+
+    values = []
+
+    for i in str_values:
+        values.append(float(i.strip()))
+
+    return values
 
 def v(x, y, z, w=1.0):
     return dict(
@@ -191,7 +214,7 @@ def vt(u, v=0, w=0):
         )
 
 
-def ctype(*args):
+def cstype(*args):
     """
     Two arguments are allowed, first of which are optional
 
@@ -223,7 +246,7 @@ def ctype(*args):
 
 
     return dict(
-        function='ctype',
+        function='cstype',
         values=[
             rat,
             typ
@@ -264,4 +287,224 @@ def bmat(*args):
 
     return ret
 
-# TODO: completion required
+
+def step(stepu, stepv):
+    return dict(
+        function='step',
+        values=[
+            float(stepu),
+            float(stepv)
+            ]
+        )
+
+def p(*args):
+
+    values = []
+    for i in args:
+        values.append(float(i))
+
+    return dict(
+        function='p',
+        values=values
+        )
+
+def l(*args):
+
+    values = []
+    for i in args:
+        values.append(parse_vertex_sequence(i))
+
+    # TODO: add correctness checks
+
+    return dict(
+        function='l',
+        values=values
+        )
+
+def f(*args):
+
+    values = []
+    for i in args:
+        values.append(parse_vertex_sequence(i))
+
+    # TODO: add correctness checks
+
+    return dict(
+        function='l',
+        values=values
+        )
+
+def curv(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    if args_l < 4:
+        ret = 1
+
+    else:
+
+        for i in range(2):
+            values.append(float(args[i]))
+
+        for i in range(2, args_l):
+            values.append(int(args[i]))
+
+        ret = dict(
+            function='curv',
+            values=values
+            )
+
+    return ret
+
+def curv2(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    if args_l < 2:
+        ret = 1
+
+    else:
+
+        for i in range(args_l):
+            values.append(int(args[i]))
+
+        ret = dict(
+            function='curv2',
+            values=values
+            )
+
+    return ret
+
+
+def surf(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    if args_l < 4:
+        ret = 1
+
+    else:
+
+        for i in range(4):
+            values.append(float(args[i]))
+
+        for i in range(4, args_l):
+            values.append(parse_vertex_sequence(args[i]))
+
+        ret = dict(
+            function='surf',
+            values=values
+            )
+
+    return ret
+
+def parm(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    if args_l < 3:
+        ret = 1
+
+    if ret == 0:
+        if not args[1] in ['u', 'v']:
+            ret = 2
+
+    if ret == 0:
+
+        for i in range(args_l):
+            values.append(float(args[i]))
+
+        ret = dict(
+            function='parm',
+            values=values
+            )
+
+    return ret
+
+def _op_x1(args, mode='trim'):
+
+    ret = 0
+
+    if not mode in ['trim', 'hole', 'scrv']:
+        ret = 4
+
+    if ret == 0:
+
+        values = []
+
+        args_l = len(args)
+
+        if args_l < 1:
+            ret = 1
+
+        if ret == 0:
+            if (args_l % 3) != 0:
+                ret = 2
+
+        if ret == 0:
+
+            for i in range(0, args_l, 3):
+                values.append(float(args[i]))
+                values.append(float(args[i + 1]))
+                values.append(int(args[i + 2]))
+
+            ret = dict(
+                function=mode,
+                values=values
+                )
+
+    return ret
+
+def trim(*args):
+    return _op_x1(args, mode='trim')
+
+def hole(*args):
+    return _op_x1(args, mode='hole')
+
+def scrv(*args):
+    return _op_x1(args, mode='scrv')
+
+def sp(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    if args_l < 1:
+        ret = 1
+
+    else:
+
+        for i in range(args_l):
+            values.append(int(args[i]))
+
+        ret = dict(
+            function='sp',
+            values=values
+            )
+
+    return ret
+
+def end():
+    return dict(
+        function='end',
+        values=[]
+        )
