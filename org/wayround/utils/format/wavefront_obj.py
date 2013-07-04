@@ -1,5 +1,6 @@
 
 import logging
+import re
 
 import org.wayround.utils.path
 
@@ -460,9 +461,11 @@ def _op_x1(args, mode='trim'):
         if ret == 0:
 
             for i in range(0, args_l, 3):
-                values.append(float(args[i]))
-                values.append(float(args[i + 1]))
-                values.append(int(args[i + 2]))
+                values += [
+                    float(args[i]),
+                    float(args[i + 1]),
+                    int(args[i + 2])
+                    ]
 
             ret = dict(
                 function=mode,
@@ -508,3 +511,92 @@ def end():
         function='end',
         values=[]
         )
+
+def con(
+    surf_1, q0_1, q1_1, curv2d_1,
+    surf_2, q0_2, q1_2, curv2d_2
+    ):
+    values = [
+        int(surf_1),
+        float(q0_1),
+        float(q1_1),
+        int(curv2d_1),
+        int(surf_2),
+        float(q0_2),
+        float(q1_2),
+        int(curv2d_2)
+        ]
+
+    return dict(
+        function='con',
+        values=values
+        )
+
+def _g_name_check(name):
+
+    ret = 0
+
+    if not re.match(r'^[a-zA-Z0-9]+$', name):
+        ret = 1
+
+    return ret
+
+
+def g(*args):
+
+    ret = 0
+
+    args_l = len(args)
+
+    if args_l < 1:
+        ret = 1
+
+    if ret == 0:
+
+        values = []
+
+        for i in args:
+            if _g_name_check(i) != 0:
+                ret = 2
+                break
+            else:
+                values.append(i)
+
+        if ret == 0:
+            ret = dict(
+                function='g',
+                values=values
+                )
+
+    return ret
+
+def s(value):
+
+    ret = 0
+
+    if not value in ['on', 'off'] or not re.match(r'^\d+$', value):
+        ret = 1
+
+    if ret == 0:
+
+        if value.isdigit():
+            if int(value) > 0:
+                value = 'on'
+            else:
+                value = 'off'
+
+        ret = dict(
+            function='s',
+            values=[value]
+            )
+
+    return ret
+
+def mg(group_number, res='1'):
+
+    ret = 0
+
+    values = []
+
+    if res == 1:
+        pass
