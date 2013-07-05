@@ -594,9 +594,250 @@ def s(value):
 
 def mg(group_number, res='1'):
 
+    values = [
+        int(group_number),
+        float(res)
+        ]
+
+    return dict(
+        function='mg',
+        values=values
+        )
+
+def o(object_name):
+
+    values = [
+        object_name
+        ]
+
+    return dict(
+        function='o',
+        values=values
+        )
+
+def _op_x2(value, mode='bevel'):
+
+    ret = 0
+
+    if not mode in ['bevel', 'c_interp', 'd_interp']:
+        ret = 4
+
+    if ret == 0:
+        if not value in ['on', 'off']:
+            ret = 1
+
+    if ret == 0:
+        value = value == 'on'
+
+        ret = dict(
+            function=mode,
+            values=[value]
+            )
+
+    return ret
+
+def bevel(value):
+    return _op_x2(value, mode='bevel')
+
+def c_interp(value):
+    return _op_x2(value, mode='c_interp')
+
+def d_interp(value):
+    return _op_x2(value, mode='d_interp')
+
+def lod(level):
+
+    ret = 0
+
+    level = int(level)
+
+    if level < 0 or level > 100:
+        ret = 1
+
+    if ret == 0:
+        ret = dict(function='level', values=[level])
+
+    return ret
+
+def maplib(*filenames):
+    values = filenames
+    return dict(
+        function='maplib',
+        values=values
+        )
+
+def usemap(map_name='off'):
+    return dict(function='usemap', values=[map_name])
+
+def usemtl(material_name=None):
+    values = []
+    if material_name:
+        values.append(material_name)
+    return dict(function='usemtl', values=values)
+
+def mtllib(*filenames):
+    values = filenames
+    return dict(
+        function='mtllib',
+        values=values
+        )
+
+def shadow_obj(filename):
+    return dict(
+        function='shadow_obj',
+        values=[filename]
+        )
+
+def trace_obj(filename):
+    return dict(
+        function='trace_obj',
+        values=[filename]
+        )
+
+def ctech(*args):
+
     ret = 0
 
     values = []
 
-    if res == 1:
-        pass
+    args_l = len(args)
+
+    technique = None
+
+    if args_l < 1:
+        ret = 2
+
+    else:
+
+        technique = args[0]
+
+        if not technique in ['cparm', 'cspace', 'curv']:
+            ret = 3
+
+        else:
+
+            if technique in ['cparm', 'cspace']:
+
+                if args_l != 2:
+                    ret = 4
+
+                else:
+                    values = [args[1]]
+
+            elif technique == 'curv':
+
+                if args_l != 3:
+                    ret = 4
+
+                else:
+                    values = args[1:2]
+
+            else:
+                raise Exception("Programming error")
+
+            if ret == 0:
+
+                ret = dict(
+                    function=ctech,
+                    values=values
+                    )
+
+    return ret
+
+def stech(*args):
+
+    ret = 0
+
+    values = []
+
+    args_l = len(args)
+
+    technique = None
+
+    if args_l < 1:
+        ret = 2
+
+    else:
+
+        technique = args[0]
+
+        if not technique in ['cparma', 'cparmb', 'cspace', 'curv']:
+            ret = 3
+
+        else:
+
+            if technique in ['cparma', 'curv']:
+
+                if args_l != 3:
+                    ret = 4
+
+                else:
+                    values = args[1:2]
+
+            elif technique in ['cparmb', 'cspace']:
+
+                if args_l != 2:
+                    ret = 4
+
+                else:
+                    values = [args[1]]
+
+            else:
+                raise Exception("Programming error")
+
+            if ret == 0:
+
+                ret = dict(
+                    function=ctech,
+                    values=values
+                    )
+
+    return ret
+
+def _op_x3(args, mode='bsp'):
+
+    ret = 0
+
+    if not mode in ['bsp', 'bzp', 'cdp']:
+        ret = 1
+    else:
+
+        args_l = len(args)
+
+        if args_l != 16:
+            ret = 2
+
+        else:
+
+            values = []
+
+            for i in args:
+                values.append(int(i))
+
+            ret = dict(
+                function=mode,
+                values=values
+                )
+
+    return ret
+
+def bsp(*args):
+    return _op_x3(args, mode='bsp')
+
+def bzp(*args):
+    return _op_x3(args, mode='bzp')
+
+def cdc(*args):
+
+    values = []
+
+    for i in args:
+        values.append(int(i))
+
+    return dict(
+        function='cdc',
+        values=values
+        )
+
+def cdp(*args):
+    return _op_x3(args, mode='cdp')
