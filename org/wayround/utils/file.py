@@ -798,3 +798,62 @@ def which(name):
             ret = n_f_n
 
     return ret
+
+def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
+
+    reducing_dir_filelist = org.wayround.utils.file.files_recurcive_list(
+        reducing_dir,
+        onerror=None,
+        followlinks=False,
+        exclude_paths=None,
+        relative_to=None,
+        mute=False,
+        sort=True,
+        acceptable_endings=None,
+        print_found=False,
+        list_symlincs=False,
+        maxdepth=None
+        )
+
+    reducing_dir_sums = org.wayround.utils.checksum.checksums_by_list(
+        reducing_dir_filelist, method
+        )
+
+#    del reducing_dir_filelist
+
+    reducable_dir_filelist = org.wayround.utils.file.files_recurcive_list(
+        reducable_dir,
+        onerror=None,
+        followlinks=False,
+        exclude_paths=None,
+        relative_to=None,
+        mute=False,
+        sort=True,
+        acceptable_endings=None,
+        print_found=False,
+        list_symlincs=False,
+        maxdepth=None
+        )
+
+    reducable_dir_sums = org.wayround.utils.checksum.checksums_by_list(
+        reducable_dir_filelist, method
+        )
+
+#    del reducable_dir_filelist
+
+    for i in reducable_dir_filelist:
+
+        for j in reducing_dir_filelist:
+
+            if reducing_dir_sums[j] == reducable_dir_sums[i]:
+
+                rel_path = org.wayround.utils.path.relpath(j, os.path.dirname(i))
+
+                if os.path.isfile(i) or os.path.islink(i):
+                    os.unlink(i)
+
+                os.symlink(rel_path, i)
+
+                break
+
+    return 0
