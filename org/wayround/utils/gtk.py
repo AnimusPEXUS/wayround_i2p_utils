@@ -2,6 +2,7 @@
 import os.path
 import threading
 import logging
+import time
 
 def widget_dict(builder):
 
@@ -180,6 +181,90 @@ class TextView:
 
         return
 
+
+try:
+    from gi.repository import Gtk
+    from gi.repository import Gdk
+except:
+    class MessageDialog:
+
+        def __init__(self, *args, **kwargs):
+            raise Exception("Gtk not available")
+
+else:
+
+    class GtkIteratedLoop:
+
+        def __init__(self):
+            self._exit_event = threading.Event()
+            self._started = False
+
+        def wait(self):
+
+            if self._started:
+                raise Exception(
+                    "Same GtkIteratedLoop must not be "
+                    "started while it's already working"
+                    )
+            else:
+                self._started = True
+
+                self._exit_event.clear()
+
+                while not self._exit_event.is_set():
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
+                    # TODO: this number (0.01) is the guess
+                    time.sleep(0.01)
+
+                self._started = False
+
+                # NOTE: making this class threaded will block Gtk,
+                #       so don't implement threads here
+
+        def stop(self):
+            self._exit_event.set()
+
+
+    class MessageDialog(Gtk.MessageDialog):
+
+        """
+        Documentation same as for Gtk.MessageDialog
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.set_modal(True)
+            self.set_transient_for(args[0])
+            self.set_destroy_with_parent(True)
+            self.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+
+            self.wayround_org_response = Gtk.ResponseType.NONE
+            self.wayround_org_iteration_loop = GtkIteratedLoop()
+
+        def run(self):
+
+            self.show_all()
+
+            self.connect('close', self.wayround_org_close_listener)
+            self.connect('response', self.wayround_org_response_listener)
+
+            self.wayround_org_iteration_loop.wait()
+
+            return self.wayround_org_response
+
+        def destroy(self, *args, **kwargs):
+            self.wayround_org_iteration_loop.stop()
+            self.wayround_org_iteration_loop = None
+            return super().destroy(*args, **kwargs)
+
+        def wayround_org_response_listener(self, dialog, response_id):
+            self.wayround_org_response = response_id
+            self.wayround_org_iteration_loop.stop()
+
+        def wayround_org_close_listener(self, dialog):
+            self.wayround_org_iteration_loop.stop()
 
 def text_view(text, title=''):
 
