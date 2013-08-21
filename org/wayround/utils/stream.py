@@ -7,6 +7,7 @@ import threading
 import time
 
 import org.wayround.utils.file
+import org.wayround.utils.signal
 
 class CatTerminationFlagFound(Exception): pass
 
@@ -424,19 +425,38 @@ def lbl_write(stdin, stdout, threaded=False, typ='info'):
 
 
 
-class SocketStreamer:
+class SocketStreamer(org.wayround.utils.signal.Signal):
     """
     Featured class for flexibly handling socket connection
+
+    Signals:
+    'start' (self, self.socket)
+    'stop' (self, self.socket)
+    'error' (self, self.socket)
+    'restart' (self, self.socket)
+    'ssl wrap error' (self, self.socket)
+    'ssl wrapped' (self, self.socket)
+    'ssl ununwrapable' (self, self.socket)
+    'ssl unwrap error' (self, self.socket)
+    'ssl unwrapped' (self, self.socket)
     """
 
-    def __init__(
-        self,
-        sock,
-        socket_transfer_size=4096,
-        on_connection_event=None
-        ):
+    def __init__(self, sock, socket_transfer_size=4096):
 
         import ssl
+
+        super().__init__(
+            ['start' ,
+             'stop' ,
+             'error',
+             'restart',
+             'ssl wrap error',
+             'ssl wrapped',
+             'ssl ununwrapable' ,
+             'ssl unwrap error',
+             'ssl unwrapped'
+             ]
+            )
 
         if not isinstance(sock, (socket.socket, ssl.SSLSocket)):
             raise TypeError(
@@ -446,11 +466,11 @@ class SocketStreamer:
         self.socket = sock
         self._socket_transfer_size = socket_transfer_size
 
-        self._on_connection_event = on_connection_event
 
         self._clear(init=True)
 
         self.connection = False
+
 
     def __del__(self):
 
@@ -608,23 +628,16 @@ class SocketStreamer:
         if not self._wrapping:
             if not self._connection_stop_signalled:
                 self._connection_stop_signalled = True
-                if self._on_connection_event:
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('stop', self.socket,),
-                        name="Connection Stopped Thread"
-                        ).start()
+
+                self.emit_signal('stop', self, self.socket,)
 
     def _send_connection_error_event(self):
         if not self._wrapping:
             if not self._connection_error_signalled:
                 self._connection_error_signalled = True
-                if self._on_connection_event:
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('error', self.socket,),
-                        name="Connection Error Thread"
-                        ).start()
+
+                self.emit_signal('error', self, self.socket,)
+
 
 
     def _restart_threads(self):
@@ -633,12 +646,7 @@ class SocketStreamer:
         self._start_threads()
         self._stat = 'soft restarted threads'
 
-        if self._on_connection_event:
-            threading.Thread(
-                target=self._on_connection_event,
-                args=('restart', self.socket,),
-                name="Connection Restarted Thread"
-                ).start()
+        self.emit_signal('restart', self, self.socket,)
 
 
 
@@ -749,12 +757,7 @@ class SocketStreamer:
                     )
             except:
                 logging.exception("ssl wrap error")
-                if self._on_connection_event:
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('ssl wrap error', self.socket,),
-                        name="Connection SSL Wrap Error Thread"
-                        ).start()
+                self.emit_signal('ssl wrap error', self, self.socket,)
             else:
                 logging.info(
                     """
@@ -779,12 +782,7 @@ compression:
                 self._start_threads()
 
 
-                if self._on_connection_event:
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('ssl wrapped', self.socket,),
-                        name="Connection SSL Wrapped Thread"
-                        ).start()
+                self.emit_signal('ssl wrapped', self, self.socket,)
 
             self._wrapping = False
 
@@ -795,12 +793,7 @@ compression:
             if not self.connection:
 
                 logging.debug("Connection already gone. Unwrapping is pointless (and erroneous)")
-                if self._on_connection_event:
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('ssl unwrapable', self.socket,),
-                        name="Connection SSL Unwrapped Thread"
-                        ).start()
+                self.emit_signal('ssl ununwrapable', self, self.socket,)
 
             else:
 
@@ -815,12 +808,7 @@ compression:
                     s = self.socket.unwrap()
                 except:
                     logging.exception("ssl unwrap error")
-                    if self._on_connection_event:
-                        threading.Thread(
-                            target=self._on_connection_event,
-                            args=('ssl unwrap error', self.socket,),
-                            name="Connection SSL Unwrap Error Thread"
-                            ).start()
+                    self.emit_signal('ssl unwrap error', self, self.socket,)
 
                 else:
                     self.socket = s
@@ -831,12 +819,7 @@ compression:
 
                     logging.debug('after unwrap sock is {}'.format(self.socket))
 
-                    if self._on_connection_event:
-                        threading.Thread(
-                            target=self._on_connection_event,
-                            args=('ssl unwrapped', self.socket,),
-                            name="Connection SSL Unwrapped Thread"
-                            ).start()
+                    self.emit_signal('ssl unwrapped', self, self.socket,)
 
             self._wrapping = False
 
@@ -947,14 +930,9 @@ compression:
 
             if not self._wrapping:
 
-                if self._on_connection_event:
-                    self.connection = True
+                self.connection = True
 
-                    threading.Thread(
-                        target=self._on_connection_event,
-                        args=('start', self.socket,),
-                        name="Connection Started Thread"
-                        ).start()
+                self.emit_signal('start', self, self.socket,)
 
         self._output_availability_watcher_thread = None
 
