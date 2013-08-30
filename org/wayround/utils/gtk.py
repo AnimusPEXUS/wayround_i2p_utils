@@ -4,194 +4,159 @@ import threading
 import logging
 import time
 
-def widget_dict(builder):
-
+try:
     from gi.repository import Gtk
+    from gi.repository import Gdk
+except:
+    pass
+#    class InitException:
+#
+#        def __init__(self, *args, **kwargs):
+#            raise Exception("Gtk not available")
+#
+#    class GtkIteratedLoop(InitException): pass
+#    class MessageDialog(InitException): pass
 
-    ret = {}
+else:
 
-    all_objects = builder.get_objects()
+    class GtkSession:
 
-    for i in all_objects:
-        if isinstance(i, Gtk.Buildable):
-            ret[Gtk.Buildable.get_name(i)] = i
+        def __init__(self, force=False):
 
-    return ret
+            if not force:
+                raise Exception("This code is deprecated but can be used to try Gtk.main() global locking")
 
-def list_view_select_and_scroll_to_name(treeview, name):
+            logging.debug("Init GtkSession")
+            self._gtk_session_started = False
+            self._thr = None
 
-    from gi.repository import Gtk
+        def _thread(self):
 
-    sel = treeview.get_selection()
-    model = treeview.get_model()
-    ind = -1
-    if model:
-        for i in model:
-            ind += 1
-            if i[0] == name:
-                path = Gtk.TreePath.new_from_string(str(ind))
-                sel.select_path(path)
-                treeview.scroll_to_cell(path, None, True, 0.5, 0.5)
-                break
+            logging.debug("Thread Started")
+            self._gtk_session_started = True
+            Gtk.main()
+            self._gtk_session_started = False
+            logging.debug("Thread Exited")
 
-    return
+        def start(self):
 
-class GtkSession:
+            if not self._gtk_session_started:
+                logging.debug("Creating new thread")
+                self._thr = threading.Thread(target=self._thread)
+    #            self._thr = multiprocessing.Process(target=self._thread)
+                self._thr.start()
+                logging.debug("Started new thread")
 
-    def __init__(self, force=False):
+        def stop(self):
 
-        if not force:
-            raise Exception("This code is deprecated but can be used to try Gtk.main() global locking")
+            if self._gtk_session_started:
+                logging.debug("Stopping main loop")
+                Gtk.main_quit()
+                logging.debug("Joining thread")
+                self._thr.join()
+                logging.debug("Joined thread")
 
-        logging.debug("Init GtkSession")
-        self._gtk_session_started = False
-        self._thr = None
+    class TextView:
 
-    def _thread(self):
+        def __init__(self):
 
-        from gi.repository import Gtk
+            ui_file = os.path.join(
+                os.path.dirname(__file__), 'ui', 'textview.glade'
+                )
 
-        logging.debug("Thread Started")
-        self._gtk_session_started = True
-        Gtk.main()
-        self._gtk_session_started = False
-        logging.debug("Thread Exited")
+            ui = Gtk.Builder()
+            ui.add_from_file(ui_file)
 
-    def start(self):
+            self.ui = widget_dict(ui)
 
-        if not self._gtk_session_started:
-            logging.debug("Creating new thread")
-            self._thr = threading.Thread(target=self._thread)
-#            self._thr = multiprocessing.Process(target=self._thread)
-            self._thr.start()
-            logging.debug("Started new thread")
+            self.ui['button1'].connect('clicked', self.onSaveAsActivated)
 
-    def stop(self):
+        def onSaveAsActivated(self, button):
 
-        from gi.repository import Gtk
+            fc = Gtk.FileChooserDialog(
+                "Select File To Save List",
+                self.ui['window1'],
+                Gtk.FileChooserAction.SAVE,
+                (
+                 Gtk.STOCK_SAVE, Gtk.ResponseType.OK,
+                 Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
+                 )
+                )
 
-        if self._gtk_session_started:
-            logging.debug("Stopping main loop")
-            Gtk.main_quit()
-            logging.debug("Joining thread")
-            self._thr.join()
-            logging.debug("Joined thread")
+            rc_resp = fc.run()
 
-class TextView:
+            path = fc.get_filename()
 
-    def __init__(self):
+            fc.destroy()
 
-        from gi.repository import Gtk
+            if rc_resp == Gtk.ResponseType.OK:
 
-        ui_file = os.path.join(
-            os.path.dirname(__file__), 'ui', 'textview.glade'
-            )
+                dialog_resp = Gtk.ResponseType.YES
 
-        ui = Gtk.Builder()
-        ui.add_from_file(ui_file)
+                if os.path.exists(path) and os.path.isdir(path):
+                    dialog_resp = Gtk.ResponseType.NO
 
-        self.ui = widget_dict(ui)
-
-        self.ui['button1'].connect('clicked', self.onSaveAsActivated)
-
-    def onSaveAsActivated(self, button):
-
-        from gi.repository import Gtk
-
-        fc = Gtk.FileChooserDialog(
-            "Select File To Save List",
-            self.ui['window1'],
-            Gtk.FileChooserAction.SAVE,
-            (
-             Gtk.STOCK_SAVE, Gtk.ResponseType.OK,
-             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
-             )
-            )
-
-        rc_resp = fc.run()
-
-        path = fc.get_filename()
-
-        fc.destroy()
-
-        if rc_resp == Gtk.ResponseType.OK:
-
-            dialog_resp = Gtk.ResponseType.YES
-
-            if os.path.exists(path) and os.path.isdir(path):
-                dialog_resp = Gtk.ResponseType.NO
-
-                dia = Gtk.MessageDialog(
-                    self.ui['window1'],
-                    Gtk.DialogFlags.MODAL,
-                    Gtk.MessageType.ERROR,
-                    Gtk.ButtonsType.OK,
-                    "Directory not acceptable"
-                    )
-
-                dia.run()
-                dia.destroy()
-
-            elif os.path.exists(path) and os.path.isfile(path):
-
-                dialog_resp = Gtk.ResponseType.NO
-
-                dia = Gtk.MessageDialog(
-                    self.ui['window1'],
-                    Gtk.DialogFlags.MODAL,
-                    Gtk.MessageType.QUESTION,
-                    Gtk.ButtonsType.YES_NO,
-                    "File exists. Rewrite?"
-                    )
-
-                if dia.run() == Gtk.ResponseType.YES:
-                    dialog_resp = Gtk.ResponseType.YES
-
-                dia.destroy()
-
-            else:
-                pass
-
-            if (
-                (os.path.exists(path) and dialog_resp == Gtk.ResponseType.YES)
-                or
-                not os.path.exists(path)
-                ):
-
-                buff = self.ui['textview1'].get_buffer()
-                txt = buff.get_text(buff.get_start_iter(), buff.get_end_iter(), False)
-
-                try:
-                    f = open(path, 'w')
-                except:
                     dia = Gtk.MessageDialog(
                         self.ui['window1'],
                         Gtk.DialogFlags.MODAL,
                         Gtk.MessageType.ERROR,
                         Gtk.ButtonsType.OK,
-                        "Couldn't rewrite file `{}'".format(path)
+                        "Directory not acceptable"
                         )
 
                     dia.run()
                     dia.destroy()
+
+                elif os.path.exists(path) and os.path.isfile(path):
+
+                    dialog_resp = Gtk.ResponseType.NO
+
+                    dia = Gtk.MessageDialog(
+                        self.ui['window1'],
+                        Gtk.DialogFlags.MODAL,
+                        Gtk.MessageType.QUESTION,
+                        Gtk.ButtonsType.YES_NO,
+                        "File exists. Rewrite?"
+                        )
+
+                    if dia.run() == Gtk.ResponseType.YES:
+                        dialog_resp = Gtk.ResponseType.YES
+
+                    dia.destroy()
+
                 else:
+                    pass
 
-                    f.write(txt)
-                    f.close()
+                if (
+                    (os.path.exists(path) and dialog_resp == Gtk.ResponseType.YES)
+                    or
+                    not os.path.exists(path)
+                    ):
 
-        return
+                    buff = self.ui['textview1'].get_buffer()
+                    txt = buff.get_text(buff.get_start_iter(), buff.get_end_iter(), False)
+
+                    try:
+                        f = open(path, 'w')
+                    except:
+                        dia = Gtk.MessageDialog(
+                            self.ui['window1'],
+                            Gtk.DialogFlags.MODAL,
+                            Gtk.MessageType.ERROR,
+                            Gtk.ButtonsType.OK,
+                            "Couldn't rewrite file `{}'".format(path)
+                            )
+
+                        dia.run()
+                        dia.destroy()
+                    else:
+
+                        f.write(txt)
+                        f.close()
+
+            return
 
 
-try:
-    from gi.repository import Gtk
-    from gi.repository import Gdk
-except:
-    class MessageDialog:
-
-        def __init__(self, *args, **kwargs):
-            raise Exception("Gtk not available")
-
-else:
 
     class GtkIteratedLoop:
 
@@ -266,19 +231,46 @@ else:
         def wayround_org_close_listener(self, dialog):
             self.wayround_org_iteration_loop.stop()
 
-def text_view(text, title=''):
+    def text_view(text, title=''):
 
-    from gi.repository import Gtk
+        tw = TextView()
 
-    tw = TextView()
+        tb = Gtk.TextBuffer()
+        tb.set_text(str(text))
 
-    tb = Gtk.TextBuffer()
-    tb.set_text(str(text))
+        tw.ui['textview1'].set_buffer(tb)
 
-    tw.ui['textview1'].set_buffer(tb)
+        tw.ui['window1'].set_title(str(title))
 
-    tw.ui['window1'].set_title(str(title))
+        tw.ui['window1'].show_all()
 
-    tw.ui['window1'].show_all()
+        return
 
-    return
+    def widget_dict(builder):
+
+        ret = {}
+
+        all_objects = builder.get_objects()
+
+        for i in all_objects:
+            if isinstance(i, Gtk.Buildable):
+                ret[Gtk.Buildable.get_name(i)] = i
+
+        return ret
+
+    def list_view_select_and_scroll_to_name(treeview, name):
+
+        sel = treeview.get_selection()
+        model = treeview.get_model()
+        ind = -1
+        if model:
+            for i in model:
+                ind += 1
+                if i[0] == name:
+                    path = Gtk.TreePath.new_from_string(str(ind))
+                    sel.select_path(path)
+                    treeview.scroll_to_cell(path, None, True, 0.5, 0.5)
+                    break
+
+        return
+

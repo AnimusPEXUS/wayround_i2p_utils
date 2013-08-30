@@ -64,7 +64,9 @@ class Signal:
     def _check_signal(self, name):
 
         if not name in self._signal_names:
-            raise ValueError("`{}' is not supported signal".format(name))
+            raise ValueError(
+                "{}: `{}' is not supported signal".format(self, name)
+                )
 
     def emit_signal(self, name, *args, **kwargs):
 
