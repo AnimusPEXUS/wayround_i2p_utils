@@ -22,6 +22,8 @@ def cat(
     convert_to_str=None,
     read_method_name='read',
     write_method_name='write',
+    read_type='file',
+    write_type='file',
     exit_on_input_eof=True,
     flush_after_every_write=False,
     flush_on_input_eof=False,
@@ -39,11 +41,19 @@ def cat(
     on_output_write_error=None
     ):
 
+    debug = False
+
     if not read_method_name.isidentifier():
         raise ValueError("Wrong `read_method_name' parameter")
 
     if not write_method_name.isidentifier():
         raise ValueError("Wrong `write_method_name' parameter")
+
+    if not read_type in ['file', 'socket', 'pipe']:
+        raise ValueError("`read_type' must be file or socket")
+
+    if not write_type in ['file', 'socket', 'pipe']:
+        raise ValueError("`write_type' must be file or socket")
 
     if not hasattr(stdin, read_method_name):
         raise ValueError(
@@ -72,7 +82,6 @@ def cat(
 
     if threaded:
 
-#        return multiprocessing.Process(
         return threading.Thread(
             target=cat,
             args=(stdin, stdout),
@@ -85,6 +94,8 @@ def cat(
                 convert_to_str=convert_to_str,
                 read_method_name=read_method_name,
                 write_method_name=write_method_name,
+                read_type=read_type,
+                write_type=write_type,
                 exit_on_input_eof=exit_on_input_eof,
                 flush_after_every_write=flush_after_every_write,
                 flush_on_input_eof=flush_on_input_eof,
@@ -113,7 +124,7 @@ def cat(
         if verbose:
             logging.info("Starting `{}' thread".format(thread_name))
 
-        buff = ' '
+        buff = None
 
         c = 0
         bytes_counter = 0
@@ -131,68 +142,87 @@ def cat(
                     raise CatTerminationFlagFound()
 
                 if waiting_for_input:
-                    logging.debug(
-                        "waiting for input descriptor {}".format(
-                            descriptor_to_wait_for_input
+                    if debug:
+                        logging.debug(
+                            "{}: waiting for input descriptor {}".format(
+                                thread_name,
+                                descriptor_to_wait_for_input
+                                )
                             )
-                        )
 
-                    in_poll = select.poll()
-                    in_poll.register(descriptor_to_wait_for_input, select.POLLIN)
-                    while len(in_poll.poll(500)) == 0:
+                    while len(select.select([descriptor_to_wait_for_input], [], [], 0.2)[0]) == 0:
 
                         if termination_event and termination_event.is_set():
                             raise CatTerminationFlagFound()
 
-                        logging.debug("rewaiting input")
+                        if debug:
+                            logging.debug(
+                                "{}: waiting for input descriptor {}".format(
+                                    thread_name,
+                                    descriptor_to_wait_for_input
+                                    )
+                                )
 
-                    logging.debug(
-                        "input descriptor {} ready".format(
-                            descriptor_to_wait_for_input
+                    if debug:
+                        logging.debug(
+                            "{}: input descriptor {} - ready".format(
+                                thread_name,
+                                descriptor_to_wait_for_input
+                                )
                             )
-                        )
 
                 if waiting_for_output:
-                    logging.debug(
-                        "waiting for output descriptor {}".format(
-                            descriptor_to_wait_for_output
+                    if debug:
+                        logging.debug(
+                            "{}: waiting for output descriptor {}".format(
+                                thread_name,
+                                descriptor_to_wait_for_output
+                                )
                             )
-                        )
 
-                    out_poll = select.poll()
-                    out_poll.register(descriptor_to_wait_for_output, select.POLLOUT)
-                    while len(out_poll.poll(500)) == 0:
+                    while len(select.select([], [descriptor_to_wait_for_output], [], 0.2)[1]) == 0:
 
                         if termination_event and termination_event.is_set():
                             raise CatTerminationFlagFound()
 
-                        logging.debug("rewaiting output")
+                        if debug:
+                            logging.debug(
+                                "{}: waiting for output descriptor {}".format(
+                                    thread_name,
+                                    descriptor_to_wait_for_output
+                                    )
+                                )
 
-                    logging.debug(
-                        "output descriptor {} ready".format(
-                            descriptor_to_wait_for_output
+                    if debug:
+                        logging.debug(
+                            "{}: output descriptor {} - ready".format(
+                                thread_name,
+                                descriptor_to_wait_for_output
+                                )
                             )
-                        )
 
 
                 if termination_event and termination_event.is_set():
                     raise CatTerminationFlagFound()
 
-                buff = None
-
-                logging.debug(
-                    "Reading {} bytes using stdin.{}".format(
-                        bs,
-                        read_method_name
+                if debug:
+                    logging.debug(
+                        "{}: Reading stdin.{} using block size {}".format(
+                            thread_name,
+                            read_method_name,
+                            bs
+                            )
                         )
-                    )
 
+                buff = b''
 
                 try:
                     # TODO: some kind of timeout needed, or some kind of
                     # termination
                     buff = eval("stdin.{}(bs)".format(read_method_name))
+
                 except:
+                    raise
                     if on_input_read_error:
                         threading.Thread(
                             target=on_input_read_error,
@@ -221,14 +251,21 @@ def cat(
 
                     buff_len = len(buff)
 
-                    logging.debug(
-                        "Readed  {} bytes using stdin.{}".format(
-                            buff_len,
-                            read_method_name
+                    if debug:
+                        logging.debug(
+                            "{}: Readed  {} bytes using stdin.{}".format(
+                                thread_name,
+                                buff_len,
+                                read_method_name
+                                )
                             )
-                        )
 
-                    logging.debug("buff data(1024 bytes max): {}".format(repr(buff[:1024])))
+                        logging.debug(
+                            "{}: buff data: {}".format(
+                                thread_name,
+                                repr(buff)
+                                )
+                            )
 
                     if convert_to_str != None:
                         buff = str(buff, encoding=convert_to_str)
@@ -243,29 +280,41 @@ def cat(
                         if termination_event and termination_event.is_set():
                             raise CatTerminationFlagFound()
 
-                        logging.debug(
-                            "Writing {} bytes using stdout.{}".format(
-                                buff_len,
-                                write_method_name
-                                )
-                            )
-                        try:
-                            this_time_written = eval(
-                                "stdout.{}(buff[written_total:])".format(
+                        if debug:
+
+                            logging.debug(
+                                "{}: Writing {} bytes using stdout.{}".format(
+                                    thread_name,
+                                    buff_len,
                                     write_method_name
                                     )
                                 )
+                        try:
+                            if standard_write_method_result:
+                                this_time_written = eval(
+                                    "stdout.{}(buff[written_total:])".format(
+                                        write_method_name
+                                        )
+                                    )
+                            else:
+                                this_time_written = eval(
+                                    "stdout.{}(buff)".format(
+                                        write_method_name
+                                        )
+                                    )
+
                         except TypeError as err_val:
                             if err_val.args[0] == 'must be str, not bytes':
                                 logging.warning(
-                                    "hint: check that output is in bytes mode or do"
-                                    " conversion with convert_to_str option"
+                                    "{}: hint: check that output is in bytes mode or do"
+                                    " conversion with convert_to_str option".format(thread_name)
                                     )
                             raise
                         except:
                             logging.error(
-                                "Can't use object's `{}' `{}' method.\n"
+                                "{}: Can't use object's `{}' `{}' method.\n"
                                 "    (Output process closed it's input. It can be not an error)".format(
+                                    thread_name,
                                     stdout,
                                     write_method_name
                                     )
@@ -285,12 +334,14 @@ def cat(
                             stdout.flush()
 
                         if standard_write_method_result:
-                            logging.debug(
-                                "Written {} bytes using stdout.{}".format(
-                                    this_time_written,
-                                    write_method_name
+                            if debug:
+                                logging.debug(
+                                    "{}: Written {} bytes using stdout.{}".format(
+                                        thread_name,
+                                        this_time_written,
+                                        write_method_name
+                                        )
                                     )
-                                )
                             if this_time_written == 0:
                                 if on_output_write_error:
                                     threading.Thread(
@@ -303,11 +354,13 @@ def cat(
                                 if written_total >= buff_len:
                                     break
                         else:
-                            logging.debug(
-                                "Written bytes using stdout.{}".format(
-                                    write_method_name
+                            if debug:
+                                logging.debug(
+                                    "{}: Written bytes using stdout.{}".format(
+                                        thread_name,
+                                        write_method_name
+                                        )
                                     )
-                                )
                             break
 
 
@@ -318,13 +371,15 @@ def cat(
                     if termination_event and termination_event.is_set():
                         raise CatTerminationFlagFound()
 
-
-
                     if isinstance(buff, bytes):
                         bytes_counter += buff_len
+
+                    buff = None
+
                 else:
 
-                    logging.debug("Readed `None' or 0. -- EOF")
+                    if debug:
+                        logging.debug("{}: Readed `None' or 0. -- EOF".format(thread_name))
 
                     if flush_on_input_eof:
                         stdout.flush()
@@ -342,12 +397,13 @@ def cat(
                     raise CatTerminationFlagFound()
 
         except CatTerminationFlagFound:
-            logging.debug("Termination flag caught")
+            if debug:
+                logging.debug("{}: Termination flag caught".format(thread_name))
         except:
 #            if not threaded:
 #                raise
 #            else:
-            logging.exception("Exception in cat thread")
+            logging.exception("{}: Exception in cat thread".format(thread_name))
 
         if apply_output_seek and hasattr(stdout, 'seek'):
             try:
@@ -357,7 +413,7 @@ def cat(
 
         if close_output_on_eof:
             if verbose:
-                logging.info(" Closing `{}' thread stdout".format(thread_name))
+                logging.info(" {}: Closing `{}' thread stdout".format(thread_name))
             stdout.close()
 
         if verbose:
@@ -561,6 +617,8 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
                 bs=self._socket_transfer_size,
                 convert_to_str=None,
                 read_method_name='read',
+                read_type='pipe',
+                write_type='socket',
                 exit_on_input_eof=True,
                 waiting_for_input=True,
                 descriptor_to_wait_for_input=self._strin.fileno(),
@@ -571,7 +629,8 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
                 flush_on_input_eof=False,
                 on_exit_callback=self._on_in_thread_exit,
                 on_output_write_error=self._on_socket_write_error,
-                termination_event=self._in_thread_stop_event
+                termination_event=self._in_thread_stop_event,
+                flush_after_every_write=False
                 )
 
             self._out_thread = cat(
@@ -584,6 +643,8 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
                 bs=self._socket_transfer_size,
                 convert_to_str=None,
                 read_method_name='recv',
+                read_type='socket',
+                write_type='pipe',
                 exit_on_input_eof=True,
                 waiting_for_input=True,
                 descriptor_to_wait_for_input=self.socket.fileno(),
@@ -594,7 +655,8 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
                 flush_on_input_eof=True,
                 on_exit_callback=self._on_out_thread_exit,
                 on_input_read_error=self._on_socket_read_error,
-                termination_event=self._out_thread_stop_event
+                termination_event=self._out_thread_stop_event,
+                flush_after_every_write=True
                 )
 
             self._in_thread.start()
@@ -658,9 +720,9 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
             self._stat = 'hard starting'
             self._stop_flag = False
 
-            self._socket_status_printer = org.wayround.utils.file.FDStatusWatcher(
-                on_status_changed=org.wayround.utils.file.print_status_change
-                )
+#            self._socket_status_printer = org.wayround.utils.file.FDStatusWatcher(
+#                on_status_changed=org.wayround.utils.file.print_status_change
+#                )
 
             self._pipe_outside = os.pipe()
             self._pipe_inside = os.pipe()
@@ -683,7 +745,7 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
 
             self.wait('working')
 
-            self._socket_status_printer.set_fd(self.socket.fileno())
+#            self._socket_status_printer.set_fd(self.socket.fileno())
 #            self._socket_status_printer.start()
 
             self._starting = False
@@ -708,8 +770,8 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
 
             self._unwrap_procedure()
 
-            self._socket_status_printer.stop()
-            self._socket_status_printer.wait('stopped')
+#            self._socket_status_printer.stop()
+#            self._socket_status_printer.wait('stopped')
 
             self._clear()
 
@@ -775,7 +837,7 @@ compression:
 
                 self.socket = s
 
-                self._socket_status_printer.set_fd(self.socket.fileno())
+#                self._socket_status_printer.set_fd(self.socket.fileno())
 
                 logging.debug('after wrap sock is {}'.format(self.socket))
 
@@ -813,7 +875,7 @@ compression:
                 else:
                     self.socket = s
 
-                    self._socket_status_printer.set_fd(self.socket.fileno())
+#                    self._socket_status_printer.set_fd(self.socket.fileno())
 
                     self._start_threads()
 
@@ -915,12 +977,9 @@ compression:
 
     def _output_availability_watcher(self):
 
-        out_poll = select.poll()
-        out_poll.register(self.socket.fileno(), select.POLLOUT)
-
         stopped_by_flag = 0
 
-        while len(out_poll.poll(100)) == 0:
+        while len(select.select([], [self.socket.fileno()], [], 0.2)[1]) == 0:
 
             if self._stop_flag:
                 stopped_by_flag = 1

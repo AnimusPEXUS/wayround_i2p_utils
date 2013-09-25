@@ -630,10 +630,11 @@ class FDStatusWatcher:
     def set_fd(self, fd):
 
         if not isinstance(fd, int):
-            raise TypeError("`fd' must be instance of int")
+            raise TypeError("`fd' must be int")
 
         logging.debug(
-            "Switching monitoring to new fd {}, previaus was {}".format(
+            "{}: Switching monitoring to new fd {}, previaus was {}".format(
+                type(self).__name__,
                 fd, self._fd
                 )
             )
@@ -783,7 +784,7 @@ def poll_stat_devider(event):
     return devided
 
 def print_status_change(sock, stats):
-    logging.info("Socket {} status changed to {}".format(sock, stats))
+    logging.info("File descriptor {} status changed to {}".format(sock, stats))
 
 def which(name):
     ret = None

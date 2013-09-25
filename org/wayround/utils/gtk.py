@@ -160,9 +160,10 @@ else:
 
     class GtkIteratedLoop:
 
-        def __init__(self):
+        def __init__(self, sleep_fraction=0.01):
             self._exit_event = threading.Event()
             self._started = False
+            self._sleep_fraction = sleep_fraction
 
         def wait(self):
 
@@ -178,14 +179,11 @@ else:
 
                 while not self._exit_event.is_set():
                     while Gtk.events_pending():
-                        Gtk.main_iteration()
-                    # TODO: this number (0.01) is the guess
-                    time.sleep(0.01)
+                        Gtk.main_iteration_do(False)
+
+                    time.sleep(self._sleep_fraction)
 
                 self._started = False
-
-                # NOTE: making this class threaded will block Gtk,
-                #       so don't implement threads here
 
         def stop(self):
             self._exit_event.set()
@@ -230,6 +228,79 @@ else:
 
         def wayround_org_close_listener(self, dialog):
             self.wayround_org_iteration_loop.stop()
+
+    class Waiter:
+
+        def __init__(
+            self,
+            wait_or_join_meth,
+            ret_val_good_for_loop,
+            is_alive_meth=None,
+            timeout=0.2,
+            waiter_sleep_time=0.01
+            ):
+
+            if not callable(wait_or_join_meth):
+                raise TypeError("`wait_or_join_meth' must be callable")
+
+            if is_alive_meth != None and not callable(is_alive_meth):
+                raise TypeError("`is_alivemeth' must be callable")
+
+            if is_alive_meth != None and waiter_sleep_time == 0:
+                raise ValueError("if `is_alivemeth' is set, `waiter_sleep_time' must not be 0")
+
+            self._timeout = timeout
+            self._is_alive_meth = is_alive_meth
+            self._wait_or_join_meth = wait_or_join_meth
+            self._waiter_sleep_time = waiter_sleep_time
+            self._ret_val_good_for_loop = ret_val_good_for_loop
+            self._thread = None
+            self._stop_event = threading.Event()
+            self._result = None
+            self._iterated_loop = GtkIteratedLoop(sleep_fraction=waiter_sleep_time)
+
+        def _start(self):
+
+            if self._thread == None:
+
+                self._thread = threading.Thread(
+                    target=self._waiter,
+                    )
+                self._thread.start()
+
+        def stop(self):
+            self._iterated_loop.stop()
+            self._stop_event.set()
+
+        def wait(self):
+            self._start()
+            self._iterated_loop.wait()
+
+
+        def _waiter(self):
+
+            while True:
+
+                if self._is_alive_meth != None:
+                    if not self._is_alive_meth():
+                        break
+                else:
+
+                    if self._wait_or_join_meth(self._timeout) != self._ret_val_good_for_loop:
+                        break
+
+                while Gtk.events_pending():
+                    Gtk.main_iteration_do(False)
+
+                time.sleep(self._waiter_sleep_time)
+
+                if self._stop_event.is_set():
+                    break
+
+            self.stop()
+            self._thread = None
+            return
+
 
     def text_view(text, title=''):
 

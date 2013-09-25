@@ -27,6 +27,12 @@ def list_rstrip(lst, lst2):
 def list_strip(lst, lst2):
     return list_lstrip(list_rstrip(copy.copy(lst), lst2), lst2)
 
+def list_lower(lst):
+    lst2 = []
+    for i in lst:
+        lst2.append(i.lower())
+    return lst2
+
 def list_sort(lst, cmp=None):
 
     lst_l = len(lst)
