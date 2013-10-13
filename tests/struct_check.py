@@ -18,6 +18,8 @@ for i in [
          {'t': dict, '{}':{'name':{'t':list, '.': {'t':str}}, 'value': {'t': list, '.': {'t': int}}}}),
         ({'name':['1', 2, '3', '4'], 'value': [1, 2, 3, 4]},
          {'t': dict, '{}':{'name':{'t':list, '.': {'t':str}}, 'value': {'t': list, '.': {'t': int}}}}),
+        ([1, '2', '3'], {'t':'Sequence', '.': {'t': str}}),
+        (['1', '2', '3'], {'t':'Sequence', '.': {'t': str}}),
 ]:
     print(repr(i))
     print(struct_check(i[0], i[1]))

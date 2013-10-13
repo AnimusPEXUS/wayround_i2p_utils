@@ -183,23 +183,24 @@ def is{name}(obj):
 del i
 
 
-STRUCT_CHECK_KEYS = ['t', 'te', '!', '<', '>', '.', '', ' ', '{}']
+STRUCT_CHECK_KEYS = ['t', 'te', 'None', '<', '>', '.', '', ' ', '{}']
 
 def struct_check(value, struct):
 
     """
     Check whatever value corresponds to struct
 
-    This implementation can't check dick with non-str keys, so exception is
+    This implementation can't check dict with non-str keys, so exception is
     raised in this case
 
     Examples of `struct':
 
 
     {
-    't': list, # type or tuple of types (like in isinstance).
+    't': list, # type or tuple of types (like in isinstance). can also be a
+               # string or tuple of strings with type names. see desc below
     'te': True, # exact type check with `type' function. default is True.
-    '!': False, # can value be None? (False - default)
+    'None': False, # can value be None? (False - default)
     '<': 0, # min child count. None - is default - no check
     '>': None, # max child count. None - is default - no check
     '.': { # check children. for work with sequences. default is None - not
@@ -217,12 +218,16 @@ def struct_check(value, struct):
     ' ': False,  # '' - string emptiness allow or not,
                  # ' ' - only spaces in string allow or not
 
-    '{}': {}, # if 't' is dict. True - any keys are possible and
+    '{}': {}, # if 't' is dict and only dict: True - any keys are possible and
               # each child checked with '.' value (recursion). False - same
               # as True, but without values checking (dafault)
               # if '{}' is dict, then all values in this dict must be dicts
               # with structures like this.
     }
+
+    if 't' value is of type str, then value type is checked using this module's
+    types() or types_s(): if '!' in beginnonig of 't' value, then types_s() is
+    used
 
     return False if value does not matches struct, and True otherwise
     """
@@ -238,12 +243,26 @@ def struct_check(value, struct):
 
     typ = struct['t']
 
+    if type(typ) != tuple:
+        typ = typ,
+
     iterable_type = types(value)
     iterable_type = (
         'Sequence' in iterable_type
         or 'Iterator' in iterable_type
         or 'Iterable' in iterable_type
         )
+
+
+    for i in typ:
+        t_type = type(i)
+        if t_type == str:
+            if i.startswith('!'):
+                if not i[1:] in COMPARISON_TABLE.keys():
+                    raise ValueError("Invalid type name")
+            else:
+                if not i in COMPARISON_TABLE.keys():
+                    raise ValueError("Invalid type name")
 
 
     type_exact = True
@@ -253,10 +272,10 @@ def struct_check(value, struct):
             raise TypeError("`te' must be bool")
 
     can_be_none = False
-    if '!' in struct:
-        can_be_none = struct['!']
+    if 'None' in struct:
+        can_be_none = struct['None']
         if type(can_be_none) != bool:
-            raise TypeError("`!' must be bool")
+            raise TypeError("`None' must be bool")
 
     min_child_count = None
     if '<' in struct:
@@ -274,13 +293,13 @@ def struct_check(value, struct):
     if '' in struct:
         string_emptiness = struct['']
         if type(string_emptiness) != bool:
-            raise TypeError("`!' must be bool")
+            raise TypeError("`' must be bool")
 
     string_is_space = True
     if ' ' in struct:
         string_is_space = struct[' ']
         if type(string_is_space) != bool:
-            raise TypeError("`!' must be bool")
+            raise TypeError("` ' must be bool")
 
     next_test = None
     if '.' in struct:
@@ -317,11 +336,29 @@ def struct_check(value, struct):
 
     if ret:
         if type_exact == True:
-            if type(value) != typ:
+            found = False
+            for i in typ:
+                t_type = type(i)
+                if t_type == str:
+                    if i.startswith('!'):
+                        if i[1:] in types_s(value):
+                            found = True
+                            break
+                    else:
+                        if i in types(value):
+                            found = True
+                            break
+                else:
+                    if type(value) == i:
+                        found = True
+                        break
+
+            if not found:
                 ret = False
         else:
             if not isinstance(value, typ):
                 ret = False
+
 
     if ret:
         if min_child_count != None:
@@ -350,7 +387,7 @@ def struct_check(value, struct):
             ret = False
 
     if ret:
-        if typ == dict:
+        if len(typ) == 1 and typ[0] == dict:
             if type(dict_info) == dict:
 
                 keys = list(dict_info.keys())

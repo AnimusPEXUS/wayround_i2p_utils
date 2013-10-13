@@ -1,4 +1,6 @@
 
+raise Exception("This module is deprecated and leaved only for history reasons")
+
 """
 This module is for XML and XHTML rendering
 """
