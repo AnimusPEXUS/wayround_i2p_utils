@@ -280,14 +280,14 @@ def struct_check(value, struct):
     min_child_count = None
     if '<' in struct:
         min_child_count = struct['<']
-        if min_child_count != None and not type(min_child_count) == bool:
-            raise TypeError("`<' must be None or bool")
+        if min_child_count != None and not type(min_child_count) == int:
+            raise TypeError("`<' must be None or int")
 
     max_child_count = None
     if '>' in struct:
         max_child_count = struct['>']
-        if max_child_count != None and not type(max_child_count) == bool:
-            raise TypeError("`>' must be None or bool")
+        if max_child_count != None and not type(max_child_count) == int:
+            raise TypeError("`>' must be None or int")
 
     string_emptiness = True
     if '' in struct:
@@ -303,14 +303,15 @@ def struct_check(value, struct):
 
     next_test = None
     if '.' in struct:
-        next_test = struct['.']
-        if next_test != None and not type(next_test) == dict:
-            raise TypeError("`.' must be None or dict")
+        if value is not None:
+            next_test = struct['.']
+            if next_test != None and not type(next_test) == dict:
+                raise TypeError("`.' must be None or dict")
 
-        if next_test != None and not iterable_type:
-            raise ValueError(
-                "`.' is not None and value is not a sequence or iterable"
-                )
+            if next_test != None and not iterable_type:
+                raise ValueError(
+                    "`.' is not None so value must be a sequence or iterable"
+                    )
 
     dict_info = False
     if '{}' in struct:

@@ -745,9 +745,9 @@ def tarobj_check_member_sum(tarobj, sums, member_name):
         ret = False
     else:
 
-        sum = org.wayround.utils.checksum.make_fileobj_checksum(fobj)
+        summ = org.wayround.utils.checksum.make_fileobj_checksum(fobj)
 
-        if sum == sums[member_name]:
+        if summ == sums[member_name]:
             ret = True
         else:
             ret = False
