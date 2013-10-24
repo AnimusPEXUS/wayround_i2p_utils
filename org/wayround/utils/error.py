@@ -3,6 +3,7 @@ import sys
 import traceback
 import pprint
 
+
 def return_exception_info(exc_info, tb=False):
     txt = """
 EXCEPTION: {type}
@@ -18,8 +19,12 @@ TRACEBACK:
 {tb}
 {feo}
     """.format(
-            tb=''.join(traceback.format_list(traceback.extract_tb(exc_info[2]))),
-            feo=''.join(traceback.format_exception_only(exc_info[0], exc_info[1]))
+            tb=''.join(
+                traceback.format_list(traceback.extract_tb(exc_info[2]))
+                ),
+            feo=''.join(
+                traceback.format_exception_only(exc_info[0], exc_info[1])
+                )
             )
 
     return txt
@@ -29,6 +34,7 @@ def print_exception_info(e):
     txt = return_exception_info(e)
     print(txt)
     return
+
 
 def prompt(g=None, l=None, prompt='-> '):
 

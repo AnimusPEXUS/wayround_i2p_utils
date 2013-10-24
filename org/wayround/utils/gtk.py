@@ -200,7 +200,7 @@ else:
 
             self.set_modal(True)
             self.set_transient_for(args[0])
-            self.set_destroy_with_parent(True)
+            #            self.set_destroy_with_parent(True)
             self.set_type_hint(Gdk.WindowTypeHint.DIALOG)
 
             self.wayround_org_response = Gtk.ResponseType.NONE

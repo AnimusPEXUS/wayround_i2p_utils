@@ -247,12 +247,7 @@ def struct_check(value, struct):
         typ = typ,
 
     iterable_type = types(value)
-    iterable_type = (
-        'Sequence' in iterable_type
-        or 'Iterator' in iterable_type
-        or 'Iterable' in iterable_type
-        )
-
+    iterable_type = 'Sequence' in iterable_type
 
     for i in typ:
         t_type = type(i)
@@ -263,7 +258,6 @@ def struct_check(value, struct):
             else:
                 if not i in COMPARISON_TABLE.keys():
                     raise ValueError("Invalid type name")
-
 
     type_exact = True
     if 'te' in struct:
@@ -310,7 +304,7 @@ def struct_check(value, struct):
 
             if next_test != None and not iterable_type:
                 raise ValueError(
-                    "`.' is not None so value must be a sequence or iterable"
+                    "`.' is not None so value must be a sequence"
                     )
 
     dict_info = False
@@ -332,110 +326,111 @@ def struct_check(value, struct):
             if not type(dict_info[i]) == dict:
                 raise ValueError("values in struct dict must be dict")
 
-    if not can_be_none and value == None:
+    if can_be_none == True and value == None:
+        ret = True
+    elif can_be_none == False and value == None:
         ret = False
-
-    if ret:
-        if type_exact == True:
-            found = False
-            for i in typ:
-                t_type = type(i)
-                if t_type == str:
-                    if i.startswith('!'):
-                        if i[1:] in types_s(value):
+    else:
+        if ret:
+            if type_exact == True:
+                found = False
+                for i in typ:
+                    t_type = type(i)
+                    if t_type == str:
+                        if i.startswith('!'):
+                            if i[1:] in types_s(value):
+                                found = True
+                                break
+                        else:
+                            if i in types(value):
+                                found = True
+                                break
+                    else:
+                        if type(value) == i:
                             found = True
                             break
-                    else:
-                        if i in types(value):
-                            found = True
+
+                if not found:
+                    ret = False
+            else:
+                if not isinstance(value, typ):
+                    ret = False
+
+        if ret:
+            if min_child_count != None:
+                if len(value) < min_child_count:
+                    ret = False
+
+        if ret:
+            if max_child_count != None:
+                if len(value) > max_child_count:
+                    ret = False
+
+        if ret:
+            if (type(value) == str
+                and value == ''
+                and string_emptiness == False):
+                ret = False
+
+        if ret:
+            if (type(value) == bytes
+                and value == b''
+                and string_emptiness == False):
+                ret = False
+
+        if ret:
+            if (type(value) == str
+                and value.isspace()
+                and string_is_space == False):
+                ret = False
+
+        if ret:
+            if (type(value) == bytes
+                and value.isspace()
+                and string_is_space == False):
+                ret = False
+
+        if ret:
+            if len(typ) == 1 and typ[0] == dict:
+                if type(dict_info) == dict:
+
+                    keys = list(dict_info.keys())
+                    for i in keys:
+                        if not i in value:
+                            ret = False
                             break
-                else:
-                    if type(value) == i:
-                        found = True
-                        break
+                        else:
+                            ret = struct_check(value[i], dict_info[i])
+                            if ret == False:
+                                break
 
-            if not found:
-                ret = False
-        else:
-            if not isinstance(value, typ):
-                ret = False
+                    keys = list(value.keys())
+                    for i in keys:
+                        if not i in dict_info:
+                            ret = False
+                            break
 
+                elif dict_info == False:
+                    pass
 
-    if ret:
-        if min_child_count != None:
-            if len(value) < min_child_count:
-                ret = False
-
-    if ret:
-        if max_child_count != None:
-            if len(value) > max_child_count:
-                ret = False
-
-    if ret:
-        if type(value) == str and value == '' and string_emptiness == False:
-            ret = False
-
-    if ret:
-        if type(value) == bytes and value == b'' and string_emptiness == False:
-            ret = False
-
-    if ret:
-        if type(value) == str and value.isspace() and string_is_space == False:
-            ret = False
-
-    if ret:
-        if type(value) == bytes and value.isspace() and string_is_space == False:
-            ret = False
-
-    if ret:
-        if len(typ) == 1 and typ[0] == dict:
-            if type(dict_info) == dict:
-
-                keys = list(dict_info.keys())
-                for i in keys:
-                    if not i in value:
-                        ret = False
-                        break
-                    else:
-                        ret = struct_check(value[i], dict_info[i])
+                elif dict_info == True:
+                    vkeys = list(value.keys())
+                    for i in vkeys:
+                        ret = struct_check(value[i], next_test)
                         if ret == False:
                             break
+                else:
+                    raise Exception("Programming error")
 
-                keys = list(value.keys())
-                for i in keys:
-                    if not i in dict_info:
-                        ret = False
-                        break
+        if ret:
+            if next_test != None:
+                if iterable_type:
+                    for i in value:
+                        if struct_check(i, next_test) == False:
+                            ret = False
+                            break
 
-            elif dict_info == False:
-                pass
-
-            elif dict_info == True:
-                vkeys = list(value.keys())
-                for i in vkeys:
-                    ret = struct_check(value[i], next_test)
-                    if ret == False:
-                        break
-            else:
-                raise Exception("Programming error")
-
-    if ret:
-        if next_test != None:
-            if iterable_type:
-                for i in value:
-                    if struct_check(i, next_test) == False:
-                        ret = False
-                        break
-
-            else:
-                ret = False
+                else:
+                    ret = False
 
     return ret
-
-
-
-
-
-
-
-
