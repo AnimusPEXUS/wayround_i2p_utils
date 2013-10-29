@@ -3,6 +3,7 @@ import lxml.etree
 
 import org.wayround.utils.types
 
+
 def subelems_to_object_props(element, obj, tagname_class_attrnames):
     """
     Find element by tag and convert it to object using additional information
@@ -15,7 +16,7 @@ def subelems_to_object_props(element, obj, tagname_class_attrnames):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<':3, '>':3}}
+        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 3}}
         ):
         raise TypeError("`tagname_class_attrnames' has invalid structure")
 
@@ -26,6 +27,7 @@ def subelems_to_object_props(element, obj, tagname_class_attrnames):
             getattr(obj, 'set_{}'.format(i[2]))(i[1].new_from_element(val))
 
     return
+
 
 def subelemsm_to_object_propsm(element, obj, tagname_class_attrnames):
     """
@@ -40,7 +42,8 @@ def subelemsm_to_object_propsm(element, obj, tagname_class_attrnames):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<':3, '>':3}}
+        tagname_class_attrnames,
+        {'t': list, '.': {'t': tuple, '<': 3, '>': 3}}
         ):
         raise TypeError("`tagname_class_attrnames' has invalid structure")
 
@@ -74,7 +77,7 @@ def elem_props_to_object_props(element, obj, names):
     if not org.wayround.utils.types.struct_check(
         names,
         {'t': list, '.':
-         {'t': tuple, '<':2, '>':2, '.': {'t': str}
+         {'t': tuple, '<': 2, '>': 2, '.': {'t': str}
           }
          }
         ):
@@ -84,8 +87,6 @@ def elem_props_to_object_props(element, obj, names):
         getattr(obj, 'set_{}'.format(i[1]))(element.get(i[0]))
 
     return
-
-
 
 
 def object_props_to_subelems(obj, element, names):
@@ -100,7 +101,7 @@ def object_props_to_subelems(obj, element, names):
 
     if not org.wayround.utils.types.struct_check(
         names,
-        {'t': list, '.':{'t': str}}
+        {'t': list, '.': {'t': str}}
         ):
         raise TypeError("`names' must be list of strings")
 
@@ -110,6 +111,7 @@ def object_props_to_subelems(obj, element, names):
             element.append(val.gen_element())
 
     return
+
 
 def object_propsm_to_subelemsm(obj, element, names):
     """
@@ -123,7 +125,7 @@ def object_propsm_to_subelemsm(obj, element, names):
 
     if not org.wayround.utils.types.struct_check(
         names,
-        {'t': list, '.':{'t': str}}
+        {'t': list, '.': {'t': str}}
         ):
         raise TypeError("`names' must be list of strings")
 
@@ -133,6 +135,7 @@ def object_propsm_to_subelemsm(obj, element, names):
             element.append(val.gen_element())
 
     return
+
 
 def object_props_to_elem_props(obj, element, names):
     """
@@ -148,7 +151,7 @@ def object_props_to_elem_props(obj, element, names):
     if not org.wayround.utils.types.struct_check(
         names,
         {'t': list, '.':
-         {'t': tuple, '<':2, '>':2, '.':{'t':str}}
+         {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}
          }
         ):
         raise TypeError("`names' has invalid structure")
@@ -160,6 +163,7 @@ def object_props_to_elem_props(obj, element, names):
             element.set(i[1], val)
 
     return
+
 
 def parse_element_tag(element, localname, namespaces=None):
 
@@ -178,7 +182,7 @@ def parse_element_tag(element, localname, namespaces=None):
 
     if not org.wayround.utils.types.struct_check(
         namespaces,
-        {'t': list, 'None':True, '.':{'t': str}}
+        {'t': list, 'None': True, '.': {'t': str}}
         ):
         raise TypeError("`namespaces' has invalid structure")
 
