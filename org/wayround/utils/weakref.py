@@ -3,6 +3,7 @@ import weakref
 import logging
 import threading
 
+
 class WeakMethod:
 
     def __init__(self, method, callback=None):
@@ -21,7 +22,9 @@ class WeakMethod:
         self._object = weakref.ref(method.__self__, self._object_finalizes)
 
         if self._debug:
-            logging.debug("{} installed weakref: {}".format(self, self._object))
+            logging.debug(
+                "{} installed weakref: {}".format(self, self._object)
+                )
 
         self._callback = callback
         self._method_name = method.__name__
@@ -41,7 +44,6 @@ class WeakMethod:
                 target=self._callback,
                 args=(self,)
                 ).start()
-
 
     def __call__(self):
 

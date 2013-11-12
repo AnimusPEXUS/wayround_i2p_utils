@@ -1,10 +1,10 @@
 
 import copy
 import threading
-import weakref
 import logging
 
 import org.wayround.utils.weakref
+
 
 class Signal:
 
@@ -33,16 +33,16 @@ class Signal:
         """
         Redefine acceptable signals
 
-        NOTE: please understand simple rule: signals must be defined in object's
-        creation time. This method (set_signal_names) is provided only for
-        completeness. So this method (set_signal_names) must not be used in
+        NOTE: please understand simple rule: signals must be defined in
+        object's creation time. This method (set_signal_names) is provided only
+        for completeness. So this method (set_signal_names) must not be used in
         other places except object's class __init__! The reason for this rule
-        is: if You will use this method in object's lifetime, then You will need
-        to track changes in it's signal set, so things will become wired, hard
-        and overheaded. For instance, SignalWaiter will not wait for new signals
-        if it was created with signal_name=True and listened object changes own
-        signal set, as SignalWaiter relies on this class'es connect_signal for
-        simplicity. Don't get things hard!
+        is: if You will use this method in object's lifetime, then You will
+        need to track changes in it's signal set, so things will become wired,
+        hard and overheaded. For instance, SignalWaiter will not wait for new
+        signals if it was created with signal_name=True and listened object
+        changes own signal set, as SignalWaiter relies on this class'es
+        connect_signal for simplicity. Don't get things hard!
         """
         self._signal_names = _add_prefix(signal_names, add_prefix)
 
@@ -59,7 +59,6 @@ class Signal:
 
     def get_signal_names(self, add_prefix=None):
         return _add_prefix(self._signal_names, add_prefix=add_prefix)
-
 
     def _check_signal(self, name):
 
@@ -78,7 +77,6 @@ class Signal:
                     self.__class__, name
                     )
                 )
-
 
         for i in self._signals[name][:]:
 
@@ -159,7 +157,6 @@ class Signal:
                     )
                 )
 
-
     def disconnect_signal(self, callback, signal_name=None):
         """
         Disconnects callback from all signals or from certain signal
@@ -209,13 +206,14 @@ class Signal:
 
         return ret
 
+
 class SignalWaiter:
     """
     Objects of this class are waiting for named signals on specified object
 
     Objects of this class are waiting for named signals on specified object,
-    puts them in some sort of buffer and returns them one by one with pop method
-    waiting for the next one if buffer is empty
+    puts them in some sort of buffer and returns them one by one with pop
+    method waiting for the next one if buffer is empty
 
     example::
 
@@ -239,8 +237,6 @@ class SignalWaiter:
 
     pop() method has a timeout parameter. if timeout occur - ``None`` will be
     returned
-
-
     """
 
     def __init__(self, obj, signal_name, debug=False):
@@ -255,14 +251,29 @@ class SignalWaiter:
         self._buffer = []
 
     def start(self):
+
         if self._debug:
-            logging.debug("({}) Starting following `{}'".format(self, self._signal_name))
+            logging.debug(
+                "({}) Starting following `{}'".format(self, self._signal_name)
+                )
+
         self._obj.connect_signal(self._signal_name, self._cb)
 
+        return
+
     def stop(self):
+
         if self._debug:
-            logging.debug("({}) Stopping following `{}'".format(self, self._signal_name))
+            logging.debug(
+                "({}) Stopping following `{}'".format(self, self._signal_name)
+                )
+
         self._obj.disconnect_signal(self._cb)
+
+        while len(self._buffer) != 0:
+            del self._buffer[0]
+
+        return
 
     def pop(self, timeout=10):
         """
@@ -270,6 +281,10 @@ class SignalWaiter:
 
         if timeout occurs, current waiter is stopped automatically and None is
         returned
+
+        if this object internal object has some data, this data is returned in
+        form of dict with keys 'event', 'args', 'kwargs'. each such dict is
+        representation of call to this class' internal signal listener
 
         NOTE: be advised: calling this method for not :meth:`start()`ed object
         will result in timeout in any way.
@@ -386,6 +401,7 @@ class Hub:
 
         return
 
+
 def _add_prefix(signal_names=None, add_prefix=None):
 
     if signal_names == None:
@@ -409,4 +425,3 @@ def _add_prefix(signal_names=None, add_prefix=None):
         ret = lst
 
     return ret
-

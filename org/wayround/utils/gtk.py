@@ -24,7 +24,9 @@ else:
         def __init__(self, force=False):
 
             if not force:
-                raise Exception("This code is deprecated but can be used to try Gtk.main() global locking")
+                raise Exception(
+    "This code is deprecated but can be used to try Gtk.main() global locking"
+                    )
 
             logging.debug("Init GtkSession")
             self._gtk_session_started = False
@@ -128,13 +130,16 @@ else:
                     pass
 
                 if (
-                    (os.path.exists(path) and dialog_resp == Gtk.ResponseType.YES)
+                    (os.path.exists(path)
+                     and dialog_resp == Gtk.ResponseType.YES)
                     or
                     not os.path.exists(path)
                     ):
 
                     buff = self.ui['textview1'].get_buffer()
-                    txt = buff.get_text(buff.get_start_iter(), buff.get_end_iter(), False)
+                    txt = buff.get_text(
+                        buff.get_start_iter(), buff.get_end_iter(), False
+                        )
 
                     try:
                         f = open(path, 'w')
@@ -156,8 +161,6 @@ else:
 
             return
 
-
-
     class GtkIteratedLoop:
 
         def __init__(self, sleep_fraction=0.01):
@@ -165,13 +168,10 @@ else:
             self._started = False
             self._sleep_fraction = sleep_fraction
 
-        def wait(self):
+        def wait(self, timeout=None):
 
             if self._started:
-                raise Exception(
-                    "Same GtkIteratedLoop must not be "
-                    "started while it's already working"
-                    )
+                self._exit_event.wait(timeout)
             else:
                 self._started = True
 
@@ -187,7 +187,6 @@ else:
 
         def stop(self):
             self._exit_event.set()
-
 
     class MessageDialog(Gtk.MessageDialog):
 
@@ -247,7 +246,9 @@ else:
                 raise TypeError("`is_alivemeth' must be callable")
 
             if is_alive_meth != None and waiter_sleep_time == 0:
-                raise ValueError("if `is_alivemeth' is set, `waiter_sleep_time' must not be 0")
+                raise ValueError(
+            "if `is_alivemeth' is set, `waiter_sleep_time' must not be 0"
+                    )
 
             self._timeout = timeout
             self._is_alive_meth = is_alive_meth
@@ -257,7 +258,9 @@ else:
             self._thread = None
             self._stop_event = threading.Event()
             self._result = None
-            self._iterated_loop = GtkIteratedLoop(sleep_fraction=waiter_sleep_time)
+            self._iterated_loop = GtkIteratedLoop(
+                sleep_fraction=waiter_sleep_time
+                )
 
         def _start(self):
 
@@ -272,10 +275,9 @@ else:
             self._iterated_loop.stop()
             self._stop_event.set()
 
-        def wait(self):
+        def wait(self, timeout=None):
             self._start()
-            self._iterated_loop.wait()
-
+            self._iterated_loop.wait(timeout)
 
         def _waiter(self):
 
@@ -286,7 +288,8 @@ else:
                         break
                 else:
 
-                    if self._wait_or_join_meth(self._timeout) != self._ret_val_good_for_loop:
+                    if (self._wait_or_join_meth(self._timeout)
+                        != self._ret_val_good_for_loop):
                         break
 
                 while Gtk.events_pending():
@@ -300,7 +303,6 @@ else:
             self.stop()
             self._thread = None
             return
-
 
     def text_view(text, title=''):
 
@@ -344,4 +346,3 @@ else:
                     break
 
         return
-
