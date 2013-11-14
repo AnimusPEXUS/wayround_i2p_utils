@@ -1,8 +1,9 @@
 
+import logging
 import os.path
 import threading
-import logging
 import time
+import weakref
 
 try:
     from gi.repository import Gtk
@@ -303,6 +304,122 @@ else:
             self.stop()
             self._thread = None
             return
+
+    class RelatedWindowCollector:
+
+        def __init__(self):
+
+            self._lock = threading.Lock()
+            self.clear(init=True)
+
+        def clear(self, init=False):
+
+            self._constructor_cbs = {}
+
+            self._singles = {}
+            self._multiples = set()
+
+        def _window_methods_check(self, window):
+
+            for i in ['run', 'show', 'destroy']:
+
+                if not hasattr(window, i):
+                    raise KeyError(
+                        "{} has not attribute `{}'".format(window, i)
+                        )
+
+                if not callable(getattr(window, i)):
+                    raise KeyError(
+                        "`{}' not callable in {}".format(i, window)
+                        )
+
+            return
+
+        def set_constructor_cb(self, name, cb, single=True):
+
+            if not isinstance(name, str):
+                raise ValueError("`name' must be str")
+
+            if not isinstance(single, bool):
+                raise ValueError("`single' must be bool")
+
+            if not callable(cb):
+                raise ValueError("`cb' must be callable")
+
+            self._lock.acquire()
+
+            if name in self._constructor_cbs:
+                logging.warning("{}:Redefining `{}'".format(self, name))
+
+            self._constructor_cbs[name] = {'cb': cb, 'single': single}
+
+            self._lock.release()
+
+            return
+
+        def show(self, name, *args, **kwargs):
+
+            if not name in self._constructor_cbs:
+                raise KeyError(
+                    "{}:Constructor for `{}' not registered".format(
+                        self,
+                        name
+                        )
+                    )
+
+            self._lock.acquire()
+
+            try:
+                cdata = self._constructor_cbs[name]
+
+                if cdata['single']:
+                    if name in self._singles:
+                        self._singles[name].show()
+                    else:
+                        window = cdata['cb']()
+                        self._window_methods_check(window)
+                        self._singles[name] = window
+                        self._lock.release()
+                        window.run(*args, **kwargs)
+                        self._lock.acquire()
+                        if name in self._singles:
+                            self._singles[name].destroy()
+                            del self._singles[name]
+                else:
+                    window = cdata['cb']()
+                    self._window_methods_check(window)
+                    threading.Thread(
+                        target=window.run, name="Thread for {}".format(window),
+                        args=args, kwargs=kwargs
+                        ).start()
+                    self._multiples.add(window)
+            except:
+                logging.exception("Exception")
+
+            self._lock.release()
+
+            return
+
+        def destroy_windows(self):
+
+            self._lock.acquire()
+
+            names = list(self._singles)
+            for i in names:
+                self._singles[i].destroy()
+                del self._singles[i]
+
+            for i in list(self._multiples):
+                i.destroy()
+                self._multiples.remove(i)
+
+            self._lock.release()
+
+            return
+
+        def destroy(self):
+            self.destroy_windows()
+            self.clear()
 
     def text_view(text, title=''):
 
