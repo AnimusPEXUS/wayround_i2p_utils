@@ -3,7 +3,6 @@ import logging
 import os.path
 import threading
 import time
-import weakref
 
 try:
     from gi.repository import Gtk
@@ -357,6 +356,25 @@ else:
 
             return
 
+        def show_threaded(self, name, *args, **kwargs):
+
+            if not name in self._constructor_cbs:
+                raise KeyError(
+                    "{}:Constructor for `{}' not registered".format(
+                        self,
+                        name
+                        )
+                    )
+
+            threading.Thread(
+                name="Thread for window `{}'".format(name),
+                target=self.show,
+                args=(name,) + args,
+                kwargs=kwargs
+                ).start()
+
+            return
+
         def show(self, name, *args, **kwargs):
 
             if not name in self._constructor_cbs:
@@ -366,6 +384,8 @@ else:
                         name
                         )
                     )
+
+            ret = None
 
             self._lock.acquire()
 
@@ -380,25 +400,28 @@ else:
                         self._window_methods_check(window)
                         self._singles[name] = window
                         self._lock.release()
-                        window.run(*args, **kwargs)
+                        ret = window.run(*args, **kwargs)
                         self._lock.acquire()
                         if name in self._singles:
                             self._singles[name].destroy()
                             del self._singles[name]
+
                 else:
                     window = cdata['cb']()
                     self._window_methods_check(window)
-                    threading.Thread(
-                        target=window.run, name="Thread for {}".format(window),
-                        args=args, kwargs=kwargs
-                        ).start()
                     self._multiples.add(window)
+                    self._lock.release()
+                    ret = window.run(*args, **kwargs)
+                    self._lock.acquire()
+                    while window in self._multiples:
+                        self._multiples.remove(window)
+
             except:
                 logging.exception("Exception")
 
             self._lock.release()
 
-            return
+            return ret
 
         def destroy_windows(self):
 

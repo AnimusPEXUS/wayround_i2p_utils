@@ -2,16 +2,20 @@
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
 
-class BasicDBConfigError(Exception): pass
+
+class BasicDBConfigError(Exception):
+    pass
+
 
 class BasicDB:
+
     """
     Main package index DB handling class
     """
 
-    Base = sqlalchemy.ext.declarative.declarative_base()
+#    Base = sqlalchemy.ext.declarative.declarative_base()
 
-# Example Table Class. Do not remove!
+# NOTE: Example Table Class. Do not remove!
 #    class Info(Base):
 #        """
 #        Class for holding package information
@@ -85,12 +89,15 @@ class BasicDB:
 #            default=True
 #            )
 
-    def __init__(self, config, echo=False, create_all=False):
+    def __init__(
+        self, *args, echo=False, create_all=False, **kwargs
+        ):
 
         self._db_engine = (
                 sqlalchemy.create_engine(
-                config,
-                echo=echo
+                *args,
+                echo=echo,
+                **kwargs
                 )
             )
 
@@ -99,7 +106,7 @@ class BasicDB:
         if create_all:
             self.Base.metadata.create_all()
 
-        self.sess = sqlalchemy.orm.Session(bind=self._db_engine)
+        self.session = sqlalchemy.orm.Session(bind=self._db_engine)
 
         return
 
@@ -108,16 +115,21 @@ class BasicDB:
             self.close()
         return
 
+    def create_all(self):
+        self.Base.metadata.create_all()
+
     def commit(self):
-        if self.sess:
-            self.sess.commit()
+        if self.session:
+            self.session.commit()
 
         return
 
     def close(self):
-        if self.sess:
-            self.sess.commit()
-            self.sess.close()
-            self.sess = None
+        if self.session:
+            self.session.commit()
+            self.session.close()
+            self.session = None
 
         return
+
+    destroy = close

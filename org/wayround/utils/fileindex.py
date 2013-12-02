@@ -7,6 +7,7 @@ import sqlalchemy.orm
 
 import org.wayround.utils.path
 
+
 class FileIndexer:
 
     Base = sqlalchemy.ext.declarative.declarative_base()
@@ -21,7 +22,6 @@ class FileIndexer:
             primary_key=True,
             default=''
             )
-
 
     def __init__(
         self,
@@ -40,18 +40,16 @@ class FileIndexer:
 
         self.Base.metadata.create_all()
 
-
         self.add_commit_items_no = add_commit_items_no
         self.add_commit_counter = 0
 
         self.del_commit_items_no = del_commit_items_no
         self.del_commit_counter = 0
 
-
         try:
-            self.sess = sqlalchemy.orm.Session(bind=self._db_engine)
+            self.session = sqlalchemy.orm.Session(bind=self._db_engine)
         except:
-            self.sess = None
+            self.session = None
             raise
 
         self.added_count = 0
@@ -68,27 +66,25 @@ class FileIndexer:
 
     def close(self):
         if self.sess:
-            self.sess.commit()
-            self.sess.close()
-            self.sess = None
+            self.session.commit()
+            self.session.close()
+            self.session = None
         return
 
     def commit(self):
-        self.sess.commit()
+        self.session.commit()
         return
 
-
     def is_name_exists(self, name):
-        c = self.sess.query(self.File).filter_by(name=name).count()
+        c = self.session.query(self.File).filter_by(name=name).count()
         return c != 0
 
-
     def delete(self, name):
-        self.sess.query(self.File).filter_by(name=name).delete()
+        self.session.query(self.File).filter_by(name=name).delete()
         return
 
     def delete_missing(self, basedir):
-        names = self.sess.query(self.File).all()
+        names = self.session.query(self.File).all()
 
         logging.info("Searching for missing files")
 
@@ -98,15 +94,14 @@ class FileIndexer:
 
                 logging.debug("`{}' not found -- deleting".format(full_name))
 
-                self.sess.delete(i)
+                self.session.delete(i)
 
                 self.del_commit_counter += 1
                 self.deleted_count += 1
 
                 if self.del_commit_counter >= self.del_commit_items_no:
-                    self.sess.commit()
+                    self.session.commit()
                     self.del_commit_counter = 0
-
 
     def add(self, name):
 
@@ -115,13 +110,13 @@ class FileIndexer:
             f = self.File()
             f.name = name
 
-            self.sess.add(f)
+            self.session.add(f)
 
             self.add_commit_counter += 1
             self.added_count += 1
 
             if self.add_commit_counter >= self.add_commit_items_no:
-                self.sess.commit()
+                self.session.commit()
                 self.add_commit_counter = 0
 
         else:
@@ -134,10 +129,10 @@ class FileIndexer:
         self.added_count = 0
 
     def get_size(self):
-        return self.sess.query(self.File).count()
+        return self.session.query(self.File).count()
 
     def get_files(self):
-        q = self.sess.query(self.File).all()
+        q = self.session.query(self.File).all()
         ret = []
         for i in q:
             ret.append(i.name)

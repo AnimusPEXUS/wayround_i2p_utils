@@ -54,9 +54,9 @@ class TagEngine:
         self.commit_counter = 0
 
         try:
-            self.sess = sqlalchemy.orm.Session(bind=self._db_engine)
+            self.session = sqlalchemy.orm.Session(bind=self._db_engine)
         except:
-            self.sess = None
+            self.session = None
             raise
 
         return
@@ -68,24 +68,24 @@ class TagEngine:
 
     def close(self):
         if self.sess:
-            self.sess.commit()
-            self.sess.close()
-            self.sess = None
+            self.session.commit()
+            self.session.close()
+            self.session = None
         return
 
     def commit(self):
-        self.sess.commit()
+        self.session.commit()
         return
 
     def set_tags(self, obj, tags=[]):
-        self.sess.query(self.Tag).filter_by(obj=obj).delete()
-        #self.sess.commit()
+        self.session.query(self.Tag).filter_by(obj=obj).delete()
+        #self.session.commit()
 
         for i in tags:
             a = self.Tag()
             a.obj = obj
             a.tag = i
-            self.sess.add(a)
+            self.session.add(a)
 
         self.commit_counter += 1
 
@@ -94,13 +94,13 @@ class TagEngine:
             self.commit()
             self.commit_counter = 0
 
-        #self.sess.commit()
+        #self.session.commit()
 
         return
 
     def get_tags(self, obj):
 
-        q = self.sess.query(self.Tag).filter_by(obj=obj).all()
+        q = self.session.query(self.Tag).filter_by(obj=obj).all()
 
         ret = set()
         for i in q:
@@ -116,11 +116,11 @@ class TagEngine:
 
         q = None
         if order == None:
-            q = self.sess.query(self.Tag).all()
+            q = self.session.query(self.Tag).all()
         elif order == 'tag':
-            q = self.sess.query(self.Tag).order_by(self.Tag.tag).all()
+            q = self.session.query(self.Tag).order_by(self.Tag.tag).all()
         elif order == 'object':
-            q = self.sess.query(self.Tag).order_by(self.Tag.obj).all()
+            q = self.session.query(self.Tag).order_by(self.Tag.obj).all()
 
         ret = list()
         for i in q:
@@ -143,7 +143,7 @@ class TagEngine:
 
     def get_all_tags(self):
 
-        q = self.sess.query(sqlalchemy.distinct(self.Tag.tag)).all()
+        q = self.session.query(sqlalchemy.distinct(self.Tag.tag)).all()
 
         ret = []
         for i in q:
@@ -154,7 +154,7 @@ class TagEngine:
     def get_size(self):
 
         self.commit()
-        ret = self.sess.query(self.Tag).count()
+        ret = self.session.query(self.Tag).count()
 
         return ret
 
@@ -165,7 +165,7 @@ class TagEngine:
 
         ret = set()
 
-        q = self.sess.query(self.Tag).filter(self.Tag.tag.in_(tags)).all()
+        q = self.session.query(self.Tag).filter(self.Tag.tag.in_(tags)).all()
 
         for i in q:
             ret.add(i.obj)
@@ -179,7 +179,7 @@ class TagEngine:
         if isinstance(obj, list):
 
             for i in range(int(len(obj) / 100) + 1):
-                self.sess.query(self.Tag).filter(
+                self.session.query(self.Tag).filter(
                         self.Tag.obj.in_(
                             obj[i * 100:(i + 1) * 100])
                             ).delete(
@@ -187,7 +187,7 @@ class TagEngine:
                                 )
 
         else:
-            self.sess.query(self.Tag).filter_by(obj=obj).delete(
+            self.session.query(self.Tag).filter_by(obj=obj).delete(
                 synchronize_session=synchronize_session
                 )
 
@@ -195,7 +195,7 @@ class TagEngine:
 
     def del_objects_by_tags(self, tags):
 
-        self.sess.query(self.Tag).filter(self.Tag.tag.in_(tags)).delete()
+        self.session.query(self.Tag).filter(self.Tag.tag.in_(tags)).delete()
 
         return
 
@@ -218,9 +218,9 @@ class TagEngine:
                 while i in objs:
                     objs.remove(i)
 
-                removed += self.sess.query(self.Tag).filter_by(obj=i).count()
+                removed += self.sesessionss.query(self.Tag).filter_by(obj=i).count()
 
-                self.sess.query(self.Tag).filter_by(obj=i).delete()
+                self.session.query(self.Tag).filter_by(obj=i).delete()
 
 
 
@@ -240,14 +240,14 @@ class TagEngine:
             org.wayround.utils.file.progress_write_finish()
 
         if changed:
-            self.sess.commit()
+            self.session.commit()
 
         return
 
     def clear(self):
 
-        self.sess.query(self.Tag).delete()
-        self.sess.commit()
+        self.session.query(self.Tag).delete()
+        self.session.commit()
 
         return
 

@@ -60,7 +60,8 @@ COMPARISON_TABLE = {
         },
     'MutableSequence': {
         'i': ['Sequence'],
-        'a': ['__getitem__', '__setitem__', '__delitem__', '__len__', 'insert'],
+        'a': ['__getitem__', '__setitem__', '__delitem__', '__len__',
+              'insert'],
         'm': ['append', 'reverse', 'extend', 'pop', 'remove', '__iadd__']
         },
     'Set': {
@@ -88,6 +89,7 @@ COMPARISON_TABLE = {
         'm': ['pop', 'popitem', 'clear', 'update', 'setdefault']
         },
     }
+
 
 def check_type_s(obj, name):
 
@@ -122,6 +124,7 @@ def check_type_s(obj, name):
 
     return ret
 
+
 def types_s(obj):
 
     """
@@ -136,6 +139,7 @@ def types_s(obj):
 
     return ret
 
+
 def check_type(obj, name):
 
     """
@@ -146,6 +150,7 @@ def check_type(obj, name):
         raise ValueError("Invalid type name")
 
     return isinstance(obj, eval('collections.abc.{}'.format(name)))
+
 
 def types(obj):
 
@@ -184,6 +189,7 @@ del i
 
 
 STRUCT_CHECK_KEYS = ['t', 'te', 'None', '<', '>', '.', '', ' ', '{}']
+
 
 def struct_check(value, struct):
 
@@ -432,5 +438,51 @@ def struct_check(value, struct):
 
                 else:
                     ret = False
+
+    return ret
+
+
+def attrs_object_to_dict(object_, dict_, attrs_keys=None):
+
+    """
+    attrs_keys: list of tuples, each of wich ('attr_name', 'key_name')
+    """
+
+    if  attrs_keys == None:
+        attrs_keys = list(object_.__dict__.keys())
+
+    for i in attrs_keys:
+        dict_[i[1]] = getattr(object_, i[0])
+
+
+def attrs_dict_to_object(
+    dict_, object_, attrs_keys=None, create_new_attributes=False
+    ):
+
+    """
+    attrs_keys: list of tuples, each of wich ('attr_name', 'key_name')
+    """
+
+    if attrs_keys == None:
+        attrs_keys = list(dict_.keys())
+
+    for i in attrs_keys:
+        if hasattr(object_, i[0]) or create_new_attributes == True:
+            setattr(object_, i[0], dict_[i[1]])
+        else:
+            raise KeyError(
+                "object `{}' has no attribute `{}'".format(
+                    object_,
+                    i[0]
+                    )
+                )
+
+
+def attrs_dict_to_object_same_names(lst):
+
+    ret = []
+
+    for i in lst:
+        ret.append((i, i,))
 
     return ret
