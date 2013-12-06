@@ -67,7 +67,7 @@ class TagEngine:
         return
 
     def close(self):
-        if self.sess:
+        if self.session:
             self.session.commit()
             self.session.close()
             self.session = None

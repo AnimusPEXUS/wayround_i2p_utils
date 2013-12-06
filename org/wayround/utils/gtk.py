@@ -356,7 +356,7 @@ else:
 
             return
 
-        def show_threaded(self, name, *args, **kwargs):
+        def _check_name(self, name):
 
             if not name in self._constructor_cbs:
                 raise KeyError(
@@ -365,6 +365,23 @@ else:
                         name
                         )
                     )
+
+            return
+
+        def get_window(self, name):
+
+            self._check_name(name)
+
+            ret = None
+
+            if name in self._singles:
+                ret = self._singles[name]
+
+            return ret
+
+        def show_threaded(self, name, *args, **kwargs):
+
+            self._check_name(name)
 
             threading.Thread(
                 name="Thread for window `{}'".format(name),
@@ -377,13 +394,7 @@ else:
 
         def show(self, name, *args, **kwargs):
 
-            if not name in self._constructor_cbs:
-                raise KeyError(
-                    "{}:Constructor for `{}' not registered".format(
-                        self,
-                        name
-                        )
-                    )
+            self._check_name(name)
 
             ret = None
 
@@ -486,3 +497,7 @@ else:
                     break
 
         return
+
+    def process_events():
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
