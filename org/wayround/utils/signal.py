@@ -144,6 +144,16 @@ class Signal:
                                 self.__class__, callback, wr, i
                                 )
                             )
+                else:
+
+                    if self._signals_debug:
+
+                        logging.debug(
+                            "({}) callbacl `{}' already connected to `{}'".\
+                                format(
+                                    self.__class__, callback, i
+                                    )
+                            )
 
         return
 
