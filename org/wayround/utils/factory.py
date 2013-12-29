@@ -1,6 +1,7 @@
 
 import org.wayround.utils.types
 
+
 def class_generate_attributes(class_obj, attributes):
 
     """
@@ -9,15 +10,46 @@ def class_generate_attributes(class_obj, attributes):
     _* values are reset to None
 
     Generated methods can make use of format_* functions of same instance
+
+    there are two cases for attributes:
+    1. list of strings: names of attributes to create;
+    2. list of 2-tuples:
+        [0] - same as in first case;
+        [1] - signal name to call on successful set operation.
     """
 
-    if not org.wayround.utils.types.struct_check(
+    case = None
+
+    if org.wayround.utils.types.struct_check(
         attributes,
-        {'t': list, '.':{'t': str}}
+        {'t': list, '.': {'t': str}}
         ):
-        raise ValueError("`attributes' must be list of strings")
+        case = 0
+
+    if org.wayround.utils.types.struct_check(
+        attributes,
+        {'t': list, '.': {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}}
+        ):
+        case = 1
+
+    if case == None:
+        raise ValueError(
+            "`attributes' must be list of strings or list of tuple of strings"
+            )
 
     for i in attributes:
+
+        if type(i) == str:
+            i = (i,)
+
+        signal_emiter = ''
+
+        if case == 1:
+            signal_emiter = \
+                "self.emit_signal('{signal_name}', self)".format(
+                    signal_name=i[1]
+                    )
+
         exec("""\
 def set_{name}(self, value):
     \"""
@@ -28,6 +60,8 @@ def set_{name}(self, value):
     if hasattr(self, 'format_{name}') and callable(self.format_{name}):
         value = self.format_{name}(value)
     self._{name} = value
+
+    {signal_emiter}
 
 def get_{name}(self):
     \"""
@@ -43,9 +77,10 @@ class_obj._{name} = None
 class_obj.set_{name} = set_{name}
 class_obj.get_{name} = get_{name}
 
-""".format(name=i))
+""".format(name=i[0], signal_emiter=signal_emiter))
 
     return
+
 
 def class_generate_check(class_obj, attributes):
 
@@ -61,7 +96,7 @@ def class_generate_check(class_obj, attributes):
 
     if not org.wayround.utils.types.struct_check(
         attributes,
-        {'t': list, '.':{'t': str}}
+        {'t': list, '.': {'t': str}}
         ):
         raise ValueError("`attributes' must be list of strings")
 

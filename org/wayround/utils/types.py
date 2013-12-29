@@ -226,13 +226,13 @@ def struct_check(value, struct):
 
     '{}': {}, # if 't' is dict and only dict: True - any keys are possible and
               # each child checked with '.' value (recursion). False - same
-              # as True, but without values checking (dafault)
+              # as True, but without values checking (default)
               # if '{}' is dict, then all values in this dict must be dicts
               # with structures like this.
     }
 
     if 't' value is of type str, then value type is checked using this module's
-    types() or types_s(): if '!' in beginnonig of 't' value, then types_s() is
+    types() or types_s(): if '!' in beginning of 't' value, then types_s() is
     used
 
     return False if value does not matches struct, and True otherwise
