@@ -351,6 +351,7 @@ class SignalWaiter:
 class Hub:
 
     def __init__(self):
+        raise Exception("Deprecated")
 
         self._clear(init=True)
 

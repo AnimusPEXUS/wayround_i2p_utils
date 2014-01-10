@@ -4,15 +4,13 @@ Module with package names parsing facilities
 """
 
 import copy
-import fnmatch
 import logging
 import os.path
-import re
-import datetime
 
 import org.wayround.utils.list
 import org.wayround.utils.tag
 import org.wayround.utils.text
+
 
 #Difficult name examples:
 DIFFICULT_NAMES = [
@@ -58,14 +56,18 @@ Acceptable source name extensions
 ALL_DELIMITERS = ['.', '_', '-', '+', '~']
 
 
-
 def _find_possible_chared_versions_and_singles(name_sliced, separator='.'):
     """
     From sliced package name, return all possible versions
     """
 
     versions = []
-    logging.debug("(internal1) versions delimitered by `{}': {}".format(separator, versions))
+    logging.debug(
+        "(internal1) versions delimitered by `{}': {}".format(
+            separator,
+            versions
+            )
+        )
 
     version_started = None
     version_ended = None
@@ -89,12 +91,16 @@ def _find_possible_chared_versions_and_singles(name_sliced, separator='.'):
                     versions.append((version_started, version_ended + 1,))
                     version_started = None
 
-
     if version_started != None:
         versions.append((version_started, version_ended + 1,))
         version_started = None
 
-    logging.debug("(internal2) versions delimitered by `{}': {}".format(separator, versions))
+    logging.debug(
+        "(internal2) versions delimitered by `{}': {}".format(
+            separator,
+            versions
+            )
+        )
 
     singles = []
     multiples = []
@@ -107,9 +113,15 @@ def _find_possible_chared_versions_and_singles(name_sliced, separator='.'):
         else:
             raise Exception("Programming error")
 
-    logging.debug("(internal3) versions delimitered by `{}': {}".format(separator, versions))
+    logging.debug(
+        "(internal3) versions delimitered by `{}': {}".format(
+            separator,
+            versions
+            )
+        )
 
     return {'singles': singles, 'version': multiples}
+
 
 def _find_all_versions_and_singles(name_sliced):
     """
@@ -121,6 +133,7 @@ def _find_all_versions_and_singles(name_sliced):
         ret[i] = _find_possible_chared_versions_and_singles(name_sliced, i)
         logging.debug("versions delimitered by `{}': {}".format(i, ret[i]))
     return ret
+
 
 def _find_most_possible_version(name_sliced, mute=False):
     """
@@ -187,7 +200,9 @@ def _find_most_possible_version(name_sliced, mute=False):
 
                 lists_to_compare = []
 
-                logging.debug("lists_to_compare: {}".format(repr(lists_to_compare)))
+                logging.debug(
+                    "lists_to_compare: {}".format(repr(lists_to_compare))
+                    )
 
                 for j in current_delimiter_group:
                     l = j[1] - j[0]
@@ -207,7 +222,11 @@ def _find_most_possible_version(name_sliced, mute=False):
                         if j[0] < most_possible_version2[0]:
                             most_possible_version2 = j
 
-                    logging.debug("most_possible_version2: {}".format(repr(most_possible_version2)))
+                    logging.debug(
+                        "most_possible_version2: {}".format(
+                            repr(most_possible_version2)
+                            )
+                        )
                     ret = most_possible_version2
                     break
 
@@ -229,16 +248,20 @@ def _find_most_possible_version(name_sliced, mute=False):
                 break
             else:
 
-                most_possible_version3 = possible_singles_grouped_by_delimeter[i][0]
+                most_possible_version3 = \
+                    possible_singles_grouped_by_delimeter[i][0]
 
                 for j in possible_singles_grouped_by_delimeter[i]:
                     if j[0] < most_possible_version3[0]:
                         most_possible_version3 = j
 
-                logging.debug("most_possible_version3: {}".format(repr(most_possible_version3)))
+                logging.debug(
+                    "most_possible_version3: {}".format(
+                        repr(most_possible_version3)
+                        )
+                    )
                 ret = most_possible_version3
                 break
-
 
     logging.debug("most_possible_version: {}".format(repr(ret)))
 
@@ -274,7 +297,9 @@ def _source_name_parse_delicate(filename, mute=False):
     else:
         without_extension = filename[:-len(extension)]
 
-        name_sliced = org.wayround.utils.text.slice_string_to_sections(without_extension)
+        name_sliced = org.wayround.utils.text.slice_string_to_sections(
+            without_extension
+            )
 
         most_possible_version = _find_most_possible_version(name_sliced, mute)
 
@@ -345,7 +370,6 @@ def _source_name_parse_delicate(filename, mute=False):
                 copy.copy(ret['groups']['status_list_dirty'])
                 )
 
-
             org.wayround.utils.list.remove_all_values(
                 ret['groups']['status_list'],
                 ALL_DELIMITERS
@@ -360,14 +384,15 @@ def _source_name_parse_delicate(filename, mute=False):
 
             ret['groups']['status'] = '.'.join(ret['groups']['status_list'])
 
-            ret['groups']['status_dirty'] = ''.join(ret['groups']['status_list_dirty'])
+            ret['groups']['status_dirty'] = \
+                ''.join(ret['groups']['status_list_dirty'])
 
             # extension
 
             ret['groups']['extension'] = extension
 
-
     return ret
+
 
 def parse_tarball_name(
     filename,
@@ -419,14 +444,18 @@ def parse_tarball_name(
 
     return ret
 
+
 def parse_test():
     """
-    Run parser on all difficult names (:data:`DIFFICULT_NAMES`) in test purposes
+    Run parser on all difficult names (:data:`DIFFICULT_NAMES`) in test
+    purposes
     """
 
     for i in DIFFICULT_NAMES:
         logging.info("====== Testing parser on `{}' ======".format(i))
         if not isinstance(parse_tarball_name(i), dict):
-            logging.error("Error parsing file name `{}' - parser not matched".format(i))
+            logging.error(
+                "Error parsing file name `{}' - parser not matched".format(i)
+                )
 
     return
