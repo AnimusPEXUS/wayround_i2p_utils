@@ -34,11 +34,12 @@ def make_dir_checksums(dirname, output_filename):
 
     return ret
 
+
 def make_dir_checksums_fo(
     dirname,
     output_fileobj,
-    rel_to = None,
-    conv_to_rooted = False
+    rel_to=None,
+    conv_to_rooted=False
     ):
 
     if not isinstance(rel_to, str):
@@ -49,13 +50,10 @@ def make_dir_checksums_fo(
     dirname = org.wayround.utils.path.abspath(dirname)
     dirname_l = len(dirname)
 
-
     if not isinstance(rel_to, str):
         rel_to = dirname
 
-
     rel_to = org.wayround.utils.path.abspath(rel_to)
-    rel_to_l = len(rel_to)
 
     if not os.path.isdir(dirname):
         logging.error("Not a dir {}".format(dirname))
@@ -68,9 +66,15 @@ def make_dir_checksums_fo(
             ret = 2
         else:
 
-            for root, dirs, files in os.walk(dirname):
+            for wres in os.walk(dirname):
+
+                root = wres[0]
+                files = wres[1]
+
                 for f in files:
-                    rel_path = org.wayround.utils.path.relpath(root + os.path.sep + f, dirname)
+                    rel_path = org.wayround.utils.path.relpath(
+                        root + os.path.sep + f, dirname
+                        )
                     org.wayround.utils.file.progress_write(
                         "    {}".format(rel_path)
                         )
@@ -93,13 +97,15 @@ def make_dir_checksums_fo(
                             try:
                                 m.update(fd.read())
 
-                                wfn = ('/' + (root + os.path.sep + f)[1:])[dirname_l:]
+                                wfn = (
+                                    '/' + (root + os.path.sep + f)[1:]
+                                    )[dirname_l:]
 
                                 output_fileobj.write(
                                     "{digest} *{pkg_file_name}\n".format_map(
                                         {
                                             'digest': m.hexdigest(),
-                                            'pkg_file_name':wfn
+                                            'pkg_file_name': wfn
                                             }
                                         )
                                     )
@@ -111,7 +117,8 @@ def make_dir_checksums_fo(
     org.wayround.utils.file.progress_write_finish()
     return ret
 
-def make_file_checksum(filename, method = 'sha512'):
+
+def make_file_checksum(filename, method='sha512'):
     ret = 0
 
     if not method.isidentifier() or not hasattr(hashlib, method):
@@ -134,7 +141,8 @@ def make_file_checksum(filename, method = 'sha512'):
 
     return ret
 
-def make_fileobj_checksum(fileobj, method = 'sha512'):
+
+def make_fileobj_checksum(fileobj, method='sha512'):
     ret = None
     hash_method_name = None
 
@@ -152,12 +160,13 @@ def make_fileobj_checksum(fileobj, method = 'sha512'):
         org.wayround.utils.stream.cat(
             fileobj,
             hash_method_name,
-            write_method_name = 'update',
-            standard_write_method_result = False
+            write_method_name='update',
+            standard_write_method_result=False
             )
         ret = hash_method_name.hexdigest()
         del(hash_method_name)
     return ret
+
 
 def parse_checksums_file_text(filename):
     ret = 0
@@ -171,12 +180,15 @@ def parse_checksums_file_text(filename):
         f.close()
         sums = parse_checksums_text(txt)
         if not isinstance(sums, dict):
-            logging.error("Can't get checksums from file `{}'".format(filename))
+            logging.error(
+                "Can't get checksums from file `{}'".format(filename)
+                )
             ret = 2
         else:
             ret = sums
 
     return ret
+
 
 def parse_checksums_text(text):
     ret = 0
@@ -201,6 +213,7 @@ def parse_checksums_text(text):
 
     return ret
 
+
 def checksums_by_list(file_lst, method):
 
     if not method.isidentifier() or not hasattr(hashlib, method):
@@ -209,11 +222,12 @@ def checksums_by_list(file_lst, method):
     ret = {}
 
     for i in file_lst:
-        ret[i] = make_file_checksum(i, method = method)
+        ret[i] = make_file_checksum(i, method=method)
 
     return ret
 
-def render_checksum_dict_to_txt(sums_dict, sort = False):
+
+def render_checksum_dict_to_txt(sums_dict, sort=False):
 
     keys = list(sums_dict.keys())
 
@@ -223,6 +237,24 @@ def render_checksum_dict_to_txt(sums_dict, sort = False):
     ret = ''
 
     for i in keys:
-        ret += '{sum} *{path}\n'.format(sum = str(sums_dict[i]), path = str(i))
+        ret += '{sum} *{path}\n'.format(sum=str(sums_dict[i]), path=str(i))
 
     return ret
+
+
+def is_data_error(method, value, data):
+
+    ret = True
+
+    value = value.lower()
+
+    if not method.isidentifier() or not hasattr(hashlib, method):
+        raise ValueError("hashlib doesn't have `{}'".format(method))
+
+    hash_method_name = eval("hashlib.{}()".format(method))
+
+    hash_method_name.update(data)
+
+    hd = hash_method_name.hexdigest().lower()
+
+    return hd == value

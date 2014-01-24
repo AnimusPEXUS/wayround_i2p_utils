@@ -170,6 +170,8 @@ def parse_element_tag(element, localname, namespaces=None):
     """
     Tag parse routine
 
+    localname must be str or list of str
+
     returns  (localname, namespace) where namespace is one of namespaces or
     (None, None)
     """
@@ -177,8 +179,17 @@ def parse_element_tag(element, localname, namespaces=None):
     if type(element) != lxml.etree._Element:
         raise ValueError("`element' must be lxml.etree._Element")
 
-    if not isinstance(localname, str):
-        raise ValueError("`localname' must be str")
+    if localname == None:
+        localname = []
+
+    if not isinstance(localname, list):
+        localname = [localname]
+
+    if not org.wayround.utils.types.struct_check(
+        localname,
+        {'t': list, '.': {'t': str}}
+        ):
+        raise TypeError("`localname' must be list of strings")
 
     if not org.wayround.utils.types.struct_check(
         namespaces,
@@ -190,7 +201,7 @@ def parse_element_tag(element, localname, namespaces=None):
 
     ret = None, None
 
-    if localname == qname.localname:
+    if len(localname) == 0 or qname.localname in localname:
         if namespaces == None:
             ret = qname.localname, qname.namespace
         else:
