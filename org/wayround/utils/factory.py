@@ -46,7 +46,7 @@ def class_generate_attributes(class_obj, attributes):
 
         if case == 1:
             signal_emiter = \
-                "self.emit_signal('{signal_name}', self)".format(
+                "self.signal.emit('{signal_name}', self)".format(
                     signal_name=i[1]
                     )
 

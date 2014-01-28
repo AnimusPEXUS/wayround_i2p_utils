@@ -368,7 +368,7 @@ else:
 
             return
 
-        def get_window(self, name):
+        def get(self, name):
 
             self._check_name(name)
 
@@ -378,6 +378,12 @@ else:
                 ret = self._singles[name]
 
             return ret
+
+        def destroy_window(self, name):
+            res = self.get(name)
+            if res != None:
+                res.destroy()
+            return
 
         def show_threaded(self, name, *args, **kwargs):
 

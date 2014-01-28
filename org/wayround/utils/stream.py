@@ -7,7 +7,7 @@ import ssl
 import threading
 import time
 
-import org.wayround.utils.signal
+import org.wayround.utils.threading
 
 CAT_READWRITE_TYPES = [
     'file', 'pipe',
@@ -556,7 +556,7 @@ def lbl_write(stdin, stdout, threaded=False, typ='info'):
     return
 
 
-class SocketStreamer(org.wayround.utils.signal.Signal):
+class SocketStreamer:
     """
     Featured class for flexibly handling socket connection
 
@@ -574,7 +574,7 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
 
     def __init__(self, sock, socket_transfer_size=4096, debug=False):
 
-        super().__init__(
+        self.signal = org.wayround.utils.threading.Signal(
             ['start',
              'stop',
              'error',
@@ -773,14 +773,14 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
             if not self._connection_stop_signalled:
                 self._connection_stop_signalled = True
 
-                self.emit_signal('stop', self, self.socket)
+                self.signal.emit('stop', self, self.socket)
 
     def _send_connection_error_event(self):
         if not self._wrapping:
             if not self._connection_error_signalled:
                 self._connection_error_signalled = True
 
-                self.emit_signal('error', self, self.socket)
+                self.signal.emit('error', self, self.socket)
 
     def _restart_threads(self):
         self._stat = 'soft restarting threads'
@@ -788,7 +788,7 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
         self._start_threads()
         self._stat = 'soft restarted threads'
 
-        self.emit_signal('restart', self, self.socket)
+        self.signal.emit('restart', self, self.socket)
 
     def start(self):
 
@@ -913,7 +913,7 @@ class SocketStreamer(org.wayround.utils.signal.Signal):
 
             except:
                 logging.exception("ssl wrap error")
-                self.emit_signal('ssl wrap error', self, self.socket)
+                self.signal.emit('ssl wrap error', self, self.socket)
             else:
                 logging.info(
                     """
@@ -937,7 +937,7 @@ compression:
 
                 self._start_threads()
 
-                self.emit_signal('ssl wrapped', self, self.socket)
+                self.signal.emit('ssl wrapped', self, self.socket)
 
             self._wrapping = False
 
@@ -951,7 +951,7 @@ compression:
                     "Connection already gone. "
                     "Unwrapping is pointless (and erroneous)"
                     )
-                self.emit_signal('ssl ununwrapable', self, self.socket)
+                self.signal.emit('ssl ununwrapable', self, self.socket)
 
             else:
 
@@ -966,7 +966,7 @@ compression:
                     s = self.socket.unwrap()
                 except:
                     logging.exception("ssl unwrap error")
-                    self.emit_signal('ssl unwrap error', self, self.socket)
+                    self.signal.emit('ssl unwrap error', self, self.socket)
 
                 else:
                     self.socket = s
@@ -979,7 +979,7 @@ compression:
                         'after unwrap sock is {}'.format(self.socket)
                         )
 
-                    self.emit_signal('ssl unwrapped', self, self.socket)
+                    self.signal.emit('ssl unwrapped', self, self.socket)
 
             self._wrapping = False
 
@@ -1083,7 +1083,7 @@ compression:
 
                 self.connection = True
 
-                self.emit_signal('start', self, self.socket)
+                self.signal.emit('start', self, self.socket)
 
         self._output_availability_watcher_thread = None
 

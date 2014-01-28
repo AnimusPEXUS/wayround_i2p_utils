@@ -1,4 +1,5 @@
 
+import queue
 import copy
 import threading
 import logging
@@ -27,24 +28,24 @@ class Signal:
 
         self._signal_obj_access_lock = threading.Lock()
 
-        self.set_signal_names(signal_names, add_prefix=add_prefix)
+        self.set_names(signal_names, add_prefix=add_prefix)
 
         return
 
-    def set_signal_names(self, signal_names=None, add_prefix=None):
+    def set_names(self, signal_names=None, add_prefix=None):
         """
         Redefine acceptable signals
 
         NOTE: please understand simple rule: signals must be defined in
-        object's creation time. This method (set_signal_names) is provided only
-        for completeness. So this method (set_signal_names) must not be used in
+        object's creation time. This method (set_names) is provided only
+        for completeness. So this method (set_names) must not be used in
         other places except object's class __init__! The reason for this rule
         is: if You will use this method in object's lifetime, then You will
         need to track changes in it's signal set, so things will become wired,
         hard and overheaded. For instance, SignalWaiter will not wait for new
         signals if it was created with signal_name=True and listened object
         changes own signal set, as SignalWaiter relies on this class'es
-        connect_signal for simplicity. Don't get things hard!
+        connect for simplicity. Don't get things hard!
         """
 
         self._signal_obj_access_lock.acquire()
@@ -68,26 +69,26 @@ class Signal:
 
         return
 
-    def get_signal_names(self, add_prefix=None):
+    def get_names(self, add_prefix=None):
         self._signal_obj_access_lock.acquire()
         ret = _add_prefix(self._signal_names, add_prefix=add_prefix)
         self._signal_obj_access_lock.release()
         return ret
 
-    def _check_signal(self, name):
+    def _check(self, name):
 
         if not name in self._signal_names:
             raise ValueError(
                 "{}: `{}' is not supported signal".format(self, name)
                 )
 
-    def emit_signal(self, name, *args, **kwargs):
+    def emit(self, name, *args, **kwargs):
 
         self._signal_obj_access_lock.acquire()
 
         try:
 
-            self._check_signal(name)
+            self._check(name)
 
             if self._signals_debug:
                 logging.debug(
@@ -132,7 +133,7 @@ class Signal:
 
         return
 
-    def connect_signal(self, signal_name, callback):
+    def connect(self, signal_name, callback):
 
         """
         Connect to some signal
@@ -156,9 +157,9 @@ class Signal:
 
                 for i in signal_name:
 
-                    self._check_signal(i)
+                    self._check(i)
 
-                    if not i in self.is_connected_signal(
+                    if not i in self.is_connected(
                         callback,
                         signal_name=i
                         ):
@@ -203,7 +204,7 @@ class Signal:
                     )
                 )
 
-    def disconnect_signal(self, callback, signal_name=None):
+    def disconnect(self, callback, signal_name=None):
         """
         Disconnects callback from all signals or from certain signal
         """
@@ -244,7 +245,7 @@ class Signal:
 
         return
 
-    def is_connected_signal(self, callback, signal_name=None):
+    def is_connected(self, callback, signal_name=None):
 
         ret = []
 
@@ -296,7 +297,7 @@ class SignalWaiter:
 
     def __init__(self, obj, signal_name, debug=False):
         """
-        signal_names same as in :meth:`Signal.connect_signal`
+        signal_names same as in :meth:`Signal.connect`
         """
 
         self._debug = debug
@@ -312,7 +313,7 @@ class SignalWaiter:
                 "({}) Starting following `{}'".format(self, self._signal_name)
                 )
 
-        self._obj.connect_signal(self._signal_name, self._cb)
+        self._obj.connect(self._signal_name, self._cb)
 
         return
 
@@ -323,7 +324,7 @@ class SignalWaiter:
                 "({}) Stopping following `{}'".format(self, self._signal_name)
                 )
 
-        self._obj.disconnect_signal(self._cb)
+        self._obj.disconnect(self._cb)
 
         while len(self._buffer) != 0:
             del self._buffer[0]
@@ -454,6 +455,86 @@ class Hub:
 
         if name in self.waiters:
             del self.waiters[name]
+
+        return
+
+
+class CallQueue:
+
+    def __init__(self, target_callable):
+
+        self._target_function = target_callable
+        self._signal_instance = None
+        self._signal_name = None
+        self._dumping_done.set()
+        self._queue = []
+        self._call_block = threading.Lock()
+
+    @classmethod
+    def new_for_signal(
+        cls,
+        target_callable,
+        signal_instance=None, signal_name=None
+        ):
+
+        ret = cls(target_callable)
+        ret.set_signal(signal_instance, signal_name)
+
+        signal_instance.connect(signal_name, ret)
+
+        return ret
+
+    def set_signal(self, signal_instance=None, signal_name=None):
+        self._signal_instance = signal_instance
+        self._signal_name = signal_name
+
+    def set_callable_target(self, target_callable):
+        self._target_function = target_callable
+
+    def copy(self):
+        if (not isinstance(self.signal_instance, Signal)
+            or self.signal_name == None
+            ):
+            raise ValueError(
+                "`signal_instance' and `signal_name' must be defined"
+                )
+
+        if self._queue == None:
+            raise Exception("this queue already dumped")
+
+        with self._call_block:
+
+            self.signal_instance.freeze()
+
+            ret = CallQueue.new_for_signal(
+                self.target_callable,
+                self.signal_instance,
+                self.signal_name
+                )
+            ret._set_queue(copy.deepcopy(self._queue))
+
+            self.signal_instance.unfreeze()
+
+        return ret
+
+    def dump(self):
+        with self._call_block:
+
+            while not len(self._queue) == 0:
+                call = self._queue.pop(0)
+                self._target_function(*call['args'], **call['kwargs'])
+            self._queue = None
+
+        return
+
+    def __call__(self, *args, **kwargs):
+
+        with self._call_block:
+
+            if self._queue != None:
+                self._queue.append({'args': args, 'kwargs': kwargs})
+            else:
+                self._target_function(*args, **kwargs)
 
         return
 
