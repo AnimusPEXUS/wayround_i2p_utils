@@ -300,6 +300,9 @@ class SignalWaiter:
         signal_names same as in :meth:`Signal.connect`
         """
 
+        if not isinstance(obj, Signal):
+            raise TypeError("`obj' must by of type Signal")
+
         self._debug = debug
         self._obj = obj
         self._signal_name = signal_name
