@@ -1,15 +1,16 @@
 
-import queue
 import copy
 import threading
 import logging
+import weakref
 
 import org.wayround.utils.weakref
+import org.wayround.utils.types
 
 
 class Signal:
 
-    def __init__(self, signal_names=None, add_prefix=None, debug=False):
+    def __init__(self, object, signal_names=None, add_prefix=None, debug=False):
 
         """
         Initiates Signal Functionality
@@ -19,6 +20,8 @@ class Signal:
         If inheriting class or connecting entity will try to use wrong signal -
         ValueError will be raised
         """
+
+        self.object = object
 
         self._signals_debug = debug
 
@@ -30,6 +33,24 @@ class Signal:
 
         self.set_names(signal_names, add_prefix=add_prefix)
 
+        self._emition_locking_event = threading.Event()
+        self._emition_locking_event.set()
+        self._emition_locking_counter = 0
+
+        return
+
+    def freeze_emition(self):
+        if self._emition_locking_counter == 0:
+            self._emition_locking_event.clear()
+        self._emition_locking_counter += 1
+        return
+
+    def unfreeze_emition(self):
+        if self._emition_locking_counter == 0:
+            raise Exception("output_lock_counter already 0")
+        self._emition_locking_counter -= 1
+        if self._emition_locking_counter == 0:
+            self._emition_locking_event.set()
         return
 
     def set_names(self, signal_names=None, add_prefix=None):
@@ -43,36 +64,33 @@ class Signal:
         is: if You will use this method in object's lifetime, then You will
         need to track changes in it's signal set, so things will become wired,
         hard and overheaded. For instance, SignalWaiter will not wait for new
-        signals if it was created with signal_name=True and listened object
+        signals if it was created with _signal_name=True and listened object
         changes own signal set, as SignalWaiter relies on this class'es
         connect for simplicity. Don't get things hard!
         """
 
-        self._signal_obj_access_lock.acquire()
+        with self._signal_obj_access_lock:
 
-        try:
-            self._signal_names = _add_prefix(signal_names, add_prefix)
+            try:
+                self._signal_names = _add_prefix(signal_names, add_prefix)
 
-            for i in list(self._signals.keys()):
-                if not i in self._signal_names:
-                    while i in self._signals:
-                        del self._signals[i]
+                for i in list(self._signals.keys()):
+                    if not i in self._signal_names:
+                        while i in self._signals:
+                            del self._signals[i]
 
-            for i in self._signal_names:
-                if not i in self._signals:
-                    self._signals[i] = []
+                for i in self._signal_names:
+                    if not i in self._signals:
+                        self._signals[i] = []
 
-        except:
-            logging.exception("Error setting signal_names")
-
-        self._signal_obj_access_lock.release()
+            except:
+                logging.exception("Error setting signal_names")
 
         return
 
     def get_names(self, add_prefix=None):
-        self._signal_obj_access_lock.acquire()
-        ret = _add_prefix(self._signal_names, add_prefix=add_prefix)
-        self._signal_obj_access_lock.release()
+        with self._signal_obj_access_lock:
+            ret = _add_prefix(self._signal_names, add_prefix=add_prefix)
         return ret
 
     def _check(self, name):
@@ -84,52 +102,55 @@ class Signal:
 
     def emit(self, name, *args, **kwargs):
 
-        self._signal_obj_access_lock.acquire()
+        self._emition_locking_event.wait()
 
-        try:
+        with self._signal_obj_access_lock:
 
-            self._check(name)
+            try:
 
-            if self._signals_debug:
-                logging.debug(
-                    "({}) preparing emiting signal `{}'".format(
-                        self.__class__, name
+                self._check(name)
+
+                if self._signals_debug:
+                    logging.debug(
+                        "({}) preparing emiting signal `{}'".format(
+                            self.object.__class__, name
+                            )
                         )
-                    )
 
-            for i in self._signals[name][:]:
+                for i in self._signals[name][:]:
 
-                ref = i()
+                    ref = i()
 
-                if not ref:
-                    while i in self._signals[name]:
-                        self._signals[name].remove(i)
+                    if not ref:
+                        while i in self._signals[name]:
+                            self._signals[name].remove(i)
+                            if self._signals_debug:
+                                logging.debug(
+                            "({}) removed garbage `{}' from `{}'".format(
+                                self.object.__class__, i, name
+                                )
+                                    )
+
+                    else:
+
                         if self._signals_debug:
+
                             logging.debug(
-                                "({}) removed garbage `{}' from `{}'".format(
-                                    self.__class__, i, name
+                                "({}) emiting signal `{}'".format(
+                                    self.object.__class__, name
                                     )
                                 )
 
-                else:
-
-                    if self._signals_debug:
-
-                        logging.debug(
-                            "({}) emiting signal `{}'".format(
-                                self.__class__, name
-                                )
-                            )
-
-                    threading.Thread(
-                        target=ref,
-                        args=(name,) + args,
-                        kwargs=kwargs
-                        ).start()
-        except:
-            logging.exception("Error emitting signal")
-
-        self._signal_obj_access_lock.release()
+                        threading.Thread(
+                            name="{} :: Thread emiting signal `{}'".format(
+                                self.object.__class__, name
+                                ),
+                            target=ref,
+                            args=(name,) + args,
+                            kwargs=kwargs
+                            ).start()
+            except:
+                logging.exception("Error emitting signal")
 
         return
 
@@ -138,59 +159,60 @@ class Signal:
         """
         Connect to some signal
 
-        signal_name can be str, list of strings or True
+        _signal_name can be str, list of strings or True
 
-        signal_name == True - means connect to all signals
+        _signal_name == True - means connect to all signals
         """
 
-        self._signal_obj_access_lock.acquire()
+        with self._signal_obj_access_lock:
 
-        try:
+            try:
 
-            if signal_name == True:
-                signal_name = self._signal_names
+                if signal_name == True:
+                    signal_name = self._signal_names
 
-            if isinstance(signal_name, str):
-                signal_name = [signal_name]
+                if isinstance(signal_name, str):
+                    signal_name = [signal_name]
 
-            if isinstance(signal_name, list):
+                if isinstance(signal_name, list):
 
-                for i in signal_name:
+                    for i in signal_name:
 
-                    self._check(i)
+                        self._check(i)
 
-                    if not i in self.is_connected(
-                        callback,
-                        signal_name=i
-                        ):
+                        if not i in self.is_connected(
+                            callback,
+                            signal_name=i
+                            ):
 
-                        wr = org.wayround.utils.weakref.WeakMethod(
-                            callback, self._print_wr_deletion
-                            )
-                        self._signals[i].append(wr)
-
-                        if self._signals_debug:
-
-                            logging.debug(
-                                "({}) connected `{}' ({}) to `{}'".format(
-                                    self.__class__, callback, wr, i
+                            if org.wayround.utils.types.is_method(callback):
+                                wr = org.wayround.utils.weakref.WeakMethod(
+                                    callback, self._print_wr_deletion
                                     )
-                                )
-                    else:
+                            else:
+                                wr = weakref.ref(callback)
+                            self._signals[i].append(wr)
 
-                        if self._signals_debug:
+                            if self._signals_debug:
 
-                            logging.debug(
-                        "({}) callbacl `{}' already connected to `{}'".\
-                            format(
-                                self.__class__, callback, i
-                                )
-                                )
+                                logging.debug(
+                                    "({}) connected `{}' ({}) to `{}'".format(
+                                        self.object.__class__, callback, wr, i
+                                        )
+                                    )
+                        else:
 
-        except:
-            logging.exception("Error connecting signal")
+                            if self._signals_debug:
 
-        self._signal_obj_access_lock.release()
+                                logging.debug(
+                            "({}) callbacl `{}' already connected to `{}'".\
+                                format(
+                                    self.object.__class__, callback, i
+                                    )
+                                    )
+
+            except:
+                logging.exception("Error connecting signal")
 
         return
 
@@ -200,7 +222,7 @@ class Signal:
 
             logging.debug(
                 "({}) `{}' finalizes".format(
-                    self.__class__, wr
+                    self.object.__class__, wr
                     )
                 )
 
@@ -209,39 +231,37 @@ class Signal:
         Disconnects callback from all signals or from certain signal
         """
 
-        self._signal_obj_access_lock.acquire()
+        with self._signal_obj_access_lock:
 
-        try:
+            try:
 
-            if signal_name:
-                if signal_name in self._signals:
-                    while callback in self._signals[signal_name]:
-                        self._signals[signal_name].remove(callback)
+                if signal_name:
+                    if signal_name in self._signals:
+                        while callback in self._signals[signal_name]:
+                            self._signals[signal_name].remove(callback)
 
-                        if self._signals_debug:
-                            logging.debug(
-                        "({}) removed on request `{}' from `{}'".format(
-                            self.__class__, callback, signal_name
-                            )
+                            if self._signals_debug:
+                                logging.debug(
+                            "({}) removed on request `{}' from `{}'".format(
+                                self.object.__class__, callback, signal_name
                                 )
+                                    )
 
-            else:
+                else:
 
-                for i in list(self._signals.keys()):
-                    while callback in self._signals[i]:
-                        self._signals[i].remove(callback)
+                    for i in list(self._signals.keys()):
+                        while callback in self._signals[i]:
+                            self._signals[i].remove(callback)
 
-                        if self._signals_debug:
-                            logging.debug(
-                        "({}) removed on request `{}' from `{}'".format(
-                            self.__class__, callback, i
-                            )
+                            if self._signals_debug:
+                                logging.debug(
+                            "({}) removed on request `{}' from `{}'".format(
+                                self.object.__class__, callback, i
                                 )
+                                    )
 
-        except:
-            logging.exception("Error disconnecting signal")
-
-        self._signal_obj_access_lock.release()
+            except:
+                logging.exception("Error disconnecting signal")
 
         return
 
@@ -262,6 +282,12 @@ class Signal:
 
         return ret
 
+    def has_signal(self, name):
+        return name in self._signal_names
+
+    def gen_call_queue(self, name):
+        return CallQueue.new_for_signal(None, self, name)
+
 
 class SignalWaiter:
     """
@@ -273,7 +299,7 @@ class SignalWaiter:
 
     example::
 
-    w = SignalWaiter(obj, signal_name)
+    w = SignalWaiter(obj, _signal_name)
     w.start()
 
     obj.do_some_stuff_which_results_in_calling_desired_signals()
@@ -466,10 +492,9 @@ class CallQueue:
 
     def __init__(self, target_callable):
 
-        self._target_function = target_callable
+        self._target_callable = target_callable
         self._signal_instance = None
         self._signal_name = None
-        self._dumping_done.set()
         self._queue = []
         self._call_block = threading.Lock()
 
@@ -492,11 +517,11 @@ class CallQueue:
         self._signal_name = signal_name
 
     def set_callable_target(self, target_callable):
-        self._target_function = target_callable
+        self._target_callable = target_callable
 
     def copy(self):
-        if (not isinstance(self.signal_instance, Signal)
-            or self.signal_name == None
+        if (not isinstance(self._signal_instance, Signal)
+            or self._signal_name == None
             ):
             raise ValueError(
                 "`signal_instance' and `signal_name' must be defined"
@@ -507,16 +532,16 @@ class CallQueue:
 
         with self._call_block:
 
-            self.signal_instance.freeze()
+            self._signal_instance.freeze_emition()
 
             ret = CallQueue.new_for_signal(
-                self.target_callable,
-                self.signal_instance,
-                self.signal_name
+                self._target_callable,
+                self._signal_instance,
+                self._signal_name
                 )
-            ret._set_queue(copy.deepcopy(self._queue))
+            ret._queue = copy.copy(self._queue)
 
-            self.signal_instance.unfreeze()
+            self._signal_instance.unfreeze_emition()
 
         return ret
 
@@ -525,7 +550,26 @@ class CallQueue:
 
             while not len(self._queue) == 0:
                 call = self._queue.pop(0)
-                self._target_function(*call['args'], **call['kwargs'])
+                logging.debug(
+                    "{}, calling {} ({}, {})".format(
+                        self,
+                        self._target_callable,
+                        call['args'],
+                        call['kwargs']
+                        )
+                    )
+                _t = threading.Thread(
+                    name="thread {} calling {} ({}, {})".format(
+                        self,
+                        self._target_callable,
+                        call['args'],
+                        call['kwargs']
+                        ),
+                    target=self._target_callable,
+                    args=call['args'],
+                    kwargs=call['kwargs']
+                    )
+                _t.start()
             self._queue = None
 
         return
@@ -537,7 +581,26 @@ class CallQueue:
             if self._queue != None:
                 self._queue.append({'args': args, 'kwargs': kwargs})
             else:
-                self._target_function(*args, **kwargs)
+                logging.debug(
+                    "{}, calling {} ({}, {})".format(
+                        self,
+                        self._target_callable,
+                        args,
+                        kwargs
+                        )
+                    )
+                _t = threading.Thread(
+                    name="thread {} calling {} ({}, {})".format(
+                        self,
+                        self._target_callable,
+                        args,
+                        kwargs
+                        ),
+                    target=self._target_callable,
+                    args=args,
+                    kwargs=kwargs
+                    )
+                _t.start()
 
         return
 

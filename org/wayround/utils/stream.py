@@ -575,6 +575,7 @@ class SocketStreamer:
     def __init__(self, sock, socket_transfer_size=4096, debug=False):
 
         self.signal = org.wayround.utils.threading.Signal(
+            self,
             ['start',
              'stop',
              'error',

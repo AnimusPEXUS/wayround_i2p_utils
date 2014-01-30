@@ -188,6 +188,36 @@ else:
         def stop(self):
             self._exit_event.set()
 
+#    class GtkIteratedLoop:
+#
+#        def __init__(self, sleep_fraction=0.01):
+#            self._exit_event = threading.Event()
+#            self._started = False
+#            self._sleep_fraction = sleep_fraction
+#
+#        def wait(self, timeout=None):
+#
+#            if self._started:
+#                self._exit_event.wait(timeout)
+#            else:
+#                self._started = True
+#
+#                self._exit_event.clear()
+#
+#                Gtk.main()
+#
+##                while not self._exit_event.is_set():
+##                    while Gtk.events_pending():
+##                        Gtk.main_iteration_do(False)
+##
+##                    time.sleep(self._sleep_fraction)
+#
+#                self._started = False
+#
+#        def stop(self):
+#            Gtk.main_quit()
+#            self._exit_event.set()
+
     class MessageDialog(Gtk.MessageDialog):
 
         """

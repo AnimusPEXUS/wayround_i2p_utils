@@ -486,3 +486,7 @@ def attrs_dict_to_object_same_names(lst):
         ret.append((i, i,))
 
     return ret
+
+
+def is_method(obj):
+    return hasattr(obj, '__self__')
