@@ -916,7 +916,7 @@ class SocketStreamer:
                 logging.exception("ssl wrap error")
                 self.signal.emit('ssl wrap error', self, self.socket)
             else:
-                logging.info(
+                logging.debug(
                     """
 peer cert:
 {}

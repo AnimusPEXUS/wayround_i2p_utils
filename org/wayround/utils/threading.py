@@ -21,6 +21,18 @@ class Signal:
         ValueError will be raised
         """
 
+        if signal_names == None:
+            signal_names = []
+
+        if not isinstance(signal_names, list):
+            signal_names = [signal_names]
+
+        if not org.wayround.utils.types.struct_check(
+            signal_names,
+            {'t': list, '.': {'t': str}}
+            ):
+            raise ValueError("`signal_names' must be None, str or list of str")
+
         self.object = object
 
         self._signals_debug = debug
@@ -607,15 +619,11 @@ class CallQueue:
 
 def _add_prefix(signal_names=None, add_prefix=None):
 
-    if signal_names == None:
-        signal_names = []
-
-    if not isinstance(signal_names, list):
-        raise TypeError("signal_names must be a list of str")
-
-    for i in signal_names:
-        if not isinstance(i, str):
-            raise TypeError("signal_names must be a list of str")
+    if not org.wayround.utils.types.struct_check(
+        signal_names,
+        {'t': list, '.': {'t': str}}
+        ):
+        raise ValueError("`signal_names' must be None, str or list of str")
 
     lst = copy.copy(signal_names)
 
