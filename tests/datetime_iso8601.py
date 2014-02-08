@@ -9,3 +9,9 @@ print()
 
 print("Tesing time")
 org.wayround.utils.datetime_iso8601.test_time()
+
+print()
+
+print("Tesing datetime")
+org.wayround.utils.datetime_iso8601.test_datetime()
+
