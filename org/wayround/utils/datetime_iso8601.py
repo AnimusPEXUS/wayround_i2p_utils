@@ -337,7 +337,7 @@ def str_to_time(value):
     return ret, ret_attributes
 
 
-def datetime_str_to_datetime(value):
+def str_to_datetime(value):
     _debug = True
     ret = None
     ret_attributes = set()
@@ -445,7 +445,7 @@ def time_to_str(time, attr=None):
     if 'T' in attr:
         t = 'T'
 
-    hour = time.hour
+    hour = '{:02d}'.format(time.hour)
 
     fract = 0
     if time.microsecond != 0:
@@ -453,17 +453,21 @@ def time_to_str(time, attr=None):
 
     second = 0
     if 'sec' in attr:
-        second = time.second
+        second = '{:02d}'.format(time.second)
     else:
-        second = float('{}.{}'.format(time.second, fract))
+#        second = float('{}.{}'.format(time.second, fract))
+        second = float(time.second + fract)
         fract = second / 60
+        second = ''
 
     minute = 0
     if 'min' in attr:
-        minute = time.minute
+        minute = '{:02d}'.format(time.minute)
     else:
-        minute = float('{}.{}'.format(time.minute, fract))
+#        minute = float('{}.{}'.format(time.minute, fract))
+        minute = float(time.minute + fract)
         fract = minute / 60
+        minute = ''
 
     fract_sep = ''
     for i in [',', '.']:
@@ -479,6 +483,11 @@ def time_to_str(time, attr=None):
     if 'sec' in attr and ':' in attr:
         sep2 = ':'
 
+    if not 'fract' in attr:
+        fract = ''
+    else:
+        fract = '{}'.format(str(fract).split('.')[1])
+
     tz = format_tz(time.tzinfo, sep=':' in attr, minu='tz_min' in attr)
 
     ret = \
@@ -488,9 +497,9 @@ def time_to_str(time, attr=None):
             sep1=sep1,
             sep2=sep2,
             fract_sep=fract_sep,
-            hour='{:02d}'.format(hour),
-            min='{:02d}'.format(minute),
-            sec='{:02d}'.format(second),
+            hour=hour,
+            min=minute,
+            sec=second,
             fract=fract,
             tz=tz
             )
@@ -505,7 +514,9 @@ def date_to_str(date, attr=None):
 
     if 'ordinal' in attr:
 
-        year = date.year
+        cop = datetime.date(date.year, 1, 1)
+
+        year = '{:04d}'.format(date.year)
         day = ''
         sep = ''
 
@@ -513,7 +524,7 @@ def date_to_str(date, attr=None):
             sep = '-'
 
         if 'day' in attr:
-            day = '{:03d}'.format(date.toordinal())
+            day = '{:03d}'.format((date - cop).days)
 
         ret = '{year}{sep}{day}'.format(
             year=year,
@@ -523,15 +534,20 @@ def date_to_str(date, attr=None):
 
     elif 'week' in attr:
 
-        calendar = date.isocalendar()
-        year = '{:04d}'.format(calendar[0])
-        week = '{:02d}'.format(calendar[1])
+        cop = datetime.date(date.year, 1, 1)
+        delta = date - cop
+        weeks = int(delta.days / 7)
+        days = delta.days - (weeks * 7)
+#        days = 7 * float('0.{}'.format(int(str(weeks).split('.')[1])))
+
+        year = '{:04d}'.format(date.year)
+        week = '{:02d}'.format(weeks)
         day = ''
         sep1 = ''
         sep2 = ''
 
         if 'day' in attr:
-            day = '{:02d}'.format(calendar[2])
+            day = '{:01d}'.format(int(days))
 
         if '-' in attr:
             sep1 = '-'
@@ -581,9 +597,34 @@ def date_to_str(date, attr=None):
     return ret
 
 
+def _test(variants, callab, callab2):
+
+    for i in variants:
+
+        print(i)
+
+        res = callab(i)
+
+        if res[0] == None:
+            print("'{}' not matches".format(i))
+        else:
+            print("forward result {}".format(repr(res)))
+
+            res = callab2(res[0], res[1])
+
+            if res == None:
+                print("'{}' not matches".format(i))
+            else:
+                print("reverse result\n{}".format(res))
+
+        print()
+
+    return
+
+
 def test_date():
 
-    for i in [
+    variants = [
         '19850412',
         '1985-04-12',
         '1985-04',
@@ -606,25 +647,16 @@ def test_date():
 #        '+001985W15',
 #        '+001985-W15'
         '2007-01-25'
-        ]:
+        ]
 
-        print(i)
-
-        res = str_to_date(i)
-
-        if res == None:
-            print("'{}' not matches".format(i))
-        else:
-            print(repr(res))
-
-        print()
+    _test(variants, str_to_date, date_to_str)
 
     return
 
 
 def test_time():
 
-    for i in [
+    variants = [
         '232050',
         '23:20:50',
         '2320',
@@ -644,23 +676,16 @@ def test_time():
         '23:20,8',
         '23,3',
         '12:00:00Z'
-        ]:
+        ]
 
-        print(i)
-
-        res = str_to_time(i)
-
-        if res == None:
-            print("'{}' not matches".format(i))
-        else:
-            print(repr(res))
-
-        print()
+    _test(variants, str_to_time, time_to_str)
 
     return
 
 
 def test_datetime():
+
+    return
 
     for i in [
         '2007-01-25T12:00:00Z'
@@ -668,7 +693,7 @@ def test_datetime():
 
         print(i)
 
-        res = datetime_str_to_datetime(i)
+        res = str_to_datetime(i)
 
         if res == None:
             print("'{}' not matches".format(i))
