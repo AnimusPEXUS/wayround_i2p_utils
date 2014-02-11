@@ -2,6 +2,7 @@
 
 """
 Based on ISO 8601-2004
+Partially supported truncated dates and times
 """
 
 import datetime
@@ -12,25 +13,40 @@ import re
 
 DATE_EXPRESSION = \
     re.compile(
+        r'^'
         r'(?P<year>((\d{4})|(\d{2})))'
         r'(?P<not_year>(?P<sep1>\-)?(?P<month>\d{2})((?P<sep2>\-)?'
-        r'(?P<day>\d{2}))?)?$'
+        r'(?P<day>\d{2}))?)?'
+        r'$'
+        )
+
+DATE_TRUNCATED_EXPRESSION = \
+    re.compile(
+        r'^'
+        r'--'
+        r'((?P<number1>\d{2})|-)(?P<sep>-)?(?P<number2>\d{2})?'
+        r'$'
         )
 
 DATE_ORDINAL_EXPRESSION = \
     re.compile(
-        r'(?P<year>\d{4})(?P<sep>\-)?(?P<day>\d{3})$'
+        r'^'
+        r'(?P<year>\d{4})(?P<sep>\-)?(?P<day>\d{3})'
+        r'$'
         )
 
 DATE_WEEK_EXPRESSION = \
     re.compile(
+        r'^'
         r'(?P<year>\d{4})(?P<sep1>\-)?'
-        r'W(?P<week>\d{2})((?P<sep2>\-)?(?P<day>\d{1}))?$'
+        r'W(?P<week>\d{2})((?P<sep2>\-)?(?P<day>\d{1}))?'
+        r'$'
         )
 
 TIME_EXPRESSION = \
     re.compile(
-        r'^(?P<T>T)?(?P<hour>\d{2})((?P<sep1>\:)?(?P<min>\d{2})((?P<sep2>\:)?'
+        r'^'
+        r'(?P<T>T)?(?P<hour>\d{2})((?P<sep1>\:)?(?P<min>\d{2})((?P<sep2>\:)?'
         r'(?P<sec>\d{2}))?)?'
         r'((?P<fract_sep>[\.\,])(?P<fract>\d+))?'
         r'(?P<tz>'
@@ -39,12 +55,21 @@ TIME_EXPRESSION = \
         r'$'
         )
 
+
+TIME_TRUNCATED_EXPRESSION = \
+    re.compile(
+        r'^'
+        r'-'
+        r'((?P<number1>\d{2})|-)(?P<sep>:)?(?P<number2>\d{2})?'
+        r'$'
+        )
+
 DATE_ATTRIBUTES = {
-    '-', 'year', 'century', 'week', 'ordinal', 'day', 'month'
+    '-', 'year', 'century', 'week', 'ordinal', 'day', 'month', 'truncated_date'
     }
 TIME_ATTRIBUTES = {
     'hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min', 'fract_sep',
-    'T', ':', 'local', 'utc', ',', '.', 'Z'
+    'T', ':', 'local', 'utc', ',', '.', 'Z', 'truncated_date'
     }
 
 
@@ -64,118 +89,127 @@ def _time_attrs_check(arr):
 
 def str_to_date(value):
 
-    res, attr = date_ordinal_str_to_date(value)
+    res, attr = date_truncated_str_to_dict(value)
     if res != None:
         ret = res, attr
     else:
-        res, attr = date_week_str_to_date(value)
+        res, attr = date_ordinal_str_to_date(value)
         if res != None:
             ret = res, attr
         else:
-            res, attr = date_normal_str_to_date(value)
+            res, attr = date_week_str_to_date(value)
             if res != None:
                 ret = res, attr
             else:
-                ret = None, None
+                res, attr = date_normal_str_to_date(value)
+                if res != None:
+                    ret = res, attr
+                else:
+                    ret = None, None
 
     return ret
 
 
 def str_to_time(value):
 
-    _debug = False
-
-    ret = None
-    ret_attributes = set()
-
-    res = TIME_EXPRESSION.match(value)
-
-    if res == None:
-        pass
+    if value[0] == '-':
+        # TODO: separate this
+        ret, ret_attributes = time_truncated_str_to_dict(value)
     else:
-        groupdict = res.groupdict()
-        separator_error = False
-        separator = groupdict['sep1']
-        microseconds = 0
 
-        if groupdict['T'] == 'T':
-            ret_attributes.add('T')
+        _debug = False
 
-        if separator == ':':
-            ret_attributes.add(':')
+        ret = None
+        ret_attributes = set()
 
-        if (groupdict['sec'] != None
-            and groupdict['sep2'] != separator):
-            separator_error = True
+        res = TIME_EXPRESSION.match(value)
 
-        if (groupdict['tz_min'] != None
-            and groupdict['sep3'] != separator):
-            separator_error = True
-
-        if groupdict['fract_sep'] != None:
-            ret_attributes.add(groupdict['fract_sep'])
-
-        for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
-            if groupdict[i] != None:
-                ret_attributes.add(i)
-
-        if groupdict['fract'] != None:
-            fract = int(groupdict['fract'])
-
-            if groupdict['min'] == None:
-                minute = float(60 * float('0.{}'.format(fract)))
-                groupdict['min'] = str(int(minute))
-                fract = int(str(minute).split('.')[1])
-
-            if groupdict['sec'] == None:
-                second = float(60 * float('0.{}'.format(fract)))
-                groupdict['sec'] = str(int(second))
-                fract = int(str(second).split('.')[1])
-
-            microseconds = round(1000000 * float('0.{}'.format(fract)))
-
-            if _debug:
-                print("After fract translations:\n{}".format(groupdict))
-                print("microseconds = {}".format(microseconds))
-
-        for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
-            if groupdict[i] == None:
-                groupdict[i] = '00'
-
-        if groupdict['tz_sign'] == None:
-            groupdict['tz_sign'] = '+'
-
-        if separator_error:
+        if res == None:
             pass
         else:
-            z = None
-            if groupdict['tz'] == None:
-                ret_attributes.add('local')
-                z = None
-            elif groupdict['tz'] == 'Z':
-                ret_attributes.add('Z')
-                ret_attributes.add('utc')
-                z = datetime.timezone.utc
+            groupdict = res.groupdict()
+            separator_error = False
+            separator = groupdict['sep1']
+            microseconds = 0
+
+            if groupdict['T'] == 'T':
+                ret_attributes.add('T')
+
+            if separator == ':':
+                ret_attributes.add(':')
+
+            if (groupdict['sec'] != None
+                and groupdict['sep2'] != separator):
+                separator_error = True
+
+            if (groupdict['tz_min'] != None
+                and groupdict['sep3'] != separator):
+                separator_error = True
+
+            if groupdict['fract_sep'] != None:
+                ret_attributes.add(groupdict['fract_sep'])
+
+            for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
+                if groupdict[i] != None:
+                    ret_attributes.add(i)
+
+            if groupdict['fract'] != None:
+                fract = int(groupdict['fract'])
+
+                if groupdict['min'] == None:
+                    minute = float(60 * float('0.{}'.format(fract)))
+                    groupdict['min'] = str(int(minute))
+                    fract = int(str(minute).split('.')[1])
+
+                if groupdict['sec'] == None:
+                    second = float(60 * float('0.{}'.format(fract)))
+                    groupdict['sec'] = str(int(second))
+                    fract = int(str(second).split('.')[1])
+
+                microseconds = round(1000000 * float('0.{}'.format(fract)))
+
+                if _debug:
+                    print("After fract translations:\n{}".format(groupdict))
+                    print("microseconds = {}".format(microseconds))
+
+            for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
+                if groupdict[i] == None:
+                    groupdict[i] = '00'
+
+            if groupdict['tz_sign'] == None:
+                groupdict['tz_sign'] = '+'
+
+            if separator_error:
+                pass
             else:
-                ret_attributes.add('utc')
-                z = gen_tz(
-                    int(groupdict['tz_hour']),
-                    int(groupdict['tz_min']),
-                    groupdict['tz_sign'] == '+'
+                z = None
+                if groupdict['tz'] == None:
+                    ret_attributes.add('local')
+                    z = None
+                elif groupdict['tz'] == 'Z':
+                    ret_attributes.add('Z')
+                    ret_attributes.add('utc')
+                    z = datetime.timezone.utc
+                else:
+                    ret_attributes.add('utc')
+                    z = gen_tz(
+                        int(groupdict['tz_hour']),
+                        int(groupdict['tz_min']),
+                        groupdict['tz_sign'] == '+'
+                        )
+
+                if _debug:
+                    print("Setting tz to {}".format(z))
+
+                ret = datetime.time(
+                    int(groupdict['hour']),
+                    int(groupdict['min']),
+                    int(groupdict['sec']),
+                    microseconds,
+                    tzinfo=z
                     )
 
-            if _debug:
-                print("Setting tz to {}".format(z))
-
-            ret = datetime.time(
-                int(groupdict['hour']),
-                int(groupdict['min']),
-                int(groupdict['sec']),
-                microseconds,
-                tzinfo=z
-                )
-
-            _time_attrs_check(ret_attributes)
+                _time_attrs_check(ret_attributes)
 
     return ret, ret_attributes
 
@@ -236,7 +270,11 @@ def date_to_str(date, attr=None):
     if attr == None:
         attr = {'year', 'month', 'day'}
 
-    if 'ordinal' in attr:
+    if 'truncated_date' in attr:
+
+        ret = dict_to_truncated_date_str(date, attr)
+
+    elif 'ordinal' in attr:
 
         cop = datetime.date(date.year, 1, 1)
 
@@ -323,76 +361,80 @@ def date_to_str(date, attr=None):
 
 def time_to_str(time, attr=None):
 
-    if attr == None:
-        attr = {'-', 'hour', 'min', 'sec'}
-
-    t = ''
-    if 'T' in attr:
-        t = 'T'
-
-    hour = '{:02d}'.format(time.hour)
-
-    fract = 0
-    if time.microsecond != 0:
-        fract = time.microsecond / 1000000
-
-    second = 0
-    if 'sec' in attr:
-        second = '{:02d}'.format(time.second)
+    if 'truncated_time' in attr:
+        ret = dict_to_truncated_time_str(time, attr)
     else:
-#        second = float('{}.{}'.format(time.second, fract))
-        second = float(time.second + fract)
-        fract = second / 60
-        second = ''
 
-    minute = 0
-    if 'min' in attr:
-        minute = '{:02d}'.format(time.minute)
-    else:
-#        minute = float('{}.{}'.format(time.minute, fract))
-        minute = float(time.minute + fract)
-        fract = minute / 60
-        minute = ''
+        if attr == None:
+            attr = {'-', 'hour', 'min', 'sec'}
 
-    fract_sep = ''
-    for i in [',', '.']:
-        if i in attr:
-            fract_sep = i
-            break
+        t = ''
+        if 'T' in attr:
+            t = 'T'
 
-    sep1 = ''
-    if 'min' in attr and ':' in attr:
-        sep1 = ':'
+        hour = '{:02d}'.format(time.hour)
 
-    sep2 = ''
-    if 'sec' in attr and ':' in attr:
-        sep2 = ':'
+        fract = 0
+        if time.microsecond != 0:
+            fract = time.microsecond / 1000000
 
-    if not 'fract' in attr:
-        fract = ''
-    else:
-        fract = '{}'.format(str(fract).split('.')[1])
+        second = 0
+        if 'sec' in attr:
+            second = '{:02d}'.format(time.second)
+        else:
+    #        second = float('{}.{}'.format(time.second, fract))
+            second = float(time.second + fract)
+            fract = second / 60
+            second = ''
 
-    tz = format_tz(
-        time.tzinfo,
-        sep=':' in attr,
-        minu='tz_min' in attr,
-        zed='Z' in attr
-        )
+        minute = 0
+        if 'min' in attr:
+            minute = '{:02d}'.format(time.minute)
+        else:
+    #        minute = float('{}.{}'.format(time.minute, fract))
+            minute = float(time.minute + fract)
+            fract = minute / 60
+            minute = ''
 
-    ret = \
-        '{T}{hour}{sep1}{min}{sep2}' \
-        '{sec}{fract_sep}{fract}{tz}'.format(
-            T=t,
-            sep1=sep1,
-            sep2=sep2,
-            fract_sep=fract_sep,
-            hour=hour,
-            min=minute,
-            sec=second,
-            fract=fract,
-            tz=tz
+        fract_sep = ''
+        for i in [',', '.']:
+            if i in attr:
+                fract_sep = i
+                break
+
+        sep1 = ''
+        if 'min' in attr and ':' in attr:
+            sep1 = ':'
+
+        sep2 = ''
+        if 'sec' in attr and ':' in attr:
+            sep2 = ':'
+
+        if not 'fract' in attr:
+            fract = ''
+        else:
+            fract = '{}'.format(str(fract).split('.')[1])
+
+        tz = format_tz(
+            time.tzinfo,
+            sep=':' in attr,
+            minu='tz_min' in attr,
+            zed='Z' in attr
             )
+
+        ret = \
+            '{T}{hour}{sep1}{min}{sep2}' \
+            '{sec}{fract_sep}{fract}{tz}'.format(
+                T=t,
+                sep1=sep1,
+                sep2=sep2,
+                fract_sep=fract_sep,
+                hour=hour,
+                min=minute,
+                sec=second,
+                fract=fract,
+                tz=tz
+                )
 
     return ret
 
@@ -416,6 +458,72 @@ def datetime_to_str(value, attr):
         )
 
     return ret
+
+
+def date_truncated_str_to_dict(value):
+
+    _debug = False
+
+    ret = None
+    ret_attributes = set()
+
+    res = DATE_TRUNCATED_EXPRESSION.match(value)
+
+    if res == None:
+        if _debug:
+            print("no match")
+    else:
+
+        ret = {'month': None, 'day': None}
+
+        ret_attributes.add('truncated_date')
+        groupdict = res.groupdict()
+
+        if groupdict['number1'] not in [None, '-']:
+            ret_attributes.add('month')
+            ret['month'] = int(groupdict['number1'])
+
+        if groupdict['number2'] not in [None]:
+            ret_attributes.add('day')
+            ret['day'] = int(groupdict['number2'])
+
+        if groupdict['sep'] == '-':
+            ret_attributes.add('-')
+
+    return ret, ret_attributes
+
+
+def time_truncated_str_to_dict(value):
+
+    _debug = False
+
+    ret = None
+    ret_attributes = set()
+
+    res = TIME_TRUNCATED_EXPRESSION.match(value)
+
+    if res == None:
+        if _debug:
+            print("no match")
+    else:
+
+        ret = {'min': None, 'sec': None}
+
+        ret_attributes.add('truncated_time')
+        groupdict = res.groupdict()
+
+        if groupdict['number1'] not in [None, '-']:
+            ret_attributes.add('min')
+            ret['min'] = int(groupdict['number1'])
+
+        if groupdict['number2'] not in [None]:
+            ret_attributes.add('sec')
+            ret['sec'] = int(groupdict['number2'])
+
+        if groupdict['sep'] == ':':
+            ret_attributes.add(':')
+
+    return ret, ret_attributes
 
 
 def date_ordinal_str_to_date(value):
@@ -579,6 +687,60 @@ def date_normal_str_to_date(value):
     return ret, ret_attributes
 
 
+def dict_to_truncated_date_str(value, attr):
+
+    day = ''
+    if 'day' in attr and value['day'] != None:
+        day = '{:02d}'.format(int(value['day']))
+
+    month = ''
+    if 'month' in attr and value['month'] != None or value['month'] == '-':
+        month = '{:02d}'.format(int(value['month']))
+
+    if not 'month' in attr:
+        month = '-'
+
+    sep = ''
+    if '-' in attr and day != '' and not month in ['', '-']:
+        sep = '-'
+
+    ret = \
+        '--{month}{sep}{day}'.format(
+            month=month,
+            sep=sep,
+            day=day
+            )
+
+    return ret
+
+
+def dict_to_truncated_time_str(value, attr):
+
+    sec = ''
+    if 'sec' in attr and value['sec'] != None:
+        sec = '{:02d}'.format(int(value['sec']))
+
+    minu = ''
+    if 'min' in attr and value['min'] != None or value['min'] == '-':
+        minu = '{:02d}'.format(int(value['min']))
+
+    if not 'min' in attr:
+        minu = '-'
+
+    sep = ''
+    if ':' in attr and sec != '' and not minu in ['', '-']:
+        sep = ':'
+
+    ret = \
+        '-{minu}{sep}{sec}'.format(
+            minu=minu,
+            sep=sep,
+            sec=sec
+            )
+
+    return ret
+
+
 def gen_tz(h, m, plus=True):
 
     td = datetime.timedelta(hours=h, minutes=m)
@@ -662,11 +824,6 @@ def test_date():
         '1985-04',
         '1985',
         '19',
-#        '+0019850412',
-#        '+001985-04-12',
-#        '+001985-04',
-#        '+001985',
-#        '+0019',
         '1985102',
         '-1985102',
         '1985-102',
@@ -674,11 +831,11 @@ def test_date():
         '1985-W15-5',
         '1985W15',
         '1985-W15',
-#        '+001985W155',
-#        '+001985-W15-5',
-#        '+001985W15',
-#        '+001985-W15'
-        '2007-01-25'
+        '2007-01-25',
+        '--0412',
+        '--04-12',
+        '--04',
+        '---12'
         ]
 
     _test(variants, str_to_date, date_to_str)
@@ -707,7 +864,11 @@ def test_time():
         '2320,8',
         '23:20,8',
         '23,3',
-        '12:00:00Z'
+        '12:00:00Z',
+        '-2050',
+        '-20:50',
+        '-20',
+        '--50'
         ]
 
     _test(variants, str_to_time, time_to_str)
