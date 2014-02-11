@@ -594,7 +594,7 @@ def format_tz(value, sep=True, minu=True, zed=False):
 
     ret = None
 
-    if value == None and zed == False:
+    if value == None:
         ret = ''
     else:
         a = value.utcoffset(None)
