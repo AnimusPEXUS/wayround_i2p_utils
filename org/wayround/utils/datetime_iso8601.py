@@ -69,7 +69,7 @@ DATE_ATTRIBUTES = {
     }
 TIME_ATTRIBUTES = {
     'hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min', 'fract_sep',
-    'T', ':', 'local', 'utc', ',', '.', 'Z', 'truncated_date'
+    'T', ':', 'local', 'utc', ',', '.', 'Z', 'truncated_time'
     }
 
 
