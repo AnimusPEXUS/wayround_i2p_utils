@@ -4,13 +4,22 @@ import lxml.etree
 import org.wayround.utils.types
 
 
-def subelems_to_object_props(element, obj, tagname_class_attrnames):
+def subelems_to_object_props(
+    element, obj, tagname_class_attrnames,
+    must_be=False
+    ):
+
     """
     Find element by tag and convert it to object using additional information
 
     tagname_class_attrnames must have following structure:
     [('{ns}tag', ClassName, 'property_name'), ...]
+
+    return: False - no error, True - if must_be==True and some element not
+        found
     """
+
+    ret = False
 
     if type(element) != lxml.etree._Element:
         raise TypeError("`element' must be lxml.etree.Element")
@@ -25,8 +34,67 @@ def subelems_to_object_props(element, obj, tagname_class_attrnames):
         val = element.find(i[0])
         if val != None:
             getattr(obj, 'set_{}'.format(i[2]))(i[1].new_from_element(val))
+        else:
+            if must_be:
+                ret = True
 
-    return
+    return ret
+
+
+def subelems_to_object_props2(element, obj, tagname_class_attrnames):
+    """
+    In distinction to subelems_to_object_props(), firsts values of tuples can
+    end on '?' or '*', which indicates necessity of tag found in elements
+
+    tagname_class_attrnames must have following structure:
+    [('{ns}tag[?*]', ClassName, 'property_name'), ...]
+    """
+
+    ret = False
+
+    if type(element) != lxml.etree._Element:
+        raise TypeError("`element' must be lxml.etree.Element")
+
+    if not org.wayround.utils.types.struct_check(
+        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 3}}
+        ):
+        raise TypeError("`tagname_class_attrnames' has invalid structure")
+
+    must_be = []
+    can_be = []
+    multiples = []
+
+    for i in tagname_class_attrnames:
+
+        if i[0].endswith('?'):
+            can_be.append((i[0][:-1], i[1], i[2]))
+
+        elif i[0].endswith('*'):
+            multiples.append((i[0][:-1], i[1], i[2]))
+
+        else:
+            must_be.append(i)
+
+    res = subelems_to_object_props(
+        element,
+        obj,
+        tagname_class_attrnames=must_be,
+        must_be=True
+        )
+
+    if res == True:
+        ret = True
+
+    else:
+        subelems_to_object_props(
+            element, obj, can_be
+            )
+
+        subelemsm_to_object_propsm(
+            element, obj, multiples
+            )
+
+    return ret
 
 
 def subelemsm_to_object_propsm(element, obj, tagname_class_attrnames):
@@ -113,6 +181,53 @@ def object_props_to_subelems(obj, element, names):
     return
 
 
+def object_props_to_subelems2(obj, element, tagname_class_attrnames):
+    """
+    In distinction to object_props_to_subelems(), firsts values of tuples can
+    end on '*', which indicates necessity to use function
+    object_propsm_to_subelemsm()
+
+    tagname_class_attrnames must have following structure:
+    [('{ns}tag[*]', ClassName, 'property_name'), ...]
+    """
+
+    if type(element) != lxml.etree._Element:
+        raise TypeError("`element' must be lxml.etree.Element")
+
+    if not org.wayround.utils.types.struct_check(
+        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 3}}
+        ):
+        raise TypeError("`tagname_class_attrnames' has invalid structure")
+
+    must_be = []
+    multiples = []
+
+    for i in tagname_class_attrnames:
+
+        if i[0].endswith('?'):
+            must_be.append((i[0][:-1], i[1], i[2]))
+
+        elif i[0].endswith('*'):
+            multiples.append((i[0][:-1], i[1], i[2]))
+
+        else:
+            must_be.append(i)
+
+    object_props_to_subelems(
+        obj,
+        element,
+        names=list(i[2] for i in must_be)
+        )
+
+    object_propsm_to_subelemsm(
+        obj,
+        element,
+        names=list(i[2] for i in multiples)
+        )
+
+    return
+
+
 def object_propsm_to_subelemsm(obj, element, names):
     """
     Get named object properties and generate subelements to element
@@ -161,6 +276,44 @@ def object_props_to_elem_props(obj, element, names):
         val = getattr(obj, 'get_{}'.format(i[0]))()
         if val != None:
             element.set(i[1], val)
+
+    return
+
+
+def subelems_to_order(element, order, tagname_class_attrnames):
+    """
+    tagname_class_attrnames must have following structure:
+    [('{ns}tag[?*]', ClassName, 'property_name'), ...]
+    """
+
+    for i in element:
+
+        cls = None
+        tag = None
+        prop = None
+
+        for j in tagname_class_attrnames:
+            if (j[0] == i.tag
+                or j[0] == i.tag + '*'
+                or j[0] == i.tag + '?'
+                ):
+                cls = j[1]
+                tag = i.tag
+                if tag[-1] in ['*', '?']:
+                    tag = tag[:-1]
+                prop = j[2]
+                break
+
+        if cls != None:
+            order.append((tag, cls.new_from_element(i), prop))
+
+    return
+
+
+def order_to_subelems(order, element):
+
+    for i in order:
+        element.append(i[1].gen_element())
 
     return
 

@@ -126,3 +126,9 @@ class_obj.check = check
 """.format(central_check))
 
     return
+
+
+def class_generate_attributes_and_check(class_obj, attributes):
+    class_generate_attributes(class_obj, attributes)
+    class_generate_check(class_obj, attributes)
+    return
