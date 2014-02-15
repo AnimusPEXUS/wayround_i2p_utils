@@ -19,7 +19,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='org_wayround_utils',
-    version='0.7',
+    version='0.8',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
