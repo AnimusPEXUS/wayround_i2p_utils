@@ -1,4 +1,11 @@
 
+
+"""
+Factory for quick constructing classes with attributes and checks
+
+see also org.wayround.utils.lxml.checker_factory()
+"""
+
 import org.wayround.utils.types
 
 
@@ -77,6 +84,9 @@ class_obj._{name} = None
 class_obj.set_{name} = set_{name}
 class_obj.get_{name} = get_{name}
 
+del set_{name}
+del get_{name}
+
 """.format(name=i[0], signal_emiter=signal_emiter))
 
     return
@@ -123,6 +133,8 @@ def check(self, inst=None):
 {}
 
 class_obj.check = check
+
+del check
 """.format(central_check))
 
     return
