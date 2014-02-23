@@ -149,7 +149,7 @@ def subelemsm_to_object_propsm(
 
         vals = element.findall(i[0])
 
-        if len(vals) == 0:
+        if must_be and len(vals) == 0:
             raise ValueError("Too few elements of `{}'".format(i[0]))
 
         for val in vals:
