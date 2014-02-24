@@ -1,9 +1,9 @@
 
-raise Exception("This module is deprecated and leaved only for history reasons")
-
 """
 This module is for XML and XHTML rendering
 """
+
+# TODO: migrate to lxml
 
 import logging
 import re
@@ -16,12 +16,14 @@ import org.wayround.utils.dict
 import org.wayround.utils.error
 import org.wayround.utils.text
 
+
 def expat_parser_connect_target(parser, target):
 
     parser.StartElementHandler = target.start
     parser.EndElementHandler = target.end
     parser.CharacterDataHandler = target.data
     parser.CommentHandler = target.comment
+
 
 class DictTreeBuilder:
 
@@ -32,7 +34,6 @@ class DictTreeBuilder:
 
         self._tree = None
         self._element_trac = []
-
 
     def start(self, name, attrs):
 
@@ -69,7 +70,6 @@ class DictTreeBuilder:
 
         return
 
-
     def data(self, text):
 
         if len(self._element_trac) == 0:
@@ -91,7 +91,6 @@ class DictTreeBuilder:
     def close(self):
 
         return [self._tree]
-
 
 
 class _ExpatTagEndFinder:
@@ -123,7 +122,6 @@ class _ExpatTagEndFinder:
 
 
 def find_next_tag_end(text):
-
 
     if not isinstance(text, (bytes, str)):
         raise TypeError("text parameter must be bytes or str")
@@ -168,6 +166,7 @@ def find_next_tag_end(text):
 
     return ret
 
+
 class ExpatReadStream:
 
     def __init__(self,
@@ -181,7 +180,6 @@ class ExpatReadStream:
         self.on_xml_error = on_xml_error
         self._on_stream_close = on_stream_close
         self.on_read_error = on_read_error
-
 
         self.xml_integrity_tracking = []
 
@@ -205,9 +203,10 @@ class ExpatReadStream:
             else:
                 del self.xml_integrity_tracking[-1]
 
-
             if len(self.xml_integrity_tracking) == 0:
                 self._on_stream_close()
+
+        return
 
 
 def pi(content):
@@ -223,11 +222,13 @@ def comment(text):
         'content': text
         }
 
+
 def dtd(text):
     return {
         'type': 'dtd',
         'content': text
         }
+
 
 def cdata(text):
     return {
@@ -235,17 +236,20 @@ def cdata(text):
         'content': text
         }
 
+
 def char(text):
     return {
         'type': 'char',
         'content': text
         }
 
+
 def static(text):
     return {
         'type': 'static',
         'content': text
         }
+
 
 def html_head(
     title='',
@@ -290,7 +294,10 @@ def html(
 
     return {
 #        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
-        '00015_html_dtd': dtd('html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'),
+        '00015_html_dtd': dtd(
+            'html PUBLIC "-//W3C//DTD XHTML 1.1//EN" '
+            '"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'
+            ),
         '00020_html': tag(
             'html',
             attributes={
@@ -298,7 +305,9 @@ def html(
                 'xmlns': 'http://www.w3.org/1999/xhtml',
                 'xml:lang': 'en',
                 'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-                'xsi:schemaLocation': 'http://www.w3.org/1999/xhtml http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
+                'xsi:schemaLocation':
+                    'http://www.w3.org/1999/xhtml '
+                    'http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
                 },
             closed=False,
             module=None,
@@ -306,7 +315,7 @@ def html(
             required_css=[],
             required_js=[],
             content={
-                '00010_head' : head,
+                '00010_head': head,
                 '00020_body': tag(
                     'body',
                     module=body_module,
@@ -318,6 +327,7 @@ def html(
                 }
             )
         }
+
 
 def tag(
     name,
@@ -357,6 +367,7 @@ def tag(
 
     return ret
 
+
 def check_unit(indict, path=[]):
 
     if isinstance(indict, str):
@@ -387,13 +398,15 @@ def check_unit(indict, path=[]):
                 )
             )
 
-    # Supplied data defenetly must be a dict or list, othervice - error
+    # Supplied data definitely must be a dict or list, otherwise - error
     if not isinstance(indict, (dict, list, str)):
         raise ValueError("Supplied data is not a dict or a list")
 
     # 'type' must be supplied
     if not 'type' in indict:
-        raise MissingDictatorshipUnitAttribute("Dictatorship unit type missing")
+        raise MissingDictatorshipUnitAttribute(
+            "Dictatorship unit type missing"
+            )
 
     # 'type' must be one of following
     if not indict['type'] in [
@@ -418,7 +431,11 @@ def check_unit(indict, path=[]):
                     'name',
                     'closed'
                     ]:
-                    raise KeyError("Wrong key `{}' at `{}'['tag_info']".format(i, '/'.join(path)))
+                    raise KeyError(
+                        "Wrong key `{}' at `{}'['tag_info']".format(
+                            i, '/'.join(path)
+                            )
+                        )
 
             # tag name MUST be supplied and must be a string!
             if not 'name' in indict['tag_info']:
@@ -439,8 +456,13 @@ def check_unit(indict, path=[]):
                     else:
                         # attribute values can be a strings or callabels
                         for i in list(indict['tag_info']['attributes'].keys()):
-                            if not isinstance(indict['tag_info']['attributes'][i], str):
-                                raise TypeError("tag `attributes' dict values must be strings")
+                            if not isinstance(
+                                indict['tag_info']['attributes'][i], str
+                                ):
+                                raise TypeError(
+                                    "tag `attributes' dict "
+                                    "values must be strings"
+                                    )
             else:
                 indict['tag_info']['attributes'] = {}
 
@@ -451,8 +473,6 @@ def check_unit(indict, path=[]):
                     raise TypeError("tag `closed' attribute can be only bool")
             else:
                 indict['tag_info']['closed'] = False
-
-
 
     for i in ['required_css', 'required_js']:
         if i in indict:
@@ -470,7 +490,6 @@ def check_unit(indict, path=[]):
         else:
             indict[i] = []
 
-
     for i in ['module', 'uid']:
         if i in indict:
             if indict[i] != None:
@@ -487,16 +506,6 @@ def check_unit(indict, path=[]):
                 else:
                     raise ValueError("`{}' can be None or str".format(i))
 
-# error present in next code
-#        else:
-#            if (('required_css' in indict) and isinstane(indict['required_css'], list) and len()
-#                or ('required_js' in indict) and (indict['required_js'] != None)):
-#                raise MissingDictatorshipUnitAttribute(
-#                    "`%(i)s' required to be in unit!" % {
-#                        'i': i
-#                        }
-#                    )
-
     if not 'content' in indict:
         indict['content'] = ''
     elif indict['content'] == None:
@@ -509,11 +518,11 @@ def check_unit(indict, path=[]):
         pass
     else:
         raise ValueError(
-            "wrong unit content value: `{}', but must be None, str, dict or list".format(
+            "wrong unit content value: `{}', but "
+            "must be None, str, dict or list".format(
                 type(indict['content'])
                 )
             )
-
 
     default_new_line_before_start = False
     default_new_line_before_content = False
@@ -531,7 +540,6 @@ def check_unit(indict, path=[]):
     elif indict['type'] in ['tag', 'comment', 'dtd', 'pi']:
         default_new_line_after_end = True
 
-
     for i in [
         ('new_line_before_start', default_new_line_before_start),
         ('new_line_before_content', default_new_line_before_content),
@@ -545,6 +553,7 @@ def check_unit(indict, path=[]):
             indict[i[0]] = i[1]
 
     return
+
 
 def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
     ret = ''
@@ -562,16 +571,17 @@ def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
     for i in keys:
 
         if ret != '':
-            ret += ' ';
+            ret += ' '
 
         value = ''
         if isinstance(indict[i], str):
             value = indict[i]
         else:
-            raise ValueError("One of attribute values (`{}') is not str".format(i))
+            raise ValueError(
+                "One of attribute values (`{}') is not str".format(i)
+                )
 
         if isinstance(ret, str):
-
 
             try:
                 attrs.append(
@@ -592,7 +602,6 @@ def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
             if len(i) > 80:
                 ind_req = True
                 break
-
 
         first = True
 
@@ -622,10 +631,10 @@ def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
             if first:
                 first = False
 
-
             curr_attr_i += 1
 
     return ret
+
 
 def dict_tree_to_xml_render(tree):
     b = DictTreeToXMLRenderer(2, True, True)
@@ -638,12 +647,20 @@ def dict_tree_to_xml_render(tree):
 
     return ret
 
-class DictatorshipUnitTooDeep(Exception): pass
-class MissingDictatorshipUnitAttribute(Exception): pass
-class ModulesDirError(Exception): pass
+
+class DictatorshipUnitTooDeep(Exception):
+    pass
+
+
+class MissingDictatorshipUnitAttribute(Exception):
+    pass
+
+
+class ModulesDirError(Exception):
+    pass
+
 
 class DictTreeToXMLRenderer:
-
 
     def __init__(
         self,
@@ -690,14 +707,12 @@ class DictTreeToXMLRenderer:
 
         self.log.append(text)
 
-
     def print_log(self):
         for i in self.log:
             print(i)
 
     def set_tree(self, indict):
         self.tree_dict = indict
-
 
     def _lineup_tree(self, indict, already_added, path=[]):
 
@@ -707,7 +722,6 @@ class DictTreeToXMLRenderer:
 
         if not isinstance(indict, (dict, list)):
             raise TypeError("This method accepts only dict or list")
-
 
         if self.check_range(indict) != 0:
             self.do_log(
@@ -731,28 +745,21 @@ class DictTreeToXMLRenderer:
 
                 index += 1
 
-
                 if isinstance(indict, dict):
                     unit = indict[i]
                 elif isinstance(indict, list):
                     unit = i
 
-
                 if isinstance(indict, dict):
                     path_name = i
-                    #print(1)
                 elif isinstance(indict, list):
                     path_name = str(index)
-                    #print(2)
-
 
                 if not id(unit) in already_added:
 
                     try:
                         tmp = '/'.join(path + [path_name])
                     except:
-                        #print("path(" + str(type(path)) + "): " + repr(path))
-                        #print("path_name(" + str(type(path_name)) + "): " + repr(path_name))
                         raise
 
                     if not tmp in self.units:
@@ -766,12 +773,13 @@ class DictTreeToXMLRenderer:
                     if isinstance(unit['content'], (dict, list)):
 
                         if self._lineup_tree(
-                            unit['content'], already_added, path=path + [path_name]
+                            unit['content'],
+                            already_added,
+                            path=path + [path_name]
                             ) != 0:
                             ret = 2
 
         return ret
-
 
     def lineup_tree(self):
         self.units = {}
@@ -779,10 +787,8 @@ class DictTreeToXMLRenderer:
         ret = self._lineup_tree(
             self.tree_dict, already_added, path=[]
             )
-        #print(repr(list(self.units.keys())))
 
         return ret
-
 
     def check_tree(self):
         ret = 0
@@ -813,7 +819,6 @@ class DictTreeToXMLRenderer:
 
         return ret
 
-
     def find_required_css_and_js(self):
 
         self.css_placeables = []
@@ -821,7 +826,6 @@ class DictTreeToXMLRenderer:
 
         keys = list(self.units.keys())
         keys.sort()
-
 
         for i in keys:
 
@@ -832,56 +836,67 @@ class DictTreeToXMLRenderer:
                 or not 'uid' in self.units[i]:
                 continue
 
-
             if self.generate_css:
                 if 'required_css' in self.units[i]:
                     for j in self.units[i]['required_css']:
-                        placeable_name = "{module}/{uid}/{required}".format_map(
-                            {
-                                'module': self.units[i]['module'],
-                                'uid': self.units[i]['uid'],
-                                'required': j,
-                                }
-                            )
+                        placeable_name = \
+                            "{module}/{uid}/{required}".format_map(
+                                {
+                                    'module': self.units[i]['module'],
+                                    'uid': self.units[i]['uid'],
+                                    'required': j,
+                                    }
+                                )
                         if not placeable_name in self.css_placeables:
                             self.css_placeables.append(placeable_name)
 
             if self.generate_js:
                 if 'required_js' in self.units[i]:
                     for j in self.units[i]['required_js']:
-                        placeable_name = "{module}/{uid}/{required}".format_map(
-                            {
-                                'module': self.units[i]['module'],
-                                'uid': self.units[i]['uid'],
-                                'required': j,
-                                }
-                            )
+                        placeable_name = \
+                            "{module}/{uid}/{required}".format_map(
+                                {
+                                    'module': self.units[i]['module'],
+                                    'uid': self.units[i]['uid'],
+                                    'required': j,
+                                    }
+                                )
                         if not placeable_name in self.js_placeables:
                             self.js_placeables.append(placeable_name)
 
         return
-
 
     def css_path_renderer(self, inname):
         module, uid, file = inname.split('/')[0:3]
 
         return "css?module={module}&uid={uid}&file={file}".format_map(
             {
-                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
-                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
-                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
+                'module': urllib.parse.quote(
+                    module, encoding='utf-8', errors='strict'
+                    ),
+                'uid': urllib.parse.quote(
+                    uid, encoding='utf-8', errors='strict'
+                    ),
+                'file': urllib.parse.quote(
+                    file, encoding='utf-8', errors='strict'
+                    )
                 }
             )
-
 
     def js_path_renderer(self, inname):
         module, uid, file = inname.split('/')[0:3]
 
         return "js?module={module}&uid={uid}&file={file}".format_map(
             {
-                'module': urllib.parse.quote(module, encoding='utf-8', errors='strict'),
-                'uid': urllib.parse.quote(uid, encoding='utf-8', errors='strict'),
-                'file': urllib.parse.quote(file, encoding='utf-8', errors='strict')
+                'module': urllib.parse.quote(
+                    module, encoding='utf-8', errors='strict'
+                    ),
+                'uid': urllib.parse.quote(
+                    uid, encoding='utf-8', errors='strict'
+                    ),
+                'file': urllib.parse.quote(
+                    file, encoding='utf-8', errors='strict'
+                    )
                 }
             )
 
@@ -904,7 +919,7 @@ class DictTreeToXMLRenderer:
                 attributes={
                     'type': 'text/css',
                     'href': css_path_renderer(self, i),
-                    'rel' : 'stylesheet'
+                    'rel': 'stylesheet'
                     }
                 )
 
@@ -919,7 +934,6 @@ class DictTreeToXMLRenderer:
         else:
             raise Exception("Wrong programming")
 
-
         check_unit(new_val)
 
         if isinstance(self.css_and_js_holder['content'], dict):
@@ -931,7 +945,6 @@ class DictTreeToXMLRenderer:
         elif isinstance(self.css_and_js_holder['content'], list):
             self.css_and_js_holder['content'].append(new_val)
 
-
     def place_found_css_and_js(
         self,
         css_path_renderer=css_path_renderer,
@@ -942,7 +955,9 @@ class DictTreeToXMLRenderer:
             raise ValueError("Wrong self.css_and_js_holder")
 
         if not isinstance(self.css_and_js_holder['content'], (dict, list)):
-            raise TypeError("self.css_and_js_holder['content'] can be only list or dict")
+            raise TypeError(
+                "self.css_and_js_holder['content'] can be only list or dict"
+                )
 
         placement_i = 0
 
@@ -959,7 +974,6 @@ class DictTreeToXMLRenderer:
 
                 placement_i += 1
 
-
         if self.generate_js:
             for i in self.js_placeables:
 
@@ -974,7 +988,6 @@ class DictTreeToXMLRenderer:
                 placement_i += 1
 
         return
-
 
     def _render_unit(self, root, unit, path, path_name, indent):
 
@@ -996,7 +1009,6 @@ class DictTreeToXMLRenderer:
         new_line_after_end = ''
         if unit['new_line_after_end']:
             new_line_after_end = '\n'
-
 
         start = ''
         content = ''
@@ -1045,10 +1057,13 @@ class DictTreeToXMLRenderer:
                 ):
                 class_list = list()
 
-                if (('class' in unit['tag_info']['attributes'])
-                    and (isinstance(unit['tag_info']['attributes']['class'], str))
+                if (
+                    ('class' in unit['tag_info']['attributes'])
+                    and
+                    (isinstance(unit['tag_info']['attributes']['class'], str))
                     ):
-                    class_list += (unit['tag_info']['attributes']['class']).split(' ')
+                    class_list += \
+                        (unit['tag_info']['attributes']['class']).split(' ')
 
                 class_list.append(unit['module'] + '---' + unit['uid'])
 
@@ -1058,7 +1073,6 @@ class DictTreeToXMLRenderer:
                 unit['tag_info']['attributes']['class'] = ' '.join(class_list)
 
                 class_list = []
-
 
             attributes = ''
             if unit['tag_info']['attributes'] != None:
@@ -1084,15 +1098,19 @@ class DictTreeToXMLRenderer:
                 else:
                     space_before_closing_slash = ''
 
-            start = '<{tagname}{space_before_attributes}{attributes}{space_before_closing_slash}{closing_slash}>'.format_map(
-                {
-                    'tagname': unit['tag_info']['name'],
-                    'space_before_attributes': space_before_attributes,
-                    'attributes': attributes,
-                    'space_before_closing_slash': space_before_closing_slash,
-                    'closing_slash': closing_slash
-                    }
-                )
+            start = (
+                '<{tagname}{space_before_attributes}{attributes}'
+                '{space_before_closing_slash}{closing_slash}>'
+                ).format_map(
+                    {
+                     'tagname': unit['tag_info']['name'],
+                     'space_before_attributes': space_before_attributes,
+                     'attributes': attributes,
+                     'space_before_closing_slash':
+                        space_before_closing_slash,
+                     'closing_slash': closing_slash
+                     }
+                    )
 
             if not unit['tag_info']['closed']:
 
@@ -1144,7 +1162,10 @@ class DictTreeToXMLRenderer:
 
         inaddr_l = len(path)
 
-        indent = org.wayround.utils.text.fill(' ', inaddr_l * self.xml_indent_size)
+        indent = org.wayround.utils.text.fill(
+            ' ',
+            inaddr_l * self.xml_indent_size
+            )
 
         index = -1
 
@@ -1168,17 +1189,14 @@ class DictTreeToXMLRenderer:
             else:
                 raise TypeError("This method accepts only dict or list")
 
-
             if isinstance(indict, dict):
                 path_name = i
             elif isinstance(indict, list):
                 path_name = str(index)
 
-
             ret += self._render_unit(root, unit, path, path_name, indent)
 
         return ret
-
 
     def render(
         self,
@@ -1210,12 +1228,15 @@ class DictTreeToXMLRenderer:
 
         return ret
 
-
     def check_range(self, indict):
         ret = 0
 
         if not isinstance(indict, (dict, list)):
-            self.do_log("-e- Supplied data is not a dict and not list: {}".format(repr(indict)))
+            self.do_log(
+                "-e- Supplied data is not a dict and not list: {}".format(
+                    repr(indict)
+                    )
+                )
             ret = 1
 
         else:
@@ -1229,9 +1250,11 @@ class DictTreeToXMLRenderer:
                 else:
                     raise TypeError("This method accepts only dict or list")
 
-
                 if not isinstance(unit, (dict, str)):
-                    self.do_log("-e- Dictatorship `{}' element value is not a dict and not str".format(str(unit)))
+                    self.do_log(
+                        "-e- Dictatorship `{}' element value "
+                        "is not a dict and not str".format(str(unit))
+                        )
 
                     ret = 2
                     break
@@ -1239,12 +1262,11 @@ class DictTreeToXMLRenderer:
         return ret
 
 
-
 def test():
-    # Upper dict element with names (like folloving) is called
+    # Upper dict element with names (like following) is called
     # `dictatorship range'.
     # Dictatorship range's keys must point only on dict-s,
-    # othervice it is an error.
+    # otherwise it is an error.
 
     logging.basicConfig(level='DEBUG')
 
@@ -1255,7 +1277,9 @@ def test():
             },
         '010_xhtml_doctype': {
             'type': 'dtd',
-            'content': 'html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'
+            'content':
+                'html PUBLIC "-//W3C//DTD XHTML 1.1//EN" '
+                '"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'
             },
         '100_html_tag': {
             # Dictatorship gange pointet dicts (like this)
@@ -1286,7 +1310,9 @@ def test():
                     'xmlns': 'http://www.w3.org/1999/xhtml',
                     'xml:lang': 'en',
                     'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-                    'xsi:schemaLocation': 'http://www.w3.org/1999/xhtml http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
+                    'xsi:schemaLocation':
+                        'http://www.w3.org/1999/xhtml '
+                        'http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
                     },
 
                 # (bool) if True - no contents is
@@ -1341,6 +1367,7 @@ def test():
     print(ret)
     return
 
+
 def test2():
     logging.basicConfig(level='DEBUG')
     print("Dictator test #2")
@@ -1350,4 +1377,3 @@ def test2():
     print(repr(b.units))
     b.print_log()
     print(ret)
-
