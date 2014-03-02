@@ -344,19 +344,7 @@ def order_to_subelems(order, element):
     return
 
 
-def parse_element_tag(element, localname, namespaces=None):
-
-    """
-    Tag parse routine
-
-    localname must be str or list of str
-
-    returns  (localname, namespace) where namespace is one of namespaces or
-    (None, None)
-    """
-
-    if type(element) != lxml.etree._Element:
-        raise ValueError("`element' must be lxml.etree._Element")
+def parse_tag(inp_str, localname, namespaces=None):
 
     if localname == None:
         localname = []
@@ -379,7 +367,7 @@ def parse_element_tag(element, localname, namespaces=None):
         ):
         raise TypeError("`namespaces' has invalid structure")
 
-    qname = lxml.etree.QName(element)
+    qname = lxml.etree.QName(inp_str)
 
     ret = None, None
 
@@ -389,6 +377,25 @@ def parse_element_tag(element, localname, namespaces=None):
         else:
             if qname.namespace in namespaces:
                 ret = qname.localname, qname.namespace
+
+    return ret
+
+
+def parse_element_tag(element, localname, namespaces=None):
+
+    """
+    Tag parse routine
+
+    localname must be str or list of str
+
+    returns  (localname, namespace) where namespace is one of namespaces or
+    (None, None)
+    """
+
+    if type(element) != lxml.etree._Element:
+        raise ValueError("`element' must be lxml.etree._Element")
+
+    ret = parse_tag(element.tag, localname, namespaces)
 
     return ret
 
@@ -428,32 +435,40 @@ def checker_factory(cls, tagname_class_attrnames):
         if lst == False and none == False:
             check = """
     if not type(value) == typ:
-        raise TypeError("`{name}' must be of type {typ}")
-            """.format(name=i[2], typ=typ)
-            doc = 'value must be single value of type {}'.format(typ)
+        raise TypeError("`{}' must be of type {}".format(_name, typ))
+            """
+            doc = 'value must be of type {}'.format(typ)
 
         elif lst == False and none == True:
             check = """
     if value != None and not type(value) == typ:
-        raise TypeError("`{name}' must be None or of type {typ}")
-            """.format(name=i[2], typ=typ)
-            doc = 'value must be single value of None or of type {}'.format(typ)
+        raise TypeError(
+            "`{}' must be None or of type {}".format(_name, typ)
+            )
+            """
+            doc = 'value must be None or of type {}'.format(typ)
 
         elif lst == True and none == False:
             check = """
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': typ}}
-        ) or len(value) == None:
-        raise TypeError("`{name}' must be not empty list of type {typ}")
+        value,
+        {'t': list, '<': 1, '.': {'t': typ}}
+        ):
+        raise TypeError(
+            "`{}' must be unempty list of type {}".format(_name, typ)
+            )
 """
             doc = 'value must be unempty list of type {}'.format(typ)
 
         elif lst == True and none == True:
             check = """
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': typ}}
+        value,
+        {'t': list, '.': {'t': typ}}
         ):
-        raise TypeError("`{name}' must be list of type {typ}")
+        raise TypeError(
+            "`{}' must be list of type {}".format(_name, typ)
+            )
 """
             doc = 'value must be list of type {}'.format(typ)
         else:
@@ -461,6 +476,9 @@ def checker_factory(cls, tagname_class_attrnames):
 
         exec("""
 def check(self, value):
+    import org.wayround.utils.types
+
+    _name = '{name}'
 
 {check}
 
@@ -469,7 +487,8 @@ cles.check_{name}.__doc__ = doc
 
 del check
         """.format(name=i[2], check=check),
-        {'typ': typ, 'cles': cls, 'doc': doc}
+        {'typ': typ, 'cles': cls, 'doc': doc,
+         'tagname_class_attrnames': tagname_class_attrnames}
         )
 
     return
@@ -517,7 +536,12 @@ def simple_exchange_class_factory(
     exec("""
 def __init__(self, **kwargs):
 
-    for i in PROPERTIES_LIST:
+    for i in self._subelements_struct:
+        if i[3] in ['+', '*']:
+            if not i[2] in kwargs or kwargs[i[2]] == None:
+                kwargs[i[2]] = []
+
+    for i in self._properties_list:
         set_func = getattr(self, 'set_{{}}'.format(i))
         set_func(kwargs.get(i))
 
@@ -527,22 +551,31 @@ def new_from_element(cls, element):
 
     import org.wayround.utils.lxml
 
-    tag = org.wayround.utils.lxml.parse_element_tag(
+    int_tag = org.wayround.utils.lxml.parse_element_tag(
         element,
-        tag,
-        NAMESPACE
+        '{tag}',
+        '{namespace}'
         )[0]
 
-    if tag is None:
+    if int_tag is None:
         raise ValueError("invalid element tag or namespace")
 
-    cl = cls()
+    nec_params = {{}}
+
+    for i in cls._subelements_struct:
+        if i[3] == '':
+            nec_params[i[2]] = i[1].new_from_element(element.find(i[0]))
+        elif i[3] in ['*', '+']:
+            nec_params[i[2]] = \
+                [i[1].new_from_element(j) for j in element.findall(i[0])]
+
+    cl = cls(**nec_params)
 
     {gw1}
 
     org.wayround.utils.lxml.subelems_to_object_props2(
         element, cl,
-        SUBELEMENTS_STRUCT
+        cls._subelements_struct
         )
 
     return cl
@@ -554,17 +587,19 @@ def gen_element(self):
 
     self.check()
 
-    el = lxml.etree.Element(tag)
+    el = lxml.etree.Element('{tag}')
 
     {gw2}
 
     org.wayround.utils.lxml.object_props_to_subelems2(
         self, el,
-        SUBELEMENTS_STRUCT
+        self._subelements_struct
         )
 
     return el
 
+clas._properties_list = PROPERTIES_LIST
+clas._subelements_struct = SUBELEMENTS_STRUCT
 clas.__init__ = __init__
 clas.new_from_element = classmethod(new_from_element)
 clas.gen_element = gen_element
@@ -575,13 +610,13 @@ del gen_element
 
 """.format(
     gw1=gw1,
-    gw2=gw2
+    gw2=gw2,
+    tag=tag,
+    namespace=namespace
     ),
     {
      'PROPERTIES_LIST': properties_list,
-     'tag': tag,
      'SUBELEMENTS_STRUCT': subelements_struct,
-     'NAMESPACE': namespace,
      'clas': cls
     }
     )
