@@ -1,10 +1,11 @@
 
 import lxml.etree
+import logging
 
 import org.wayround.utils.types
 
 
-def _check_tagname_class_attrnames(tagname_class_attrnames):
+def check_tagname_class_attrnames(tagname_class_attrnames):
     if not org.wayround.utils.types.struct_check(
         tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 4}}
         ):
@@ -48,7 +49,7 @@ def subelems_to_object_props(
     if type(element) != lxml.etree._Element:
         raise TypeError("`element' must be lxml.etree.Element")
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     for i in tagname_class_attrnames:
 
@@ -76,7 +77,7 @@ def subelems_to_object_props2(element, obj, tagname_class_attrnames):
     if type(element) != lxml.etree._Element:
         raise TypeError("`element' must be lxml.etree.Element")
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     must_be = []
     can_be = []
@@ -139,7 +140,7 @@ def subelemsm_to_object_propsm(
     if type(element) != lxml.etree._Element:
         raise TypeError("`element' must be lxml.etree.Element")
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     for i in tagname_class_attrnames:
 
@@ -223,7 +224,7 @@ def object_props_to_subelems2(obj, element, tagname_class_attrnames):
     if type(element) != lxml.etree._Element:
         raise TypeError("`element' must be lxml.etree.Element")
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     must_be = []
     multiples = []
@@ -315,7 +316,7 @@ def subelems_to_order(element, order, tagname_class_attrnames):
     [('{ns}tag', ClassName, 'property_name'[, '[\?\*\+]?']), ...]
     """
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     for i in element:
 
@@ -331,7 +332,17 @@ def subelems_to_order(element, order, tagname_class_attrnames):
                 break
 
         if cls != None:
-            order.append((tag, cls.new_from_element(i), prop))
+            try:
+                order.append((tag, cls.new_from_element(i), prop))
+            except:
+                logging.error(
+                    "Can't bring to order {}. ({}):\n--\n{}\n--\n".format(
+                        i,
+                        type(i),
+                        lxml.etree.tostring(i)
+                        )
+                    )
+                raise
 
     return
 
@@ -393,7 +404,12 @@ def parse_element_tag(element, localname, namespaces=None):
     """
 
     if type(element) != lxml.etree._Element:
-        raise ValueError("`element' must be lxml.etree._Element")
+        raise ValueError(
+            "`element' must be lxml.etree._Element, not ({}): {}".format(
+                type(element),
+                element
+                )
+            )
 
     ret = parse_tag(element.tag, localname, namespaces)
 
@@ -409,7 +425,7 @@ def checker_factory(cls, tagname_class_attrnames):
     [('{ns}tag', ClassName, 'property_name'[, '[\?\*\+]?']), ...]
     """
 
-    _check_tagname_class_attrnames(tagname_class_attrnames)
+    check_tagname_class_attrnames(tagname_class_attrnames)
 
     for i in tagname_class_attrnames:
 
@@ -506,7 +522,7 @@ def simple_exchange_class_factory(
     """
     Factories simple class structure to handle simple lxml elements
 
-    see org.wayround.xmpp.xcard for example usage
+    see org.wayround.xmpp.xcard_4 for example usage
 
     Yes, this is not as beautiful as using class inheritance, but match simpler
     and obvious
@@ -580,6 +596,12 @@ def new_from_element(cls, element):
 
     return cl
 
+def corresponding_tag(cls):
+    return '{tag}'
+
+corresponding_tag.__doc__ = \
+    "returns tag name, for which this class generated"
+
 def gen_element(self):
 
     import lxml.etree
@@ -602,11 +624,13 @@ clas._properties_list = PROPERTIES_LIST
 clas._subelements_struct = SUBELEMENTS_STRUCT
 clas.__init__ = __init__
 clas.new_from_element = classmethod(new_from_element)
+clas.corresponding_tag = classmethod(corresponding_tag)
 clas.gen_element = gen_element
 
 del __init__
 del new_from_element
 del gen_element
+del corresponding_tag
 
 """.format(
     gw1=gw1,
