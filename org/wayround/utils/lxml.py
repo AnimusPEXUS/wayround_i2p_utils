@@ -46,8 +46,8 @@ def subelems_to_object_props(
 
     ret = False
 
-    if type(element) != lxml.etree._Element:
-        raise TypeError("`element' must be lxml.etree.Element")
+    if not is_lxml_tag_element(element):
+        raise TypeError("`element' must be lxml tag element")
 
     check_tagname_class_attrnames(tagname_class_attrnames)
 
@@ -74,8 +74,8 @@ def subelems_to_object_props2(element, obj, tagname_class_attrnames):
 
     ret = False
 
-    if type(element) != lxml.etree._Element:
-        raise TypeError("`element' must be lxml.etree.Element")
+    if not is_lxml_tag_element(element):
+        raise TypeError("`element' must be lxml tag element")
 
     check_tagname_class_attrnames(tagname_class_attrnames)
 
@@ -137,7 +137,7 @@ def subelemsm_to_object_propsm(
     [('{ns}tag', ClassName, 'property_name'[, '[\?\*\+]?']), ...]
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     check_tagname_class_attrnames(tagname_class_attrnames)
@@ -169,7 +169,7 @@ def elem_props_to_object_props(element, obj, names):
     [('element_prop_name', 'object_prop_name'), ...]
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
@@ -194,7 +194,7 @@ def object_props_to_subelems(obj, element, names):
     names must be list of names of object properties
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
@@ -221,7 +221,7 @@ def object_props_to_subelems2(obj, element, tagname_class_attrnames):
     [('{ns}tag', ClassName, 'property_name'[, '[\?\*\+]?']), ...]
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     check_tagname_class_attrnames(tagname_class_attrnames)
@@ -265,7 +265,7 @@ def object_propsm_to_subelemsm(obj, element, names):
     names must be list of names of object properties
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
@@ -290,7 +290,7 @@ def object_props_to_elem_props(obj, element, names):
     [('object_prop_name', 'element_prop_name'), ...]
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
@@ -320,29 +320,31 @@ def subelems_to_order(element, order, tagname_class_attrnames):
 
     for i in element:
 
-        cls = None
-        tag = None
-        prop = None
+        if is_lxml_tag_element(i):
 
-        for j in tagname_class_attrnames:
-            if (j[0] == i.tag):
-                cls = j[1]
-                tag = i.tag
-                prop = j[2]
-                break
+            cls = None
+            tag = None
+            prop = None
 
-        if cls != None:
-            try:
-                order.append((tag, cls.new_from_element(i), prop))
-            except:
-                logging.error(
-                    "Can't bring to order {}. ({}):\n--\n{}\n--\n".format(
-                        i,
-                        type(i),
-                        lxml.etree.tostring(i)
+            for j in tagname_class_attrnames:
+                if (j[0] == i.tag):
+                    cls = j[1]
+                    tag = i.tag
+                    prop = j[2]
+                    break
+
+            if cls != None:
+                try:
+                    order.append((tag, cls.new_from_element(i), prop))
+                except:
+                    logging.error(
+                        "Can't bring to order {}. ({}):\n--\n{}\n--\n".format(
+                            i,
+                            type(i),
+                            lxml.etree.tostring(i)
+                            )
                         )
-                    )
-                raise
+                    raise
 
     return
 
@@ -403,9 +405,9 @@ def parse_element_tag(element, localname, namespaces=None):
     (None, None)
     """
 
-    if type(element) != lxml.etree._Element:
+    if not is_lxml_tag_element(element):
         raise ValueError(
-            "`element' must be lxml.etree._Element, not ({}): {}".format(
+            "`element' must be lxml tag element, not ({}): {}".format(
                 type(element),
                 element
                 )
@@ -644,3 +646,10 @@ del corresponding_tag
      'clas': cls
     }
     )
+
+
+#def is_lxml_tag_element(element):
+#    return type(element) == lxml.etree._Element
+
+def is_lxml_tag_element(element):
+    return isinstance(element.tag, str)
