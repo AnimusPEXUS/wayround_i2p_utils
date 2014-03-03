@@ -552,6 +552,10 @@ def simple_exchange_class_factory(
             )
 
     exec("""
+import logging
+import lxml.etree
+import org.wayround.utils.lxml
+
 def __init__(self, **kwargs):
 
     for i in self._subelements_struct:
@@ -567,8 +571,6 @@ def __init__(self, **kwargs):
 
 def new_from_element(cls, element):
 
-    import org.wayround.utils.lxml
-
     int_tag = org.wayround.utils.lxml.parse_element_tag(
         element,
         '{tag}',
@@ -582,10 +584,20 @@ def new_from_element(cls, element):
 
     for i in cls._subelements_struct:
         if i[3] == '':
-            nec_params[i[2]] = i[1].new_from_element(element.find(i[0]))
+            found = element.find(i[0])
+            if found != None:
+                nec_params[i[2]] = i[1].new_from_element()
+            else:
+                raise ValueError(
+                    "Not found required element `{{}}'".format(i[0])
+                    )
         elif i[3] in ['*', '+']:
             nec_params[i[2]] = \
                 [i[1].new_from_element(j) for j in element.findall(i[0])]
+            if len(nec_params[i[2]]) == 0 and i[3] == '+':
+                raise ValueError(
+                    "Not found required element `{{}}'".format(i[0])
+                    )
 
     cl = cls(**nec_params)
 
@@ -605,9 +617,6 @@ corresponding_tag.__doc__ = \
     "returns tag name, for which this class generated"
 
 def gen_element(self):
-
-    import lxml.etree
-    import org.wayround.utils.lxml
 
     self.check()
 
@@ -652,4 +661,4 @@ del corresponding_tag
 #    return type(element) == lxml.etree._Element
 
 def is_lxml_tag_element(element):
-    return isinstance(element.tag, str)
+    return hasattr(element, 'tag') and isinstance(element.tag, str)
