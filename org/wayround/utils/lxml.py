@@ -7,24 +7,32 @@ import org.wayround.utils.types
 
 def check_tagname_class_attrnames(tagname_class_attrnames):
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 4}}
+        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 6}}
         ):
         raise TypeError("`tagname_class_attrnames' has invalid structure")
 
-    for i in tagname_class_attrnames[:]:
-        if len(i) == 3:
-            inde = tagname_class_attrnames.index(i)
-            new_val = i + ('',)
-            tagname_class_attrnames[inde] = new_val
+    for i in range(len(tagname_class_attrnames)):
 
-        if len(i) == 4 and i[3] == None:
-            inde = tagname_class_attrnames.index(i)
-            new_val = tuple(i[:3]) + ('',)
-            tagname_class_attrnames[inde] = new_val
+        for j in range(6 - len(tagname_class_attrnames[i])):
+            new_val = tuple(tagname_class_attrnames[i]) + ('',)
+            tagname_class_attrnames[i] = new_val
 
-        if len(i) == 4:
-            if not i[3] in ['', '?', '+', '*']:
-                raise ValueError("invalid mode")
+        if tagname_class_attrnames[i][3] == None:
+            new_val = (i[0], i[1], i[2], '', i[4], i[5])
+            tagname_class_attrnames[i] = new_val
+
+        if tagname_class_attrnames[i][4] == None:
+            new_val = (i[0], i[1], i[2], i[3], '', i[5])
+            tagname_class_attrnames[i] = new_val
+
+        if tagname_class_attrnames[i][5] == None:
+            new_val = (i[0], i[1], i[2], i[3], i[4], '')
+            tagname_class_attrnames[i] = new_val
+
+        if not tagname_class_attrnames[i][3] in ['', '?', '+', '*']:
+            raise ValueError(
+                "invalid mode: `{}'".format(tagname_class_attrnames[i][3])
+                )
 
     return
 
@@ -586,7 +594,7 @@ def new_from_element(cls, element):
         if i[3] == '':
             found = element.find(i[0])
             if found != None:
-                nec_params[i[2]] = i[1].new_from_element()
+                nec_params[i[2]] = i[1].new_from_element(found)
             else:
                 raise ValueError(
                     "Not found required element `{{}}'".format(i[0])
@@ -608,6 +616,20 @@ def new_from_element(cls, element):
         cls._subelements_struct
         )
 
+    return cl
+
+def new_empty(cls, *args, **kwargs):
+    nec_params = {{}}
+
+    for i in cls._subelements_struct:
+        if i[3] == '':
+            nec_params[i[2]] = i[1].new_empty(*args, **kwargs)
+        elif i[3] in ['*', '+']:
+            nec_params[i[2]] = []
+            if len(nec_params[i[2]]) == 0 and i[3] == '+':
+                nec_params[i[2]].append(i[1].new_empty(*args, **kwargs))
+
+    cl = cls(**nec_params)
     return cl
 
 def corresponding_tag(cls):
@@ -635,6 +657,7 @@ clas._properties_list = PROPERTIES_LIST
 clas._subelements_struct = SUBELEMENTS_STRUCT
 clas.__init__ = __init__
 clas.new_from_element = classmethod(new_from_element)
+clas.new_empty = classmethod(new_empty)
 clas.corresponding_tag = classmethod(corresponding_tag)
 clas.gen_element = gen_element
 
