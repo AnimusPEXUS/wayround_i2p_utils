@@ -352,7 +352,6 @@ def subelems_to_order(element, order, tagname_class_attrnames):
                             lxml.etree.tostring(i)
                             )
                         )
-                    raise
 
     return
 
@@ -461,7 +460,9 @@ def checker_factory(cls, tagname_class_attrnames):
         if lst == False and none == False:
             check = """
     if not type(value) == typ:
-        raise TypeError("`{}' must be of type {}".format(_name, typ))
+        raise TypeError(
+            "`{}' must be of type {}, not {}".format(_name, typ, type(value))
+            )
             """
             doc = 'value must be of type {}'.format(typ)
 
@@ -469,7 +470,7 @@ def checker_factory(cls, tagname_class_attrnames):
             check = """
     if value != None and not type(value) == typ:
         raise TypeError(
-            "`{}' must be None or of type {}".format(_name, typ)
+    "`{}' must be None or of type {}, not {}".format(_name, typ, type(value))
             )
             """
             doc = 'value must be None or of type {}'.format(typ)
@@ -481,7 +482,7 @@ def checker_factory(cls, tagname_class_attrnames):
         {'t': list, '<': 1, '.': {'t': typ}}
         ):
         raise TypeError(
-            "`{}' must be unempty list of type {}".format(_name, typ)
+    "`{}' must be unempty list of type {}, not {}".format(_name, typ, type(value))
             )
 """
             doc = 'value must be unempty list of type {}'.format(typ)
@@ -493,7 +494,7 @@ def checker_factory(cls, tagname_class_attrnames):
         {'t': list, '.': {'t': typ}}
         ):
         raise TypeError(
-            "`{}' must be list of type {}".format(_name, typ)
+    "`{}' must be list of type {}, not {}".format(_name, typ, type(value))
             )
 """
             doc = 'value must be list of type {}'.format(typ)
@@ -588,26 +589,8 @@ def new_from_element(cls, element):
     if int_tag is None:
         raise ValueError("invalid element tag or namespace")
 
-    nec_params = {{}}
-
-    for i in cls._subelements_struct:
-        if i[3] == '':
-            found = element.find(i[0])
-            if found != None:
-                nec_params[i[2]] = i[1].new_from_element(found)
-            else:
-                raise ValueError(
-                    "Not found required element `{{}}'".format(i[0])
-                    )
-        elif i[3] in ['*', '+']:
-            nec_params[i[2]] = \
-                [i[1].new_from_element(j) for j in element.findall(i[0])]
-            if len(nec_params[i[2]]) == 0 and i[3] == '+':
-                raise ValueError(
-                    "Not found required element `{{}}'".format(i[0])
-                    )
-
-    cl = cls(**nec_params)
+    cl = cls(**org.wayround.utils.lxml.\
+        generate_initial_parameters_for_constructors(cls, element))
 
     {gw1}
 
@@ -619,17 +602,10 @@ def new_from_element(cls, element):
     return cl
 
 def new_empty(cls, *args, **kwargs):
-    nec_params = {{}}
-
-    for i in cls._subelements_struct:
-        if i[3] == '':
-            nec_params[i[2]] = i[1].new_empty(*args, **kwargs)
-        elif i[3] in ['*', '+']:
-            nec_params[i[2]] = []
-            if len(nec_params[i[2]]) == 0 and i[3] == '+':
-                nec_params[i[2]].append(i[1].new_empty(*args, **kwargs))
-
-    cl = cls(**nec_params)
+    cl = cls(**org.wayround.utils.lxml.\
+        generate_empty_parameters_for_constructors(
+            cls, *args, **kwargs)
+            )
     return cl
 
 def corresponding_tag(cls):
@@ -685,3 +661,43 @@ del corresponding_tag
 
 def is_lxml_tag_element(element):
     return hasattr(element, 'tag') and isinstance(element.tag, str)
+
+
+def generate_initial_parameters_for_constructors(cls, element):
+
+    nec_params = {}
+
+    for i in cls._subelements_struct:
+
+        if i[3] == '':
+            found = element.find(i[0])
+            if found != None:
+                nec_params[i[2]] = i[1].new_from_element(found)
+            else:
+                raise ValueError(
+                    "Not found required element `{{}}'".format(i[0])
+                    )
+        elif i[3] in ['*', '+']:
+            nec_params[i[2]] = \
+                [i[1].new_from_element(j) for j in element.findall(i[0])]
+            if len(nec_params[i[2]]) == 0 and i[3] == '+':
+                raise ValueError(
+                    "Not found required element `{{}}'".format(i[0])
+                    )
+
+    return nec_params
+
+
+def generate_empty_parameters_for_constructors(cls, *args, **kwargs):
+
+    nec_params = {}
+
+    for i in cls._subelements_struct:
+        if i[3] == '':
+            nec_params[i[2]] = i[1].new_empty(*args, **kwargs)
+        elif i[3] in ['*', '+']:
+            nec_params[i[2]] = []
+            if len(nec_params[i[2]]) == 0 and i[3] == '+':
+                nec_params[i[2]].append(i[1].new_empty(*args, **kwargs))
+
+    return nec_params
