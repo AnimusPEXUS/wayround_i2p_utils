@@ -300,7 +300,6 @@ def _get_subcommands_text(commands_dict, command, warnings=False):
             order = []
 
         kl = list(commands_dict[command].keys())
-        kl.sort()
 
         for i in kl:
             if not i in order:
@@ -345,7 +344,6 @@ def _get_commands_text(commands_dict, warnings=False):
         order = []
 
     kl = list(commands_dict.keys())
-    kl.sort()
 
     for i in kl:
         if not i in order:

@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 import os
 import re
 
 import org.wayround.utils.terminal
+
 
 def columned_list_print(
     lst, width=None, columns=None,
@@ -17,6 +17,7 @@ def columned_list_print(
             spacing=spacing, fd=fd
             )
           )
+
 
 def return_columned_list(
     lst, width=None, columns=None,
@@ -80,6 +81,7 @@ def return_columned_list(
             )
 
     return ret
+
 
 def fill(char=' ', count=80):
     char = str(char)
