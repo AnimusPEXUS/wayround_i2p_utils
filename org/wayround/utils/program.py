@@ -374,10 +374,6 @@ def program_help(command_name, commands, command, subcommand, warnings=False):
     command_name - if not given -- not added to render
     """
 
-    command_name_text = ''
-    if command_name != None:
-        command_name_text = '{} '.format(command_name)
-
     ret = ''
 
     if command != None:
@@ -409,9 +405,9 @@ commands:
 
 {}
 
-    --help          see this help or help for command or subcommand
-    --version       version Info
-""".format(commands_text, command_name=command_name_text)
+    --help          see this help or help for command
+    --version       version info
+""".format(commands_text, command_name=command_name)
 
         elif subcommand == None:
             commands_text = _get_subcommands_text(commands, command, warnings)
@@ -430,13 +426,12 @@ subcommands:
 
 {commands_text}
 
-    --help          see this help or help for command or subcommand
-    --version       version Info
+    --help          see this help or help for subcommand
 """.format(
                command=command,
                commands_text=commands_text,
                command_help=command_help,
-               command_name=command_name_text
+               command_name=command_name
                )
         else:
             commands_text = inspect.getdoc(commands[command][subcommand])
@@ -453,7 +448,7 @@ Usage: {command_name} {command} {subcommand} [options] [parameters]
                command=command,
                subcommand=subcommand,
                commands_text=commands_text,
-               command_name=command_name_text
+               command_name=command_name
                )
 
     return ret
