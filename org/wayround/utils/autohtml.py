@@ -1,212 +1,17 @@
 
 """
-This module is for XML and XHTML rendering
+This module is for XHTML rendering
 """
-
-# TODO: migrate to lxml
 
 import logging
 import re
 import sys
 import urllib.parse
-import xml.parsers.expat
 import xml.sax.saxutils
 
 import org.wayround.utils.dict
 import org.wayround.utils.error
 import org.wayround.utils.text
-
-
-def expat_parser_connect_target(parser, target):
-
-    parser.StartElementHandler = target.start
-    parser.EndElementHandler = target.end
-    parser.CharacterDataHandler = target.data
-    parser.CommentHandler = target.comment
-
-
-class DictTreeBuilder:
-
-    def __init__(self):
-        self._clean(init=True)
-
-    def _clean(self, init=False):
-
-        self._tree = None
-        self._element_trac = []
-
-    def start(self, name, attrs):
-
-        new_elem = tag(
-            name=name,
-            attributes=attrs,
-            closed=False,
-            module=None,
-            uid=None,
-            required_css=None,
-            required_js=None,
-            content=[],
-            new_line_before_start=False,
-            new_line_before_content=False,
-            new_line_after_content=False,
-            new_line_after_end=False
-            )
-
-        if len(self._element_trac) == 0:
-            self._tree = new_elem
-        else:
-            self._element_trac[-1]['content'].append(new_elem)
-
-        self._element_trac.append(new_elem)
-
-        return
-
-    def end(self, name):
-
-        if len(self._element_trac) == 0:
-            raise RuntimeError("Error in tree building: end before start")
-
-        del self._element_trac[-1]
-
-        return
-
-    def data(self, text):
-
-        if len(self._element_trac) == 0:
-            raise RuntimeError("Error in tree building: data before start")
-
-        self._element_trac[-1]['content'].append(char(text))
-
-        return
-
-    def comment(self, text):
-
-        if len(self._element_trac) == 0:
-            raise RuntimeError("Error in tree building: data before start")
-
-        self._element_trac[-1]['content'].append(comment(text))
-
-        return
-
-    def close(self):
-
-        return [self._tree]
-
-
-class _ExpatTagEndFinder:
-
-    def __init__(self, parser):
-
-        self.parser = parser
-        self.look_for = None
-        self.look_for_counter = 0
-        self.result = -1
-
-        self.parser.StartElementHandler = self.StartElementHandler
-        self.parser.EndElementHandler = self.EndElementHandler
-
-    def StartElementHandler(self, name, attributes):
-
-        if self.look_for == None:
-            self.look_for = name
-
-        if self.look_for and self.look_for == name:
-            self.look_for_counter += 1
-
-    def EndElementHandler(self, name):
-
-        if self.look_for and self.look_for == name:
-            self.look_for_counter -= 1
-            if self.look_for_counter == 0:
-                self.result = self.parser.CurrentByteIndex
-
-
-def find_next_tag_end(text):
-
-    if not isinstance(text, (bytes, str)):
-        raise TypeError("text parameter must be bytes or str")
-
-    encoding = 'ISO-8859-1'
-    gt = b'>'
-
-    if isinstance(text, bytes):
-        encoding = 'ISO-8859-1'
-        gt = b'>'
-    else:
-        encoding = 'UTF-8'
-        gt = '>'
-
-    ret = -1
-
-    parser = xml.parsers.expat.ParserCreate(
-        encoding=encoding
-        )
-
-    esd = _ExpatTagEndFinder(parser)
-
-    try:
-        parser.Parse(text, True)
-    except xml.parsers.expat.ExpatError as err:
-
-        if err.code in [3, 9, 5]:
-            pass
-        else:
-            print(
-                "Code {}: {}".format(
-                    err.code, xml.parsers.expat.errors.messages[err.code]
-                    )
-                )
-            raise
-
-    if esd.result != -1:
-        ret = text.find(gt, esd.result)
-
-    if ret != -1:
-        ret += 1
-
-    return ret
-
-
-class ExpatReadStream:
-
-    def __init__(self,
-        parser,
-        on_read_error=None,
-        on_stream_close=None,
-        on_xml_error=None
-        ):
-
-        self.parser = parser
-        self.on_xml_error = on_xml_error
-        self._on_stream_close = on_stream_close
-        self.on_read_error = on_read_error
-
-        self.xml_integrity_tracking = []
-
-        self.parser.StartElementHandler = self.StartElementHandler
-        self.parser.EndElementHandler = self.EndElementHandler
-
-    def StartElementHandler(self, name, attributes):
-
-        self.xml_integrity_tracking.append(name)
-
-    def EndElementHandler(self, name):
-
-        if len(self.xml_integrity_tracking) == 0:
-            if self.on_xml_error:
-                self.on_xml_error()
-        else:
-
-            if not self.xml_integrity_tracking[-1] == name:
-                if self.on_xml_error:
-                    self.on_xml_error()
-            else:
-                del self.xml_integrity_tracking[-1]
-
-            if len(self.xml_integrity_tracking) == 0:
-                self._on_stream_close()
-
-        return
 
 
 def pi(content):
@@ -283,7 +88,7 @@ def html_head(
        )
 
 
-def html(
+def xhtml11(
     head=None,
     content=None,
     body_module=None,
@@ -293,7 +98,7 @@ def html(
     ):
 
     return {
-#        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
+        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
         '00015_html_dtd': dtd(
             'html PUBLIC "-//W3C//DTD XHTML 1.1//EN" '
             '"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"'
@@ -308,6 +113,45 @@ def html(
                 'xsi:schemaLocation':
                     'http://www.w3.org/1999/xhtml '
                     'http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd'
+                },
+            closed=False,
+            module=None,
+            uid=None,
+            required_css=[],
+            required_js=[],
+            content={
+                '00010_head': head,
+                '00020_body': tag(
+                    'body',
+                    module=body_module,
+                    uid=body_uid,
+                    required_css=body_css,
+                    required_js=body_js,
+                    content=content
+                    )
+                }
+            )
+        }
+
+
+def html5(
+    head=None,
+    content=None,
+    body_module=None,
+    body_uid=None,
+    body_js=None,
+    body_css=None
+    ):
+
+    return {
+        '00010_xml_pi': pi('xml version="1.0" encoding="UTF-8"'),
+        '00015_html_dtd': dtd(
+            'DOCTYPE xhtml'
+            ),
+        '00020_html': tag(
+            'html',
+            attributes={
+                'lang': 'en'
                 },
             closed=False,
             module=None,
@@ -662,6 +506,13 @@ class ModulesDirError(Exception):
 
 class DictTreeToXMLRenderer:
 
+    """
+    renderer for dict structures described in this modules
+
+    use settings on init to adjust needed parameters, set_tree() method to
+    set required tree and then user method render() to get the string
+    """
+
     def __init__(
         self,
         xml_indent_size=2,
@@ -866,40 +717,6 @@ class DictTreeToXMLRenderer:
 
         return
 
-    def css_path_renderer(self, inname):
-        module, uid, file = inname.split('/')[0:3]
-
-        return "css?module={module}&uid={uid}&file={file}".format_map(
-            {
-                'module': urllib.parse.quote(
-                    module, encoding='utf-8', errors='strict'
-                    ),
-                'uid': urllib.parse.quote(
-                    uid, encoding='utf-8', errors='strict'
-                    ),
-                'file': urllib.parse.quote(
-                    file, encoding='utf-8', errors='strict'
-                    )
-                }
-            )
-
-    def js_path_renderer(self, inname):
-        module, uid, file = inname.split('/')[0:3]
-
-        return "js?module={module}&uid={uid}&file={file}".format_map(
-            {
-                'module': urllib.parse.quote(
-                    module, encoding='utf-8', errors='strict'
-                    ),
-                'uid': urllib.parse.quote(
-                    uid, encoding='utf-8', errors='strict'
-                    ),
-                'file': urllib.parse.quote(
-                    file, encoding='utf-8', errors='strict'
-                    )
-                }
-            )
-
     def _place_found_css_or_js(
         self,
         i,
@@ -918,7 +735,7 @@ class DictTreeToXMLRenderer:
                 closed=True,
                 attributes={
                     'type': 'text/css',
-                    'href': css_path_renderer(self, i),
+                    'href': css_path_renderer(i),
                     'rel': 'stylesheet'
                     }
                 )
@@ -928,7 +745,7 @@ class DictTreeToXMLRenderer:
                 'script',
                 attributes={
                     'type': 'text/javascript',
-                    'src': js_path_renderer(self, i),
+                    'src': js_path_renderer(i),
                     }
                 )
         else:
@@ -1262,6 +1079,42 @@ class DictTreeToXMLRenderer:
         return ret
 
 
+def css_path_renderer(inname):
+    module, uid, file = inname.split('/')[0:3]
+
+    return "css?module={module}&uid={uid}&file={file}".format_map(
+        {
+            'module': urllib.parse.quote(
+                module, encoding='utf-8', errors='strict'
+                ),
+            'uid': urllib.parse.quote(
+                uid, encoding='utf-8', errors='strict'
+                ),
+            'file': urllib.parse.quote(
+                file, encoding='utf-8', errors='strict'
+                )
+            }
+        )
+
+
+def js_path_renderer(inname):
+    module, uid, file = inname.split('/')[0:3]
+
+    return "js?module={module}&uid={uid}&file={file}".format_map(
+        {
+            'module': urllib.parse.quote(
+                module, encoding='utf-8', errors='strict'
+                ),
+            'uid': urllib.parse.quote(
+                uid, encoding='utf-8', errors='strict'
+                ),
+            'file': urllib.parse.quote(
+                file, encoding='utf-8', errors='strict'
+                )
+            }
+        )
+
+
 def test():
     # Upper dict element with names (like following) is called
     # `dictatorship range'.
@@ -1372,7 +1225,7 @@ def test2():
     logging.basicConfig(level='DEBUG')
     print("Dictator test #2")
     b = DictTreeToXMLRenderer(2, True, True)
-    b.set_tree(html())
+    b.set_tree(html5())
     ret = b.render()
     print(repr(b.units))
     b.print_log()

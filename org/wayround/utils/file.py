@@ -2,16 +2,16 @@
 import fnmatch
 import logging
 import os
-import select
 import shutil
 import sys
 import threading
 import time
 
-
 import org.wayround.utils.path
 import org.wayround.utils.terminal
 import org.wayround.utils.text
+import select
+
 
 POLL_CONSTS = {}
 
@@ -28,7 +28,6 @@ for _i in [
 
 del _i
 del _l
-
 
 
 def _copytree(
@@ -93,6 +92,7 @@ def _copytree(
 
     return ret
 
+
 def copytree(
     src_dir,
     dst_dir,
@@ -128,7 +128,8 @@ def copytree(
             logging.error("Error creating dir `{}'".format(dst_dir))
             ret = 2
         else:
-            if _copytree(src_dir, dst_dir, overwrite_files=overwrite_files) != 0:
+            if (_copytree(src_dir, dst_dir, overwrite_files=overwrite_files)
+                != 0):
                 logging.error(
                     "Some errors occurred while copying `{}' to `{}'".format(
                         src_dir,
@@ -174,7 +175,9 @@ def remove_if_exists(file_or_dir):
             try:
                 os.unlink(file_or_dir)
             except:
-                logging.exception("      can't remove link {}".format(file_or_dir))
+                logging.exception(
+                    "      can't remove link {}".format(file_or_dir)
+                    )
                 return 1
 
     return 0
@@ -243,7 +246,6 @@ def inderictory_copy_file(directory, file1, file2):
     else:
         logging.error("source file not exists")
 
-
     return
 
 
@@ -271,8 +273,7 @@ def files_recurcive_list(
 
         else:
             if maxdepth < 0:
-                raise ValueError("maxdepth can't be lesser when zero")
-
+                raise ValueError("maxdepth can't be lesser than zero")
 
     dirname = org.wayround.utils.path.normpath(dirname)
 
@@ -285,7 +286,6 @@ def files_recurcive_list(
         logging.info(
             "Setting list of files in `{}' and it's subdirs".format(dirname)
             )
-
 
     if isinstance(exclude_paths, list):
         exclude_paths2 = list()
@@ -374,8 +374,6 @@ def files_recurcive_list(
                     print("    {}".format(f_path))
                 lst.append(f_path)
 
-
-
         if not mute:
             pp = None
             if not relative_to:
@@ -413,6 +411,7 @@ def progress_write_finish():
     sys.stdout.flush()
     return
 
+
 # TODO: output descriptor selector
 def progress_write(line_to_write, new_line=False):
 
@@ -439,7 +438,7 @@ def progress_write(line_to_write, new_line=False):
             'spaces': org.wayround.utils.text.fill(
                 ' ', width - line_to_write_l
                 ),
-            'new_line':new_line_str
+            'new_line': new_line_str
             }
         )
 
@@ -452,6 +451,7 @@ def progress_write(line_to_write, new_line=False):
     sys.stdout.flush()
     return
 
+
 def null_file(filename):
     ret = 0
     try:
@@ -461,6 +461,7 @@ def null_file(filename):
     else:
         f.close()
     return ret
+
 
 def get_dir_size(name):
     name = org.wayround.utils.path.abspath(name)
@@ -487,6 +488,7 @@ def get_dir_size(name):
 
     return size
 
+
 def get_file_size(name):
 
     ret = None
@@ -501,6 +503,7 @@ def get_file_size(name):
             ret = get_dir_size(name)
 
     return ret
+
 
 def dereference_file(filename):
 
@@ -519,7 +522,9 @@ def dereference_file(filename):
                 ret = 0
             else:
                 lnk = None
-                dir_name = org.wayround.utils.path.abspath(os.path.dirname(filename))
+                dir_name = org.wayround.utils.path.abspath(
+                    os.path.dirname(filename)
+                    )
 
                 try:
                     lnk = os.readlink(filename)
@@ -527,12 +532,15 @@ def dereference_file(filename):
                     ret = 2
                 else:
                     if lnk[0] != '/':
-                        lnk = org.wayround.utils.path.abspath(dir_name + os.path.sep + lnk)
+                        lnk = org.wayround.utils.path.abspath(
+                            org.wayround.utils.path.join(dir_name, lnk)
+                            )
 
                     os.unlink(filename)
                     shutil.copy2(lnk, filename)
 
     return ret
+
 
 def dereference_files_in_dir(dirname):
 
@@ -547,7 +555,7 @@ def dereference_files_in_dir(dirname):
             dirpath = org.wayround.utils.path.abspath(dirpath)
 
             for i in filenames:
-                if dereference_file(os.path.join(dirpath , i)) != 0:
+                if dereference_file(os.path.join(dirpath, i)) != 0:
                     logging.error(
                         "Could not dereference `{}'".format(
                             org.wayround.utils.path.relpath(
@@ -563,6 +571,7 @@ def dereference_files_in_dir(dirname):
         ret = 2
 
     return ret
+
 
 def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
 
@@ -589,8 +598,6 @@ def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
         ret = 1
 
     return ret
-
-
 
 
 class FDStatusWatcher:
@@ -676,7 +683,9 @@ class FDStatusWatcher:
         if not isinstance(self._fd, int):
             raise TypeError("file descriptor must be given before start")
 
-        if not self._starting and not self._stopping and self.stat() == 'stopped':
+        if (not self._starting
+            and not self._stopping
+            and self.stat() == 'stopped'):
 
             self._starting = True
 
@@ -749,7 +758,6 @@ class FDStatusWatcher:
         self._watching_thread = None
 
 
-
 def poll_stat_namer(event):
 
     if not isinstance(event, int):
@@ -767,6 +775,7 @@ def poll_stat_namer(event):
 
     return list(names)
 
+
 def poll_stat_devider(event):
 
     if not isinstance(event, int):
@@ -783,8 +792,10 @@ def poll_stat_devider(event):
 
     return devided
 
+
 def print_status_change(sock, stats):
     logging.info("File descriptor {} status changed to {}".format(sock, stats))
+
 
 def which(name):
     ret = None
@@ -799,6 +810,7 @@ def which(name):
             ret = n_f_n
 
     return ret
+
 
 def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
 
@@ -820,8 +832,6 @@ def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
         reducing_dir_filelist, method
         )
 
-#    del reducing_dir_filelist
-
     reducable_dir_filelist = org.wayround.utils.file.files_recurcive_list(
         reducable_dir,
         onerror=None,
@@ -840,15 +850,14 @@ def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
         reducable_dir_filelist, method
         )
 
-#    del reducable_dir_filelist
-
     for i in reducable_dir_filelist:
 
         for j in reducing_dir_filelist:
 
             if reducing_dir_sums[j] == reducable_dir_sums[i]:
 
-                rel_path = org.wayround.utils.path.relpath(j, os.path.dirname(i))
+                rel_path = \
+                    org.wayround.utils.path.relpath(j, os.path.dirname(i))
 
                 if os.path.isfile(i) or os.path.islink(i):
                     os.unlink(i)
