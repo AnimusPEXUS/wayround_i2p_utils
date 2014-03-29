@@ -1,12 +1,12 @@
 
-import os
 import hashlib
-import re
 import logging
+import os
+import re
 
-import org.wayround.utils.file
 import org.wayround.utils.path
 import org.wayround.utils.stream
+import org.wayround.utils.terminal
 
 
 def make_dir_checksums(dirname, output_filename):
@@ -75,7 +75,7 @@ def make_dir_checksums_fo(
                     rel_path = org.wayround.utils.path.relpath(
                         root + os.path.sep + f, dirname
                         )
-                    org.wayround.utils.file.progress_write(
+                    org.wayround.utils.terminal.progress_write(
                         "    {}".format(rel_path)
                         )
                     if (
@@ -114,7 +114,7 @@ def make_dir_checksums_fo(
 
                         del(m)
 
-    org.wayround.utils.file.progress_write_finish()
+    org.wayround.utils.terminal.progress_write_finish()
     return ret
 
 

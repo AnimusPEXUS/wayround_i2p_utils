@@ -381,10 +381,12 @@ def files_recurcive_list(
             else:
                 pp = org.wayround.utils.path.relpath(dire, relative_to)
 
-            progress_write("    ({} files): {}".format(len(lst), pp))
+            org.wayround.utils.terminal.progress_write(
+                "    ({} files): {}".format(len(lst), pp)
+                )
 
     if not mute:
-        progress_write_finish()
+        org.wayround.utils.terminal.progress_write_finish()
 
     ret = lst
 
@@ -403,53 +405,6 @@ def files_recurcive_list(
             ret[i] = org.wayround.utils.path.relpath(ret[i], relative_to)
 
     return lst
-
-
-# TODO: output descriptor selector
-def progress_write_finish():
-    sys.stdout.write('\n')
-    sys.stdout.flush()
-    return
-
-
-# TODO: output descriptor selector
-def progress_write(line_to_write, new_line=False):
-
-    new_line_str = ''
-
-    if line_to_write.endswith('\n'):
-        new_line = True
-        line_to_write = line_to_write.rstrip('\n')
-
-    if new_line:
-        new_line = True
-        new_line_str = '\n'
-
-    width = 80
-    ts = org.wayround.utils.terminal.get_terminal_size(sys.stdout.fileno())
-    if ts != None:
-        width = ts['ws_col']
-
-    line_to_write_l = len(line_to_write)
-
-    line_to_out = '\r{ltw}{spaces}{new_line}\r'.format_map(
-        {
-            'ltw': line_to_write,
-            'spaces': org.wayround.utils.text.fill(
-                ' ', width - line_to_write_l
-                ),
-            'new_line': new_line_str
-            }
-        )
-
-    if len(line_to_out) > width:
-        line_to_out = line_to_out[:width + 1] + new_line_str + '\r'
-
-    # TODO: put sys.stdout to parameters
-
-    sys.stdout.write(line_to_out)
-    sys.stdout.flush()
-    return
 
 
 def null_file(filename):

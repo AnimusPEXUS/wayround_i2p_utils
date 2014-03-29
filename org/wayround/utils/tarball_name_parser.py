@@ -431,6 +431,8 @@ def parse_tarball_name(
     .. NOTE:: version numbers are always joined with \`.\'
     """
 
+    # TODO: read off mute parameter and result printing
+
     if not isinstance(filename, str):
         raise TypeError("filename must be str")
 

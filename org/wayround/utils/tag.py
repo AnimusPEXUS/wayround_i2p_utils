@@ -4,11 +4,10 @@ Tag Utils
 
 import logging
 
-import sqlalchemy
-import sqlalchemy.orm
 import sqlalchemy.ext.declarative
+import sqlalchemy.orm
 
-import org.wayround.utils.file
+import org.wayround.utils.terminal
 
 
 class TagEngine:
@@ -227,7 +226,7 @@ class TagEngine:
             ii += 1
 
             if not mute:
-                org.wayround.utils.file.progress_write(
+                org.wayround.utils.terminal.progress_write(
                     "    {} of {} ({:.2f}%, deleted {})".format(
                         ii,
                         ic,
@@ -237,7 +236,7 @@ class TagEngine:
                     )
 
         if not mute:
-            org.wayround.utils.file.progress_write_finish()
+            org.wayround.utils.terminal.progress_write_finish()
 
         if changed:
             self.session.commit()
