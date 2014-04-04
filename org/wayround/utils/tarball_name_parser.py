@@ -6,6 +6,7 @@ Module with package names parsing facilities
 import copy
 import logging
 import os.path
+import pprint
 
 import org.wayround.utils.list
 import org.wayround.utils.tag
@@ -21,6 +22,7 @@ DIFFICULT_NAMES = [
     'dahdi-linux-complete-2.1.0.3+2.1.0.2.tar.gz',
     'dhcp-4.1.2rc1.tar.gz',
     'dvd+rw-tools-5.5.4.3.4.tar.gz',
+    'gtk+-3.12.0.tar.xz',
     'lynx2.8.7rel.1.tar.bz2',
     'name.tar.gz',
     'ogre_src_v1-8-1.tar.bz2',
@@ -32,7 +34,7 @@ DIFFICULT_NAMES = [
     'wmirq-0.1-source.tar.gz',
     'xc-1.tar.gz',
     'xf86-input-acecad-1.5.0.tar.bz2',
-    'xf86-input-elo2300-1.1.2.tar.bz2'
+    'xf86-input-elo2300-1.1.2.tar.bz2',
     ]
 """
 Testing tarbal names
@@ -53,7 +55,8 @@ ACCEPTABLE_SOURCE_NAME_EXTENSIONS = [
 Acceptable source name extensions
 """
 
-ALL_DELIMITERS = ['.', '_', '-', '+', '~']
+ALL_DELIMITERS = ['.', '_', '-', '~']
+STATUS_DELIMITERS = ALL_DELIMITERS + ['+']
 
 
 def _find_possible_chared_versions_and_singles(name_sliced, separator='.'):
@@ -362,7 +365,7 @@ def _source_name_parse_delicate(filename, mute=False):
             ret['groups']['status_list_dirty'] = (
                 org.wayround.utils.list.list_strip(
                     ret['groups']['status_list_dirty'],
-                    ALL_DELIMITERS
+                    STATUS_DELIMITERS
                     )
                 )
 
@@ -372,13 +375,13 @@ def _source_name_parse_delicate(filename, mute=False):
 
             org.wayround.utils.list.remove_all_values(
                 ret['groups']['status_list'],
-                ALL_DELIMITERS
+                STATUS_DELIMITERS
                 )
 
             ret['groups']['status_list'] = (
                 org.wayround.utils.list.list_strip(
                     ret['groups']['status_list'],
-                    ALL_DELIMITERS
+                    STATUS_DELIMITERS
                     )
                 )
 
@@ -455,9 +458,13 @@ def parse_test():
 
     for i in DIFFICULT_NAMES:
         logging.info("====== Testing parser on `{}' ======".format(i))
-        if not isinstance(parse_tarball_name(i), dict):
+        res = parse_tarball_name(i)
+        if not isinstance(res, dict):
             logging.error(
                 "Error parsing file name `{}' - parser not matched".format(i)
                 )
+        else:
+            pprint.pprint(res)
+            print()
 
     return

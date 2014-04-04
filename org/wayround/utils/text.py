@@ -3,6 +3,7 @@ import os
 import re
 
 import org.wayround.utils.terminal
+import org.wayround.utils.types
 
 
 def columned_list_print(
@@ -24,6 +25,12 @@ def return_columned_list(
     margin_right=' | ', margin_left=' | ', spacing=' | ',
     fd=1
     ):
+
+    if not org.wayround.utils.types.struct_check(
+        lst,
+        {'t': list, '.': {'t': str}}
+        ):
+        raise TypeError("`lst' must be list of str")
 
     if width == None:
         if (

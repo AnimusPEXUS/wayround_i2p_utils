@@ -163,6 +163,9 @@ else:
 
     class GtkIteratedLoop:
 
+        # NOTE: this class is tending to be deprecated. we must obey to use
+        #       Gtk+ threading rules
+
         def __init__(self, sleep_fraction=0.01):
             self._exit_event = threading.Event()
             self._started = False

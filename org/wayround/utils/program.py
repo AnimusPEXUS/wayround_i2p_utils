@@ -201,7 +201,7 @@ def command_processor(
                         if res == 0:
                             txt = 'No errors'
                         else:
-                            txt = 'Some error (Read documentation).'
+                            txt = 'Some error'
 
                         ret = dict(
                             code=res,

@@ -24,16 +24,18 @@ class TagEngine:
             autoincrement=True
             )
 
-        tag = sqlalchemy.Column(
-            sqlalchemy.UnicodeText,
-            nullable=False,
-            default=''
-            )
-
         obj = sqlalchemy.Column(
             sqlalchemy.UnicodeText,
             nullable=False,
-            default=''
+            default='',
+            index=True
+            )
+
+        tag = sqlalchemy.Column(
+            sqlalchemy.UnicodeText,
+            nullable=False,
+            default='',
+            index=True
             )
 
     def __init__(self, config_string, commit_every=1000):
@@ -76,9 +78,10 @@ class TagEngine:
         self.session.commit()
         return
 
-    def set_tags(self, obj, tags=[]):
+    def set_tags(self, obj, tags=[], nocommit=True):
         self.session.query(self.Tag).filter_by(obj=obj).delete()
-        #self.session.commit()
+        if not nocommit:
+            self.session.commit()
 
         for i in tags:
             a = self.Tag()
@@ -93,9 +96,12 @@ class TagEngine:
             self.commit()
             self.commit_counter = 0
 
-        #self.session.commit()
+        if not nocommit:
+            self.session.commit()
 
         return
+
+    set_object_tags = set_tags
 
     def get_tags(self, obj):
 
@@ -107,6 +113,7 @@ class TagEngine:
 
         return list(ret)
 
+    get_object_tags = get_tags
 
     def get_objects(self, order=None):
 
@@ -217,11 +224,10 @@ class TagEngine:
                 while i in objs:
                     objs.remove(i)
 
-                removed += self.sesessionss.query(self.Tag).filter_by(obj=i).count()
+                removed += \
+                    self.sesessionss.query(self.Tag).filter_by(obj=i).count()
 
                 self.session.query(self.Tag).filter_by(obj=i).delete()
-
-
 
             ii += 1
 
@@ -249,4 +255,3 @@ class TagEngine:
         self.session.commit()
 
         return
-
