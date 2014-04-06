@@ -1,6 +1,5 @@
 
 import sqlalchemy.orm
-import sqlalchemy.ext.declarative
 
 
 class BasicDBConfigError(Exception):
@@ -13,81 +12,82 @@ class BasicDB:
     Main package index DB handling class
     """
 
-#    Base = sqlalchemy.ext.declarative.declarative_base()
-
-# NOTE: Example Table Class. Do not remove!
-#    class Info(Base):
-#        """
-#        Class for holding package information
-#        """
-#        __tablename__ = 'package_info'
-#
-#        name = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            primary_key=True,
-#            default=''
-#            )
-#
-#        basename = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            default=''
-#            )
-#
-#        version_re = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            default=''
-#            )
-#
-#        home_page = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            default=''
-#            )
-#
-#        description = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            default=''
-#            )
-#
-#        buildscript = sqlalchemy.Column(
-#            sqlalchemy.UnicodeText,
-#            nullable=False,
-#            default=''
-#            )
-#
-#        installation_priority = sqlalchemy.Column(
-#            sqlalchemy.Integer,
-#            nullable=False,
-#            default=5
-#            )
-#
-#        removable = sqlalchemy.Column(
-#            sqlalchemy.Boolean,
-#            nullable=False,
-#            default=True
-#            )
-#
-#        reducible = sqlalchemy.Column(
-#            sqlalchemy.Boolean,
-#            nullable=False,
-#            default=True
-#            )
-#
-#        auto_newest_src = sqlalchemy.Column(
-#            sqlalchemy.Boolean,
-#            nullable=False,
-#            default=True
-#            )
-#
-#        auto_newest_pkg = sqlalchemy.Column(
-#            sqlalchemy.Boolean,
-#            nullable=False,
-#            default=True
-#            )
+    # NOTE: Example Table Class. Do not remove!
+    #
+    #    Base = sqlalchemy.ext.declarative.declarative_base()
+    #
+    #    class Info(Base):
+    #        """
+    #        Class for holding package information
+    #        """
+    #        __tablename__ = 'package_info'
+    #
+    #        name = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            primary_key=True,
+    #            default=''
+    #            )
+    #
+    #        basename = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            default=''
+    #            )
+    #
+    #        version_re = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            default=''
+    #            )
+    #
+    #        home_page = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            default=''
+    #            )
+    #
+    #        description = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            default=''
+    #            )
+    #
+    #        buildscript = sqlalchemy.Column(
+    #            sqlalchemy.UnicodeText,
+    #            nullable=False,
+    #            default=''
+    #            )
+    #
+    #        installation_priority = sqlalchemy.Column(
+    #            sqlalchemy.Integer,
+    #            nullable=False,
+    #            default=5
+    #            )
+    #
+    #        removable = sqlalchemy.Column(
+    #            sqlalchemy.Boolean,
+    #            nullable=False,
+    #            default=True
+    #            )
+    #
+    #        reducible = sqlalchemy.Column(
+    #            sqlalchemy.Boolean,
+    #            nullable=False,
+    #            default=True
+    #            )
+    #
+    #        auto_newest_src = sqlalchemy.Column(
+    #            sqlalchemy.Boolean,
+    #            nullable=False,
+    #            default=True
+    #            )
+    #
+    #        auto_newest_pkg = sqlalchemy.Column(
+    #            sqlalchemy.Boolean,
+    #            nullable=False,
+    #            default=True
+    #            )
 
     def __init__(
         self, *args, echo=False, create_all=False, **kwargs

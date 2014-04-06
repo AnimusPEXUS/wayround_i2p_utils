@@ -9,7 +9,10 @@ import org.wayround.utils.stream
 import org.wayround.utils.terminal
 
 
-def make_dir_checksums(dirname, output_filename):
+def make_dir_checksums(
+    dirname, output_filename,
+    rel_to=None, conv_to_rooted=True
+    ):
 
     ret = 0
 
@@ -28,7 +31,12 @@ def make_dir_checksums(dirname, output_filename):
             ret = 2
         else:
             try:
-                ret = make_dir_checksums_fo(dirname, sums_fd)
+                ret = make_dir_checksums_fo(
+                    dirname, sums_fd,
+                    rel_to, conv_to_rooted
+                    )
+            except:
+                logging.exception("Error")
             finally:
                 sums_fd.close()
 
@@ -39,7 +47,7 @@ def make_dir_checksums_fo(
     dirname,
     output_fileobj,
     rel_to=None,
-    conv_to_rooted=False
+    conv_to_rooted=True
     ):
 
     if not isinstance(rel_to, str):
@@ -48,9 +56,8 @@ def make_dir_checksums_fo(
     ret = 0
 
     dirname = org.wayround.utils.path.abspath(dirname)
-    dirname_l = len(dirname)
 
-    if not isinstance(rel_to, str):
+    if rel_to == None:
         rel_to = dirname
 
     rel_to = org.wayround.utils.path.abspath(rel_to)
@@ -69,37 +76,49 @@ def make_dir_checksums_fo(
             for wres in os.walk(dirname):
 
                 root = wres[0]
-                files = wres[1]
+                files = wres[2]
 
                 for f in files:
+                    root_f = org.wayround.utils.path.join(root, f)
+
                     rel_path = org.wayround.utils.path.relpath(
-                        root + os.path.sep + f, dirname
+                        root_f, rel_to
                         )
+
                     org.wayround.utils.terminal.progress_write(
                         "    {}".format(rel_path)
                         )
-                    if (
-                        (os.path.isfile(root + os.path.sep + f))
+                    if (os.path.isfile(root_f)
                         and
-                        (not os.path.islink(root + os.path.sep + f))
+                        not os.path.islink(root_f)
                         ):
                         m = hashlib.sha512()
+                        fd = None
                         try:
-                            fd = open(root + os.path.sep + f, 'rb')
+                            fd = open(root_f, 'rb')
                         except:
                             logging.exception(
                                 "Can't open file `{}'".format(
-                                    root + os.path.sep + f
+                                    root_f
                                     )
                                 )
                             ret = 3
                         else:
                             try:
-                                m.update(fd.read())
+                                while True:
 
-                                wfn = (
-                                    '/' + (root + os.path.sep + f)[1:]
-                                    )[dirname_l:]
+                                    buf = fd.read()
+                                    if len(buf) == 0:
+                                        break
+
+                                    m.update(buf)
+
+                                wfn = rel_path
+
+                                if (conv_to_rooted
+                                    and not wfn.startswith(os.path.sep)):
+
+                                    wfn = os.path.sep + wfn
 
                                 output_fileobj.write(
                                     "{digest} *{pkg_file_name}\n".format_map(
@@ -109,6 +128,8 @@ def make_dir_checksums_fo(
                                             }
                                         )
                                     )
+                            except:
+                                logging.exception("Some error")
                             finally:
                                 fd.close()
 

@@ -24,8 +24,11 @@ import collections.abc
 
 COMPARISON_TABLE = {
     'Container': {
+        # Inherits from
         'i': [],
+        # Abstract Methods
         'a': ['__contains__'],
+        # Mixin Methods
         'm': []
         },
     'Hashable': {
@@ -149,7 +152,7 @@ def check_type(obj, name):
     if not name in COMPARISON_TABLE.keys():
         raise ValueError("Invalid type name")
 
-    return isinstance(obj, eval('collections.abc.{}'.format(name)))
+    return isinstance(obj, getattr(collections.abc, name))
 
 
 def types(obj):
