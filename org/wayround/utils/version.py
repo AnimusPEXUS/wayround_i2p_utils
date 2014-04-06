@@ -7,6 +7,7 @@ import logging
 
 import org.wayround.utils.tarball_name_parser
 
+
 def source_version_comparator(name1, name2):
 
     ret = 0
@@ -21,12 +22,16 @@ def source_version_comparator(name1, name2):
         mute=True
         )
 
-
     if d1 == None or d2 == None:
         raise Exception("Can't parse filename")
 
     if d1['groups']['name'] != d2['groups']['name']:
-        raise ValueError("Files has different names")
+        raise ValueError(
+            "Files has different names: `{}' ({}) and `{}' ({})".format(
+                d1['groups']['name'], name1,
+                d2['groups']['name'], name2
+                )
+            )
 
     else:
         com_res = standard_comparison(
@@ -83,15 +88,20 @@ def standard_comparator(
                 i2_error = True
 
     if i1_error:
-        raise ValueError("standart_comparison parameters must be [lists of [str or int]] or [strings], not {}".format(int_v1))
+        raise ValueError(
+            "standart_comparison parameters must be [lists of [str or int]]"
+            " or [strings], not {}".format(int_v1)
+            )
 
     if i2_error:
-        raise ValueError("standart_comparison parameters must be [lists of [str or int]] or [strings], not {}".format(int_v2))
+        raise ValueError(
+            "standart_comparison parameters must be [lists of [str or int]]"
+            " or [strings], not {}".format(int_v2)
+            )
 
     ret = standard_comparison(int_v1, None, int_v2, None)
     logging.debug("standard_comparator ret: `{}'".format(ret))
     return ret
-
 
 
 def standard_comparison(
@@ -139,7 +149,6 @@ def standard_comparison(
             break
         else:
             continue
-
 
     # second comparison part
     if vers_comp_res == None:
