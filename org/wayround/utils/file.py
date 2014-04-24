@@ -2,15 +2,14 @@
 import fnmatch
 import logging
 import os
+import select
 import shutil
-import sys
 import threading
 import time
 
 import org.wayround.utils.path
 import org.wayround.utils.terminal
 import org.wayround.utils.text
-import select
 
 
 POLL_CONSTS = {}
@@ -30,13 +29,63 @@ del _i
 del _l
 
 
+def _copy_file(src, dst, overwrite_dst=False):
+
+    ret = 0
+
+    if os.path.isfile(dst) and not overwrite_dst:
+        logging.info("Skipping overwriting file `{}'".format(dst))
+    else:
+
+        logging.info("copying `{}'".format(os.path.relpath(src)))
+
+        try:
+            shutil.copy2(src, dst)
+        except:
+            logging.error(
+                "Can't overwrite file `{}'".format(dst)
+                )
+            ret = 1
+
+    return ret
+
+
+def _copy_symlink(src, dst, overwrite_dst=False):
+
+    ret = 0
+
+    link_value = os.readlink(src)
+
+    if ((os.path.isfile(dst)
+         or os.path.islink(dst))
+        and overwrite_dst):
+
+        os.unlink(dst)
+
+    elif os.path.isdir(dst):
+        logging.error(
+            "Can't create link. It's a directory `{}'".format(dst))
+        ret = 1
+
+    try:
+        os.symlink(link_value, dst)
+    except:
+        logging.error(
+            "Can't create link. File exists `{}'".format(dst)
+            )
+        ret = 2
+
+    return ret
+
+
 def _copytree(
     src_dir,
     dst_dir,
     overwrite_files=False,
-    copy_links=False,
     stop_on_overwrite_error=True
     ):
+
+    # TODO: make verbose parameter
 
     ret = 0
 
@@ -48,49 +97,88 @@ def _copytree(
         ret = 1
     else:
         if create_if_not_exists_dir(full_dst_dir) != 0:
-            logging.error("Error creating destination dir `{}'".format(full_dst_dir))
+            logging.error(
+                "Error creating destination dir `{}'".format(full_dst_dir)
+                )
             ret = 2
         else:
 
-            shutil.copystat(full_src_dir, full_dst_dir)
+            for path, dirs, files in os.walk(
+                src_dir,
+                topdown=True,
+                onerror=_copytree_on_error,
+                followlinks=False
+                ):
 
-            files = os.listdir(full_src_dir)
-            files.sort()
+                path_dst = org.wayround.utils.path.join(
+                    full_dst_dir,
+                    org.wayround.utils.path.relpath(
+                        path,
+                        full_src_dir
+                        )
+                    )
 
-            for i in files:
+                dirs.sort()
+                files.sort()
+
+                for i in dirs:
+
+                    joined = org.wayround.utils.path.join(path, i)
+                    joined_dst = org.wayround.utils.path.join(path_dst, i)
+
+                    if os.path.islink(joined):
+
+                        if _copy_symlink(
+                            joined,
+                            joined_dst,
+                            overwrite_files
+                            ) != 0:
+                            ret = 3
+
+                    else:
+                        if create_if_not_exists_dir(joined_dst) != 0:
+                            logging.error(
+                            "Can't create directory `{}'".format(joined_dst)
+                                )
+                            ret = 5
+
+                for i in files:
+
+                    joined = org.wayround.utils.path.join(path, i)
+                    joined_dst = org.wayround.utils.path.join(path_dst, i)
+
+                    if os.path.islink(joined):
+
+                        if _copy_symlink(
+                            joined,
+                            joined_dst,
+                            overwrite_files
+                            ) != 0:
+                            ret = 3
+                            break
+
+                    elif os.path.isfile(joined):
+
+                        if _copy_file(
+                            joined,
+                            joined_dst,
+                            overwrite_files
+                            ) != 0:
+                            ret = 4
+                            break
+
                 if ret != 0:
                     break
-                full_src_file = os.path.join(full_src_dir, i)
-                full_dst_file = os.path.join(full_dst_dir, i)
-
-                if not os.path.islink(full_src_file) \
-                    or (os.path.islink(full_src_file) and copy_links):
-                    if os.path.isdir(full_src_file) and not os.path.islink(full_src_file):
-                        if _copytree(full_src_file, full_dst_file,
-                              overwrite_files=overwrite_files
-                              ) != 0:
-                            ret = 5
-                    else:
-                        if os.path.isfile(full_dst_file) and overwrite_files \
-                            or not os.path.exists(full_dst_file):
-                            if os.path.isdir(full_dst_file):
-                                if stop_on_overwrite_error:
-                                    logging.error("Can't overwrite dir `{}' with file".format(full_dst_file))
-                                    ret = 3
-                                else:
-                                    logging.warning("Can't overwrite dir `{}' with file. -- skipping".format(full_dst_file))
-                            else:
-                                logging.info("copying `{}'".format(os.path.relpath(full_dst_file)))
-                                try:
-                                    shutil.copy2(full_src_file, full_dst_file)
-                                except:
-                                    if stop_on_overwrite_error:
-                                        logging.error("Can't overwrite dir `{}' with file".format(full_dst_file))
-                                        ret = 4
-                                    else:
-                                        logging.warning("Can't overwrite dir `{}' with file. -- skipping".format(full_dst_file))
 
     return ret
+
+
+def _copytree_on_error(err):
+    try:
+        raise err
+    except:
+        logging.exception("Can't copy file:\n{}".format(err))
+    return
 
 
 def copytree(
@@ -101,7 +189,7 @@ def copytree(
     dst_must_be_empty=True
     ):
 
-    # TODO: think of symlinks
+    # TODO: think of hardlinks too..
 
     src_dir = org.wayround.utils.path.abspath(src_dir)
     dst_dir = org.wayround.utils.path.abspath(dst_dir)
@@ -114,7 +202,7 @@ def copytree(
         os.makedirs(dst_dir, exist_ok=True)
 
     if dst_must_be_empty:
-        if isdirempty(dst_dir):
+        if not isdirempty(dst_dir):
             logging.error("Destination dir `{}' not empty".format(dst_dir))
             ret = 1
 

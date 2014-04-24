@@ -271,7 +271,9 @@ def _find_most_possible_version(name_sliced, mute=False):
     return ret
 
 
-def _source_name_parse_delicate(filename, mute=False):
+def _source_name_parse_delicate(
+    filename, mute=False, acceptable_source_name_extensions=None
+    ):
 
     """
     Main source name parsing function
@@ -286,7 +288,7 @@ def _source_name_parse_delicate(filename, mute=False):
     ret = None
 
     extension = None
-    for i in ACCEPTABLE_SOURCE_NAME_EXTENSIONS:
+    for i in acceptable_source_name_extensions:
         if filename.endswith(i):
             extension = i
 
@@ -399,7 +401,8 @@ def _source_name_parse_delicate(filename, mute=False):
 
 def parse_tarball_name(
     filename,
-    mute=False
+    mute=False,
+    acceptable_source_name_extensions=None
     ):
     """
     Parse source file name and do some more actions on success
@@ -439,7 +442,14 @@ def parse_tarball_name(
     if not isinstance(filename, str):
         raise TypeError("filename must be str")
 
-    ret = _source_name_parse_delicate(filename, mute)
+    if acceptable_source_name_extensions == None:
+        acceptable_source_name_extensions = ACCEPTABLE_SOURCE_NAME_EXTENSIONS
+
+    ret = _source_name_parse_delicate(
+        filename,
+        mute,
+        acceptable_source_name_extensions
+        )
 
     if not isinstance(ret, dict):
         if not mute:

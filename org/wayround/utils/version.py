@@ -8,18 +8,27 @@ import logging
 import org.wayround.utils.tarball_name_parser
 
 
-def source_version_comparator(name1, name2):
+def source_version_comparator(
+    name1, name2,
+    acceptable_source_name_extensions
+    ):
 
     ret = 0
 
+    if isinstance(acceptable_source_name_extensions, str):
+        acceptable_source_name_extensions = \
+            acceptable_source_name_extensions.split(' ')
+
     d1 = org.wayround.utils.tarball_name_parser.parse_tarball_name(
         name1,
-        mute=True
+        True,
+        acceptable_source_name_extensions
         )
 
     d2 = org.wayround.utils.tarball_name_parser.parse_tarball_name(
         name2,
-        mute=True
+        True,
+        acceptable_source_name_extensions
         )
 
     if d1 == None or d2 == None:
