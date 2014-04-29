@@ -16,7 +16,308 @@ CAT_READWRITE_TYPES = [
     ]
 
 
-class CatTerminationFlagFound(Exception): pass
+class Streamer:
+
+    def __init__(
+        self,
+        stream_object,
+        stream_object_read_meth,
+        stream_object_write_meth,
+        stream_object_mode='file',
+        bs=2 * 1024 ** 2,
+        descriptor_to_wait_for=None,
+        flush_after_each_write=False,
+        flush_on_input_eof=False,
+        close_output_on_eof=False,
+        standard_write_method_result=None,
+        thread_name='Thread',
+        verbose=False,
+        debug=False,
+        on_exit_callback=None,
+        on_input_read_error=None,
+        on_output_write_error=None
+        ):
+
+        if not stream_object_mode in CAT_READWRITE_TYPES:
+            raise ValueError("invalid `descriptor_mode'")
+
+        if bs < 1:
+            raise ValueError("invalid `bs'")
+
+        if not standard_write_method_result in [None, False, True]:
+            raise ValueError("invalid `standard_write_method_result'")
+
+        self._verbose = verbose
+        self._debug = debug
+
+        self._bs = bs
+
+        self._stream_object = stream_object
+        self._stream_object_mode = stream_object_mode
+
+        self._stream_object_read_meth = stream_object_read_meth
+        self._stream_object_write_meth = stream_object_write_meth
+
+        self._descriptor_to_wait_for = descriptor_to_wait_for
+
+        self._standard_write_method_result = standard_write_method_result
+
+        self._thread_name = thread_name
+
+        self._flush_after_each_write = flush_after_each_write
+        self._flush_on_input_eof = flush_on_input_eof
+        self._close_output_on_eof = close_output_on_eof
+
+        self._on_input_read_error = on_input_read_error
+
+        self._termination_event = threading.Event()
+
+        return
+
+    def _wait_input_avail(self):
+
+        if self._debug:
+            logging.debug(
+                "{}: waiting for input descriptor {}".format(
+                    self._thread_name,
+                    self._descriptor_to_wait_for
+                    )
+                )
+
+        while len(
+            select.select([self._descriptor_to_wait_for], [], [], 0.2)[0]
+            ) == 0:
+
+            if (self._termination_event
+                and self._termination_event.is_set()):
+                raise CatTerminationFlagFound()
+
+            if self._debug:
+                logging.debug(
+                    "{}: rewaiting for input descriptor {}".format(
+                        self._thread_name,
+                        self._descriptor_to_wait_for
+                        )
+                    )
+
+        if self._debug:
+            logging.debug(
+                "{}: input descriptor {} - ready".format(
+                    self._thread_name,
+                    self._descriptor_to_wait_for
+                    )
+                )
+
+        return
+
+    def _wait_output_avail(self):
+
+        if self._debug:
+            logging.debug(
+                "{}: waiting for output descriptor {}".format(
+                    self._thread_name,
+                    self._descriptor_to_wait_for
+                    )
+                )
+
+        while len(
+            select.select([], [self._descriptor_to_wait_for], [], 0.2)[1]
+            ) == 0:
+
+            if (self._termination_event
+                and self._termination_event.is_set()):
+                raise CatTerminationFlagFound()
+
+            if self._debug:
+                logging.debug(
+            "{}: rewaiting for output descriptor {}".format(
+                self._thread_name,
+                self._descriptor_to_wait_for
+                )
+                    )
+
+        if self._debug:
+            logging.debug(
+                "{}: output descriptor {} - ready".format(
+                    self._thread_name,
+                    self._descriptor_to_wait_for
+                    )
+                )
+
+        return
+
+    def read(self):
+
+        """
+        ret[0] == True - stream closed
+        """
+
+        ret_closed = False
+        ret_buff = None
+
+        try:
+
+            if self._stream_object_mode in ['file', 'pipe', 'socket']:
+
+                res = self._stream_object_read_meth(self._bs)
+
+                if len(res) == 0:
+                    res = None
+                    ret_closed = True
+                    ret_buff = None
+
+                else:
+
+                    ret_closed = False
+                    ret_buff = res
+
+            elif self._stream_object_mode == 'socket-nb':
+
+                self._wait_input_avail()
+
+                while True:
+
+                    if (self._termination_event
+                        and self._termination_event.is_set()):
+                        raise CatTerminationFlagFound()
+
+                    try:
+                        ret_buff = self._stream_object_read_meth(self._bs)
+
+                    except BlockingIOError:
+                        pass
+                    else:
+                        #                        ret_closed = True
+                        break
+
+            elif self._stream_object_mode == 'ssl-nb':
+
+                self._wait_input_avail()
+
+                while True:
+
+                    if (self._termination_event
+                        and self._termination_event.is_set()):
+                        raise CatTerminationFlagFound()
+
+                    try:
+                        ret_buff = self._stream_object_read_meth(self._bs)
+
+                    except BlockingIOError:
+                        pass
+
+                    except ssl.SSLWantReadError:
+                        select.select(
+                            [self._descriptor_to_wait_for],
+                            #[self._descriptor_to_wait_for],
+                            [],
+                            []
+                            )
+
+                    except ssl.SSLWantWriteError:
+                        select.select(
+                            #[self._descriptor_to_wait_for],
+                            [],
+                            [self._descriptor_to_wait_for],
+                            []
+                            )
+                    else:
+                        #                        ret_closed = True
+                        break
+
+            else:
+                raise Exception(
+                    "Programming error: self._stream_object_mode == {}".format(
+                        self._stream_object_mode
+                        )
+                    )
+
+        except:
+            if self._on_input_read_error:
+                threading.Thread(
+                    target=self._on_input_read_error,
+                    name="{} Input Read Error Thread".format(
+                        self._thread_name
+                        )
+                    ).start()
+
+            ret_closed = True
+            ret_buff = None
+
+        if not ret_closed and not isinstance(ret_buff, bytes):
+            ret_closed = True
+            raise TypeError(
+                (
+                 "Can read only bytes buffer "
+                 "(Not str or anything other), but "
+                 "buffer is ({}):{}..."
+                 ).format(
+                    type(ret_buff),
+                    repr(ret_buff)[:100]
+                    )
+                )
+
+        ret = ret_closed, ret_buff
+
+        return ret
+
+    def write(self, buff):
+
+        if not self._stream_object_mode in ['file', 'pipe', 'socket']:
+            self._wait_output_avail()
+
+        if buff:
+
+            if (self._termination_event
+                and self._termination_event.is_set()):
+                raise CatTerminationFlagFound()
+
+            try:
+
+                while len(buff) != 0:
+
+                    if (not self._stream_object_mode
+                        in ['file', 'pipe', 'socket']):
+                        self._wait_output_avail()
+
+                    sb = buff[:self._bs]
+                    buff = buff[self._bs:]
+                    self._stream_object_write_meth(sb)
+
+                    if self._flush_after_each_write:
+                        self._stream_object.flush()
+
+            except TypeError as err_val:
+                if err_val.args[0] == 'must be str, not bytes':
+                    logging.warning(
+    "{}: hint: check that output is in bytes mode or do"
+    " conversion with convert_to_str option".format(self._thread_name)
+                        )
+                raise
+
+            except:
+
+                logging.error(
+                    "{}: Can't use object's `{}' `{}' method.\n"
+                    "    (Output process closed it's input. "
+                    "It can be not an error)".format(
+                        self._thread_name,
+                        self._stream_object,
+                        self._stream_object_write_meth
+                        )
+                    )
+
+                if self._on_output_write_error:
+                    threading.Thread(
+                        target=self._on_output_write_error,
+                        name="`{}' Output Error Thread".format(
+                            self._thread_name
+                            )
+                        ).start()
+
+                raise
+
+        return
 
 
 def cat(
@@ -33,7 +334,7 @@ def cat(
     read_type='file',
     write_type='file',
     exit_on_input_eof=True,
-    flush_after_every_write=False,
+    flush_after_each_write=False,
     flush_on_input_eof=False,
     close_output_on_eof=False,
     waiting_for_input=False,
@@ -104,7 +405,7 @@ def cat(
                 read_type=read_type,
                 write_type=write_type,
                 exit_on_input_eof=exit_on_input_eof,
-                flush_after_every_write=flush_after_every_write,
+                flush_after_each_write=flush_after_each_write,
                 flush_on_input_eof=flush_on_input_eof,
                 close_output_on_eof=close_output_on_eof,
                 waiting_for_input=waiting_for_input,
@@ -132,6 +433,268 @@ def cat(
             logging.info("Starting `{}' thread".format(thread_name))
 
         buff = None
+
+        c = 0
+        bytes_counter = 0
+
+        if apply_input_seek and hasattr(stdin, 'seek'):
+            try:
+                stdin.seek(0)
+            except:
+                pass
+
+        s1 = Streamer(
+            stdin,
+            getattr(stdin, read_method_name),
+            None,
+            stream_object_mode=read_type,
+            bs=bs,
+            descriptor_to_wait_for=descriptor_to_wait_for_input,
+            thread_name='Input Streamer {}'.format(thread_name),
+            verbose=verbose,
+            debug=debug
+            )
+
+        s2 = Streamer(
+            stdout,
+            None,
+            getattr(stdout, write_method_name),
+            stream_object_mode=write_type,
+            bs=bs,
+            descriptor_to_wait_for=descriptor_to_wait_for_output,
+            thread_name='Output Streamer {}'.format(thread_name),
+            flush_after_each_write=flush_after_each_write,
+            verbose=verbose,
+            debug=debug
+            )
+
+        try:
+            while True:
+
+                if termination_event and termination_event.is_set():
+                    raise CatTerminationFlagFound()
+
+                closed, buff = s1.read()
+
+                if not closed:
+
+                    if debug:
+
+                        buff_len = len(buff)
+
+                        logging.debug(
+                            "{}: Readed  {} bytes using method {}".format(
+                                thread_name,
+                                buff_len,
+                                read_method_name
+                                )
+                            )
+
+                        logging.debug(
+                            "{}: buff data: {}".format(
+                                thread_name,
+                                repr(buff)
+                                )
+                            )
+
+                        logging.debug(
+                            "{}: Writing {} bytes using method {}".format(
+                                thread_name,
+                                buff_len,
+                                write_method_name
+                                )
+                            )
+
+                    if convert_to_str != None:
+                        buff = str(buff, encoding=convert_to_str)
+
+                    s2.write(buff)
+
+                else:
+                    if exit_on_input_eof:
+                        break
+
+                c += 1
+                if isinstance(buff, (bytes, str)):
+                    if isinstance(buff, bytes):
+                        bytes_counter += len(buff)
+                    if isinstance(buff, str):
+                        bytes_counter += len(bytes(buff, 'utf-8'))
+
+        except CatTerminationFlagFound:
+            if debug:
+                logging.debug(
+                    "{}: Termination flag caught".format(thread_name)
+                    )
+        except:
+            logging.exception(
+                "{}: Exception in cat thread".format(thread_name)
+                )
+
+        if flush_on_input_eof:
+            stdout.flush()
+
+        if apply_output_seek and hasattr(stdout, 'seek'):
+            try:
+                stdout.seek(0, os.SEEK_END)
+            except:
+                pass
+
+        if close_output_on_eof:
+            if verbose:
+                logging.info(" {}: Closing thread stdout".format(thread_name))
+            stdout.close()
+
+        if verbose:
+            logging.info("""\
+  Ending `{name}' thread
+        {{
+           {num} cycles worked,
+           {size} bytes ({sizem:4.2f} MiB) transferred,
+           with buffer size {bufs} bytes ({bufm:4.2f} MiB)
+        }}
+""".format_map({
+        'name': thread_name,
+        'num': c,
+        'size': bytes_counter,
+        'sizem': (float(bytes_counter) / 1024 / 1024),
+        'bufs': bs,
+        'bufm': (float(bs) / 1024 / 1024)
+        }
+        )
+    )
+
+        if on_exit_callback:
+            threading.Thread(
+                target=on_exit_callback,
+                name="{} Exited Callback Thread".format(thread_name)
+                ).start()
+
+        return
+
+    return
+
+
+class CatTerminationFlagFound(Exception):
+    pass
+
+
+def cat_old(
+    stdin,
+    stdout,
+    bs=2 * 1024 ** 2,
+    count=None,
+    threaded=False,
+    thread_name='Thread',
+    verbose=False,
+    convert_to_str=None,
+    read_method_name='read',
+    write_method_name='write',
+    read_type='file',
+    write_type='file',
+    exit_on_input_eof=True,
+    flush_after_each_write=False,
+    flush_on_input_eof=False,
+    close_output_on_eof=False,
+    waiting_for_input=False,
+    waiting_for_output=False,
+    descriptor_to_wait_for_input=None,
+    descriptor_to_wait_for_output=None,
+    apply_input_seek=True,
+    apply_output_seek=True,
+    standard_write_method_result=True,
+    termination_event=None,
+    on_exit_callback=None,
+    on_input_read_error=None,
+    on_output_write_error=None,
+    debug=False
+    ):
+
+    if not read_method_name.isidentifier():
+        raise ValueError("Wrong `read_method_name' parameter")
+
+    if not write_method_name.isidentifier():
+        raise ValueError("Wrong `write_method_name' parameter")
+
+    if not read_type in CAT_READWRITE_TYPES:
+        raise ValueError("`read_type' must be file or socket")
+
+    if not write_type in CAT_READWRITE_TYPES:
+        raise ValueError("`write_type' must be file or socket")
+
+    if not hasattr(stdin, read_method_name):
+        raise ValueError(
+            "Object `{}' have no '{}' method".format(stdin, read_method_name)
+            )
+
+    if not hasattr(stdout, write_method_name):
+        raise ValueError(
+            "Object `{}' have no '{}' method".format(stdout, write_method_name)
+            )
+
+    if convert_to_str == True:
+        convert_to_str = 'utf-8'
+    elif convert_to_str == False:
+        convert_to_str = None
+
+    if (convert_to_str != None
+        and not isinstance(convert_to_str, str)
+        ):
+        raise ValueError(
+            "convert_to_str can only be str(encoding name), bool or None"
+            )
+
+    if thread_name == None:
+        thread_name = 'Thread'
+
+    if threaded:
+
+        return threading.Thread(
+            target=cat_old,
+            args=(stdin, stdout),
+            kwargs=dict(
+                bs=bs,
+                count=count,
+                threaded=False,
+                thread_name=thread_name,
+                verbose=verbose,
+                convert_to_str=convert_to_str,
+                read_method_name=read_method_name,
+                write_method_name=write_method_name,
+                read_type=read_type,
+                write_type=write_type,
+                exit_on_input_eof=exit_on_input_eof,
+                flush_after_each_write=flush_after_each_write,
+                flush_on_input_eof=flush_on_input_eof,
+                close_output_on_eof=close_output_on_eof,
+                waiting_for_input=waiting_for_input,
+                waiting_for_output=waiting_for_output,
+                descriptor_to_wait_for_input=descriptor_to_wait_for_input,
+                descriptor_to_wait_for_output=descriptor_to_wait_for_output,
+                apply_input_seek=apply_input_seek,
+                apply_output_seek=apply_output_seek,
+                standard_write_method_result=standard_write_method_result,
+                termination_event=termination_event,
+                on_exit_callback=on_exit_callback,
+                on_input_read_error=on_input_read_error,
+                on_output_write_error=on_output_write_error,
+                debug=debug
+                ),
+            name=thread_name
+            )
+
+    else:
+
+        if termination_event and termination_event.is_set():
+            raise CatTerminationFlagFound()
+
+        if verbose:
+            logging.info("Starting `{}' thread".format(thread_name))
+
+        buff = None
+
+        read_method = getattr(stdin, read_method_name)
+        write_method = getattr(stdin, write_method_name)
 
         c = 0
         bytes_counter = 0
@@ -233,11 +796,11 @@ def cat(
                 try:
                     if read_type in ['file', 'pipe']:
                         # waiting_for_input must be True in this case
-                        buff = eval("stdin.{}(bs)".format(read_method_name))
+                        buff = read_method(bs)
 
                     elif read_type == 'socket':
                         # waiting_for_input must be True in this case
-                        buff = eval("stdin.{}(bs)".format(read_method_name))
+                        buff = read_method(bs)
 
                     elif read_type == 'socket-nb':
                         # waiting_for_input must be True in this case
@@ -246,9 +809,7 @@ def cat(
                                 and termination_event.is_set()):
                                 raise CatTerminationFlagFound()
                             try:
-                                buff = eval(
-                                    "stdin.{}(bs)".format(read_method_name)
-                                    )
+                                buff = read_method(bs)
                             except BlockingIOError:
                                 pass
                             else:
@@ -262,9 +823,7 @@ def cat(
                                 raise CatTerminationFlagFound()
 
                             try:
-                                buff = eval(
-                                    "stdin.{}(bs)".format(read_method_name)
-                                    )
+                                buff = read_method(bs)
 
                             except BlockingIOError:
                                 pass
@@ -356,17 +915,11 @@ def cat(
                                 )
                         try:
                             if standard_write_method_result:
-                                this_time_written = eval(
-                                    "stdout.{}(buff[written_total:])".format(
-                                        write_method_name
-                                        )
+                                this_time_written = write_method(
+                                    buff[written_total:]
                                     )
                             else:
-                                this_time_written = eval(
-                                    "stdout.{}(buff)".format(
-                                        write_method_name
-                                        )
-                                    )
+                                this_time_written = write_method(buff)
 
                         except TypeError as err_val:
                             if err_val.args[0] == 'must be str, not bytes':
@@ -375,6 +928,7 @@ def cat(
                 " conversion with convert_to_str option".format(thread_name)
                                     )
                             raise
+
                         except:
                             logging.error(
                                 "{}: Can't use object's `{}' `{}' method.\n"
@@ -398,7 +952,7 @@ def cat(
                         if termination_event and termination_event.is_set():
                             raise CatTerminationFlagFound()
 
-                        if flush_after_every_write:
+                        if flush_after_each_write:
                             stdout.flush()
 
                         if standard_write_method_result:
@@ -642,12 +1196,16 @@ class SocketStreamer:
 
         self._connection_error_signalled = False
         self._connection_stop_signalled = False
+
         self._starting = False
         self._starting_threads = False
-        self._stop_flag = False
+
         self._stopping = False
         self._stopping_threads = False
+
         self._wrapping = False
+
+        self._stop_flag = False
 
         self._output_availability_watcher_thread = None
 
@@ -712,7 +1270,7 @@ class SocketStreamer:
                 on_exit_callback=self._on_in_thread_exit,
                 on_output_write_error=self._on_socket_write_error,
                 termination_event=self._in_thread_stop_event,
-                flush_after_every_write=False,
+                flush_after_each_write=False,
                 debug=self._debug
                 )
 
@@ -739,7 +1297,7 @@ class SocketStreamer:
                 on_exit_callback=self._on_out_thread_exit,
                 on_input_read_error=self._on_socket_read_error,
                 termination_event=self._out_thread_stop_event,
-                flush_after_every_write=True,
+                flush_after_each_write=True,
                 debug=self._debug
                 )
 
@@ -942,6 +1500,8 @@ compression:
 
             self._wrapping = False
 
+        return
+
     def stop_ssl(self):
 
         if not self._wrapping and not self._stopping and not self._starting:
@@ -984,6 +1544,8 @@ compression:
 
             self._wrapping = False
 
+        return
+
     def _unwrap_procedure(self):
         if self.is_ssl_working():
             self.stop_ssl()
@@ -991,7 +1553,6 @@ compression:
             logging.debug("Socket not wrapped - unwrapping not needed")
 
     def is_ssl_working(self):
-
         return isinstance(self.socket, ssl.SSLSocket)
 
     def stat(self):

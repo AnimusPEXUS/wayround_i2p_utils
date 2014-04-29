@@ -16,13 +16,15 @@ import org.wayround.utils.stream
 
 CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
 
+
 def _extract_zip(file_name, output_dir):
 
     ret = 0
 
     try:
         proc = org.wayround.utils.exec.simple_exec(
-            'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr,
+            'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=sys.stderr,
             options=['-qq', '-o', file_name, '-d', output_dir],
             )
     except:
@@ -61,7 +63,7 @@ def _extract_tar_7z(file_name, output_dir):
                 options=[
                     '--no-same-owner',
                     '--no-same-permissions',
-                    '-xlRC' ,
+                    '-xlRC',
                     output_dir
                     ]
                 )
@@ -76,14 +78,15 @@ def _extract_tar_7z(file_name, output_dir):
             if proc_tar.returncode == None:
                 proc_tar.terminate()
 
-
     return ret
 
 
 def _extract_tar_arch(file_name, output_dir, compressor):
 
     if not compressor in CANONICAL_COMPRESSORS:
-        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
+        raise ValueError(
+            "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
+            )
 
     ret = extract_tar_canonical(
         file_name,
@@ -132,6 +135,7 @@ def extract(file_name, output_dir):
 
     return ret
 
+
 def determine_compressor_by_filename(file_name, mute=False):
 
     ret = None
@@ -154,6 +158,7 @@ def determine_compressor_by_filename(file_name, mute=False):
 
     return ret
 
+
 def determine_extension_by_filename(file_name, mute=False):
 
     ret = None
@@ -170,14 +175,6 @@ def determine_extension_by_filename(file_name, mute=False):
 
     return ret
 
-#def canonical_compressor_files(
-#    compressor,
-#    infile,
-#    outfile,
-#    verbose=False,
-#    options=[]
-#    ):
-
 
 def canonical_compressor(
     compressor,
@@ -185,9 +182,10 @@ def canonical_compressor(
     stdout=None,
     stderr=None,
     verbose=False,
-    options=[],
+    options=None,
     bufsize=(2 * 1024 ** 2),
-    close_output_on_eof=False
+    close_output_on_eof=False,
+    flush_on_input_eof=False
     ):
 
     """
@@ -197,11 +195,14 @@ def canonical_compressor(
     must support -0 .. -9 , -v and -d options in canonical way
     """.format(repr(list(CANONICAL_COMPRESSORS)))
 
+    if options == None:
+        options = []
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
-            "canonical_compressor supports only `{}', but `{}' requested".format(
-                repr(list(CANONICAL_COMPRESSORS)),
+            "canonical_compressor supports only"
+            " `{}', but `{}' requested".format(
+                list(CANONICAL_COMPRESSORS),
                 compressor
                 )
             )
@@ -214,7 +215,8 @@ def canonical_compressor(
         options=options,
         verbose=verbose,
         cat_bufsize=bufsize,
-        close_output_on_eof=close_output_on_eof
+        close_output_on_eof=close_output_on_eof,
+        flush_on_input_eof=flush_on_input_eof
         )
 
     return ret
@@ -308,7 +310,8 @@ def archive_tar_canonical_fobj(
                     stdout=output_fobj,
                     stderr=stderr,
                     verbose=verbose_compressor,
-                    close_output_on_eof=True
+                    close_output_on_eof=True,
+                    flush_on_input_eof=True
                     ) != 0:
                     ret = 3
                 tarproc.wait()
@@ -328,7 +331,9 @@ def extract_tar_canonical(
     ):
 
     if not compressor in CANONICAL_COMPRESSORS:
-        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
+        raise ValueError(
+            "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
+            )
 
     ret = 0
     try:
@@ -360,7 +365,9 @@ def extract_tar_canonical_fobj(
     ):
 
     if not compressor in CANONICAL_COMPRESSORS:
-        raise ValueError("compressor not in `{}'".format(CANONICAL_COMPRESSORS))
+        raise ValueError(
+            "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
+            )
 
     dirname = org.wayround.utils.path.abspath(dirname)
 
@@ -373,7 +380,6 @@ def extract_tar_canonical_fobj(
         ret = 1
     else:
 
-        # tar
         options = [] + add_tar_options
 
         if verbose_tar:
@@ -389,7 +395,6 @@ def extract_tar_canonical_fobj(
                 stdin=subprocess.PIPE,
                 stdout=sys.stdout,
                 cwd=dirname,
-                bufsize=0,
                 stderr=sys.stdout
                 )
         except:
@@ -411,6 +416,7 @@ def extract_tar_canonical_fobj(
                     stdout=tarproc.stdin,
                     options=options,
                     stderr=sys.stderr,
+                    flush_on_input_eof=True,
                     close_output_on_eof=True
                     ) != 0:
 
@@ -535,7 +541,9 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
                 )
             try:
                 if not isinstance(fobj, tarfile.ExFileObject):
-                    logging.error("Error getting {} from tar".format(cont_name))
+                    logging.error(
+                        "Error getting {} from tar".format(cont_name)
+                        )
                     ret = 2
                 else:
                     org.wayround.utils.stream.cat(fobj, fd)
@@ -596,61 +604,6 @@ def xzcat(stdin, convert_to_str=None):
     return ret
 
 
-#def xzcat(stdin, convert_to_str=None):
-#
-#    ret = 0
-#
-#    comprproc = None
-#    try:
-#        comprproc = org.wayround.utils.exec.simple_exec(
-#            'xz',
-#            stdin=subprocess.PIPE,
-#            stdout=subprocess.PIPE,
-#            options=['-d'],
-#            bufsize=0,
-#            stderr=sys.stderr
-#            )
-#    except:
-#        ret = 1
-#    else:
-#
-#        make  BytesIO in case convert_to_str == None
-#        outstr = io.StringIO()
-#
-#        try:
-#            cat_p1 = org.wayround.utils.stream.cat(
-#                stdin,
-#                comprproc.stdin,
-#                threaded=True,
-#                close_output_on_eof=True
-#                )
-#            cat_p1.start()
-#
-#            cat_p2 = org.wayround.utils.stream.cat(
-#                comprproc.stdout,
-#                outstr,
-#                threaded=True,
-#                close_output_on_eof=False,
-#                convert_to_str=convert_to_str
-#                )
-#            cat_p2.start()
-#
-#            comprproc.wait()
-#            cat_p1.join()
-#            cat_p2.join()
-#
-#            if comprproc.returncode != 0:
-#                ret = comprproc.returncode
-#
-#            if ret == 0:
-#                #outstr.seek(0)
-#                ret = outstr.getvalue()
-#        finally:
-#            outstr.close()
-#            del(outstr)
-#
-#    return ret
-
 def extract_low(
     log,
     tmpdir,
@@ -660,8 +613,6 @@ def extract_low(
     rename_dir=False,
     more_when_one_extracted_ok=False
     ):
-
-    ret = 0
 
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
@@ -709,20 +660,35 @@ def extract_low(
                     if rename_dir:
                         n = outdir + os.path.sep + str(rename_dir)
                         if log:
-                            log.info("moving extracted {}\n    as `{}'".format(i2, n))
+                            log.info(
+                                "moving extracted {}\n    as `{}'".format(
+                                    i2,
+                                    n
+                                    )
+                                )
                         shutil.move(i2, n)
                     else:
                         if log:
-                            log.info("moving extracted {}\n    to `{}'".format(i2, outdir))
+                            log.info(
+                                "moving extracted {}\n    to `{}'".format(
+                                    i2,
+                                    outdir
+                                    )
+                                )
 
                         if os.path.isfile(i2):
-                            new_file_name = os.path.join(outdir, os.path.basename(i2))
+                            new_file_name = os.path.join(
+                                outdir,
+                                os.path.basename(i2)
+                                )
+
                             if os.path.isfile(new_file_name):
                                 os.unlink(new_file_name)
 
                         shutil.move(i2, outdir)
 
     return ret
+
 
 def tarobj_check_member_sum(tarobj, sums, member_name):
 
@@ -755,4 +721,3 @@ def tarobj_check_member_sum(tarobj, sums, member_name):
         fobj.close()
 
     return ret
-
