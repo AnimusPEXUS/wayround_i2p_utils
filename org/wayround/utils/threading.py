@@ -1,11 +1,12 @@
 
 import copy
-import threading
 import logging
+import threading
+import time
 import weakref
 
-import org.wayround.utils.weakref
 import org.wayround.utils.types
+import org.wayround.utils.weakref
 
 
 class Signal:
@@ -614,6 +615,71 @@ class CallQueue:
                     )
                 _t.start()
 
+        return
+
+
+class TimeoutForEternity:
+
+    """
+    This class is for calling callables, which not support timeout
+    """
+
+    @classmethod
+    def run(cls, call, args, kwargs, timeout=10, default=None):
+        a = cls(call, args, kwargs, timeout, default)
+        return a.call()
+
+    def __init__(self, call, args, kwargs, timeout=10, default=None):
+
+        """
+        timeout - seconds
+        """
+
+        if not timeout > 0:
+            raise ValueError("invalid timeout value")
+
+        self._timeout = timeout
+
+        self._call = call
+        self._args = args
+        self._kwargs = kwargs
+
+        self._normal_exit = False
+        self._call_result = default
+
+        self._thread_terminator = threading.Event()
+        self._thread_terminator.clear()
+
+        return
+
+    def call(self):
+
+        """
+        return: correct_exit?, returned_value
+        """
+
+        self._normal_exit = False
+
+        threading.Thread(
+            target=self._caller,
+            args=self._args,
+            kwargs=self._kwargs
+            ).start()
+
+        waited = 0.0
+        while True:
+            if self._normal_exit == True:
+                break
+            time.sleep(0.2)
+            waited += 0.2
+            if waited >= self._timeout:
+                break
+
+        return self._normal_exit, self._call_result
+
+    def _caller(self, *args, **kwargs):
+        self._call_result = self._call(*args, **kwargs)
+        self._normal_exit = True
         return
 
 
