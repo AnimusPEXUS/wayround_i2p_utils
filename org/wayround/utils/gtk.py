@@ -7,6 +7,7 @@ import time
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
+    from gi.repository import GLib
 except:
     pass
 #    class InitException:
@@ -540,3 +541,22 @@ else:
     def process_events():
         while Gtk.events_pending():
             Gtk.main_iteration_do(False)
+
+
+class ToIdle:
+
+    @classmethod
+    def new_from_callable(cls, action):
+        return cls(action)
+
+    def __init__(self, action):
+        if not callable(action):
+            raise ValueError("`action' must be callable")
+        self._action = action
+
+    def __call__(self, *args, **kwargs):
+        GLib.idle_add(self._action, *args, **kwargs)
+
+
+def to_idle(action):
+    return ToIdle.new_from_callable(action)
