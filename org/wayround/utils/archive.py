@@ -181,11 +181,7 @@ def canonical_compressor(
     stdin=None,
     stdout=None,
     stderr=None,
-    verbose=False,
     options=None,
-    bufsize=(2 * 1024 ** 2),
-    close_output_on_eof=False,
-    flush_on_input_eof=False
     ):
 
     """
@@ -212,11 +208,7 @@ def canonical_compressor(
         stdin=stdin,
         stdout=stdout,
         stderr=stderr,
-        options=options,
-        verbose=verbose,
-        cat_bufsize=bufsize,
-        close_output_on_eof=close_output_on_eof,
-        flush_on_input_eof=flush_on_input_eof
+        options=options
         )
 
     return ret
@@ -246,8 +238,12 @@ def archive_tar_canonical(
                 verbose_compressor,
                 bufsize=bufsize
                 )
-        finally:
-            fobj.close()
+        except:
+            logging.exception("Error")
+            ret = 2
+    finally:
+        fobj.close()
+
     return ret
 
 
@@ -282,7 +278,7 @@ def archive_tar_canonical_fobj(
             tarproc = org.wayround.utils.exec.simple_exec(
                 'tar',
                 options=options,
-                stdin=None,
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 cwd=dirname,
                 bufsize=bufsize,
@@ -308,16 +304,17 @@ def archive_tar_canonical_fobj(
                     options=options,
                     stdin=tarproc.stdout,
                     stdout=output_fobj,
-                    stderr=stderr,
-                    verbose=verbose_compressor,
-                    close_output_on_eof=True,
-                    flush_on_input_eof=True
+                    stderr=stderr
                     ) != 0:
                     ret = 3
                 tarproc.wait()
-            finally:
-                if tarproc.returncode == None:
-                    tarproc.terminate()
+            except:
+                logging.exception("Error")
+
+        finally:
+            tarproc.poll()
+            if tarproc.returncode == None:
+                tarproc.terminate()
 
     return ret
 
@@ -415,9 +412,7 @@ def extract_tar_canonical_fobj(
                     stdin=input_fobj,
                     stdout=tarproc.stdin,
                     options=options,
-                    stderr=sys.stderr,
-                    flush_on_input_eof=True,
-                    close_output_on_eof=True
+                    stderr=sys.stderr
                     ) != 0:
 
                     ret = 3

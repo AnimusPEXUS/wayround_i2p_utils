@@ -39,8 +39,6 @@ class Streamer:
         bs=2 * 1024 ** 2,
         descriptor_to_wait_for=None,
         flush_after_each_write=False,
-        flush_on_input_eof=False,
-        close_output_on_eof=False,
         standard_write_method_result=None,
         thread_name='Thread',
         termination_event=None,
@@ -78,8 +76,6 @@ class Streamer:
         self._thread_name = thread_name
 
         self._flush_after_each_write = flush_after_each_write
-        self._flush_on_input_eof = flush_on_input_eof
-        self._close_output_on_eof = close_output_on_eof
 
         self._on_input_read_error = on_input_read_error
 
@@ -572,6 +568,10 @@ def cat(
     if close_output_on_eof:
         if verbose:
             logging.info(" {}: Closing thread stdout".format(thread_name))
+
+#        if write_type in CAT_READWRITE_NB:
+#            stdout.write(b'')
+
         stdout.close()
 
     if verbose:

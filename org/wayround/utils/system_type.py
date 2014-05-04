@@ -79,9 +79,14 @@ def parse_triplet(string):
 
     wd = os.path.dirname(org.wayround.utils.path.abspath(__file__))
 
+    jd = os.path.join(wd, 'config.sub')
+
+    if not os.path.isfile(jd):
+        raise Exception("file not found: `{}'".format(jd))
+
     p = subprocess.Popen(
         ['bash',
-         os.path.join(wd, 'config.sub'),
+         jd,
          string
          ],
         cwd=wd,

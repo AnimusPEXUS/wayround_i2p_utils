@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import subprocess
+import os.path
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -19,7 +20,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='org_wayround_utils',
-    version='0.9',
+    version='0.13',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
@@ -52,5 +53,11 @@ This package contains various useful modules functions and classes.
 #            )
         ],
 #    cmdclass={'build_ext': build_ext},
-    package_data={'org.wayround.utils.format': ['*.c', '*.h']}
+    package_data={
+        'org.wayround.utils': [
+            'config.sub', 
+            os.path.join('format', '*.c'),
+            os.path.join('format', '*.h')
+            ]
+        }
     )

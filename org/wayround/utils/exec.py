@@ -4,17 +4,15 @@ import logging
 import os.path
 import subprocess
 import sys
-import threading
-import time
 
 import org.wayround.utils.stream
 
 
 def simple_exec(
     program,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=None,
+    stdin=subprocess.DEVNULL,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
     options=None,
     bufsize=(2 * 1024 ** 2),
     cwd=None
@@ -269,345 +267,384 @@ def test_pipes():
 
     txt.close()
 
-
-class ProcessStream:
-
-    def __init__(self):
-
-        self.clear(init=True)
-
-    def __del__(self):
-        self.stop()
-
-    def clear(self, init=False):
-
-        ret = 0
-
-        if not init and self.stat() != 'stopped':
-            logging.error(
-                "Program settings can not be cleaned while it is working"
-                )
-
-            ret = 1
-        else:
-
-            if not init:
-                self.stop()
-
-            self.program = None
-            self.stdin = None
-            self.stdout = None
-            self.stderr = None
-            self.options = None
-            self.proc_bufsize = None
-            self.cat_bufsize = None
-            self.cwd = None
-            self.verbose = None
-            self.close_output_on_eof = None
-            self.flush_on_input_eof = None
-
-            self.proc = None
-
-            self.in_cat = None
-            self.out_cat = None
-
-            if not init:
-                if self.stop_flag:
-                    self.stop_flag.set()
-
-            self.stop_flag = threading.Event()
-
-            if init:
-                self.returncode = None
-
-        return ret
-
-    def setValues(
-        self,
-        program,
-        stdin,
-        stdout,
-        stderr,
-        options=None,
-        proc_bufsize=0,
-        cat_bufsize=(2 * 1024 ** 2),
-        cwd=None,
-        verbose=False,
-        close_output_on_eof=False,
-        flush_on_input_eof=False
-        ):
-
-        if options == None:
-            options = []
-
-        ret = 0
-
-        if self.stat() != 'stopped':
-            logging.error(
-                "Program settings can not be changed while it is working"
-                )
-
-            ret = 1
-
-        else:
-
-            self.program = program
-            self.stdin = stdin
-            self.stdout = stdout
-            self.stderr = stderr
-            self.options = options
-            self.proc_bufsize = proc_bufsize
-            self.cat_bufsize = cat_bufsize
-            self.cwd = cwd
-            self.verbose = verbose
-            self.close_output_on_eof = close_output_on_eof
-            self.flush_on_input_eof = flush_on_input_eof
-
-        return ret
-
-    def start(self):
-
-        ret = 0
-
-        if self.stat() != 'stopped':
-            logging.error(
-                "Program can not be started if it's already working"
-                )
-
-            ret = 1
-
-        if ret == 0:
-
-            try:
-                self.proc = simple_exec(
-                    self.program,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=self.stderr,
-                    options=self.options,
-                    bufsize=self.proc_bufsize,
-                    cwd=self.cwd
-                    )
-            except:
-                logging.exception(
-                    "Error starting process `{}'".format(self.program)
-                    )
-                ret = 2
-
-        if ret == 0:
-            try:
-                threading.Thread(
-                    name="Thread Waiting for program `{}' exit".format(
-                        self.program
-                        ),
-                    target=self._proc_waiter
-                    ).start()
-            except:
-                logging.exception("Error starting thread")
-                ret = 3
-
-        if ret == 0:
-
-            try:
-                thread_name = ''
-
-                if self.verbose:
-                    thread_name = 'in >> {}'.format(self.proc.pid)
-                else:
-                    thread_name = 'Thread'
-
-                # TODO: add error handlers
-
-                self.in_cat = org.wayround.utils.stream.cat(
-                    self.stdin,
-                    self.proc.stdin,
-                    threaded=True,
-                    flush_on_input_eof=True,
-                    close_output_on_eof=True,
-                    bs=self.cat_bufsize,
-                    thread_name=thread_name,
-                    verbose=self.verbose,
-                    termination_event=self.stop_flag,
-                    on_exit_callback=self._close_in_cat,
-                    on_input_read_error=None,
-                    on_output_write_error=None
-                    )
-
-                if self.verbose:
-                    thread_name = '{} >> out'.format(self.proc.pid)
-                else:
-                    thread_name = 'Thread'
-
-                self.out_cat = org.wayround.utils.stream.cat(
-                    self.proc.stdout,
-                    self.stdout,
-                    threaded=True,
-                    flush_on_input_eof=self.flush_on_input_eof,
-                    close_output_on_eof=self.close_output_on_eof,
-                    bs=self.cat_bufsize,
-                    thread_name=thread_name,
-                    verbose=self.verbose,
-                    termination_event=self.stop_flag,
-                    on_exit_callback=self._close_out_cat,
-                    on_input_read_error=None,
-                    on_output_write_error=None
-                    )
-
-                self.in_cat.start()
-                self.out_cat.start()
-
-            except:
-                logging.exception(
-                    "Some exception while starting cat threads"
-                    )
-                ret = 4
-
-        if ret == 0:
-            self.wait('working')
-        else:
-            self.stop()
-
-        return ret
-
-    def stop(self):
-
-        logging.debug("Signaled stop for `{}'".format(self.program))
-
-        if self.stat() != 'stopped':
-
-            self.stop_flag.set()
-
-            if self.in_cat:
-                self.in_cat.join()
-
-            if self.out_cat:
-                self.out_cat.join()
-
-            self.wait('stopped')
-
-            self.clear()
-
-        return
-
-    def stat(self):
-
-        ret = 'unknown'
-
-        if (self.in_cat
-            and self.out_cat
-            and self.proc != None):
-            ret = 'working'
-
-        if (not self.in_cat
-            and not self.out_cat
-            and self.proc == None):
-            ret = 'stopped'
-
-        logging.debug("""\
-status (for `{}'):
-self.in_cat     {}
-self.out_cat    {}
-self.proc       {}
-{}
-""".format(self.program, self.in_cat, self.out_cat, self.proc, ret))
-
-        return ret
-
-    def wait(self, what='stopped'):
-
-        # TODO: add timeout
-
-        if not what in ['stopped', 'working']:
-            raise ValueError("wrong `what' value")
-
-        while True:
-
-            logging.debug("Waiting for status `{}'".format(what))
-
-            if self.stat() == what:
-                break
-
-            if self.stat() == 'stopped':
-                if self.stop_flag.is_set():
-                    break
-
-            time.sleep(0.2)
-
-        return self.returncode
-
-    def _close_in_cat(self):
-        self.in_cat.join()
-        self.in_cat = None
-        return
-
-    def _close_out_cat(self):
-        self.out_cat.join()
-        self.out_cat = None
-        return
-
-    def _proc_waiter(self):
-
-        #        if self.proc.returncode == None:
-        #            self.wait('working')
-
-        while True:
-
-            self.proc.poll()
-
-            if isinstance(self.proc.returncode, int):
-                self.returncode = self.proc.returncode
-                break
-
-            time.sleep(0.2)
-
-        self.proc = None
-        self.stop()
-
-        return
+# TODO: remove this comment blocks after some test time. today is 4 May 2014
+#class ProcessStream:
+#
+#    def __init__(self):
+#
+#        self.clear(init=True)
+#
+#    def __del__(self):
+#        self.stop()
+#
+#    def clear(self, init=False):
+#
+#        ret = 0
+#
+#        if not init and self.stat() != 'stopped':
+#            logging.error(
+#                "Program settings can not be cleaned while it is working"
+#                )
+#
+#            ret = 1
+#        else:
+#
+#            if not init:
+#                self.stop()
+#
+#            self.program = None
+#            self.stdin = None
+#            self.stdout = None
+#            self.stderr = None
+#            self.options = None
+#            self.proc_bufsize = None
+#            self.cat_bufsize = None
+#            self.cwd = None
+#            self.verbose = None
+#            self.close_output_on_eof = None
+#            self.flush_on_input_eof = None
+#
+#            self.proc = None
+#
+#            self.in_cat = None
+#            self.out_cat = None
+#
+#            if not init:
+#                if self.stop_flag:
+#                    self.stop_flag.set()
+#
+#            self.stop_flag = threading.Event()
+#
+#            if init:
+#                self.returncode = None
+#
+#        return ret
+#
+#    def setValues(
+#        self,
+#        program,
+#        stdin,
+#        stdout,
+#        stderr,
+#        options=None,
+#        proc_bufsize=0,
+#        cat_bufsize=(2 * 1024 ** 2),
+#        cwd=None,
+#        verbose=False,
+#        close_output_on_eof=False,
+#        flush_on_input_eof=False,
+#        stdin_mode='file',
+#        stdout_mode='file'
+#        ):
+#
+#        if options == None:
+#            options = []
+#
+#        ret = 0
+#
+#        if self.stat() != 'stopped':
+#            logging.error(
+#                "Program settings can not be changed while it is working"
+#                )
+#
+#            ret = 1
+#
+#        else:
+#
+#            self.program = program
+#            self.stdin = stdin
+#            self.stdout = stdout
+#            self.stderr = stderr
+#            self.options = options
+#            self.proc_bufsize = proc_bufsize
+#            self.cat_bufsize = cat_bufsize
+#            self.cwd = cwd
+#            self.verbose = verbose
+#            self.close_output_on_eof = close_output_on_eof
+#            self.flush_on_input_eof = flush_on_input_eof
+#            self.stdin_mode = stdin_mode
+#            self.stdout_mode = stdout_mode
+#
+#        return ret
+#
+#    def start(self):
+#
+#        ret = 0
+#
+#        if self.stat() != 'stopped':
+#            logging.error(
+#                "Program can not be started if it's already working"
+#                )
+#
+#            ret = 1
+#
+#        if ret == 0:
+#
+#            try:
+#                self.proc = simple_exec(
+#                    self.program,
+#                    stdin=subprocess.PIPE,
+#                    stdout=subprocess.PIPE,
+#                    stderr=self.stderr,
+#                    options=self.options,
+#                    bufsize=self.proc_bufsize,
+#                    cwd=self.cwd
+#                    )
+#            except:
+#                logging.exception(
+#                    "Error starting process `{}'".format(self.program)
+#                    )
+#                ret = 2
+#
+#        if ret == 0:
+#            try:
+#                threading.Thread(
+#                    name="Thread Waiting for program `{}' exit".format(
+#                        self.program
+#                        ),
+#                    target=self._proc_waiter
+#                    ).start()
+#            except:
+#                logging.exception("Error starting thread")
+#                ret = 3
+#
+#        if ret == 0:
+#
+#            try:
+#                thread_name = ''
+#
+#                if self.verbose:
+#                    thread_name = 'in >> {}'.format(self.proc.pid)
+#                else:
+#                    thread_name = 'Thread'
+#
+#                # TODO: add error handlers
+#
+#                self.in_cat = org.wayround.utils.stream.cat(
+#                    self.stdin,
+#                    self.proc.stdin,
+#                    threaded=True,
+#                    flush_on_input_eof=True,
+#                    close_output_on_eof=True,
+#                    bs=self.cat_bufsize,
+#                    thread_name=thread_name,
+#                    verbose=self.verbose,
+#                    termination_event=self.stop_flag,
+#                    on_exit_callback=self._close_in_cat,
+#                    on_input_read_error=None,
+#                    on_output_write_error=None,
+#                    read_type=self.stdin_mode,
+#                    write_type='pipe'
+#                    )
+#
+#                if self.verbose:
+#                    thread_name = '{} >> out'.format(self.proc.pid)
+#                else:
+#                    thread_name = 'Thread'
+#
+#                self.out_cat = org.wayround.utils.stream.cat(
+#                    self.proc.stdout,
+#                    self.stdout,
+#                    threaded=True,
+#                    flush_on_input_eof=self.flush_on_input_eof,
+#                    close_output_on_eof=self.close_output_on_eof,
+#                    bs=self.cat_bufsize,
+#                    thread_name=thread_name,
+#                    verbose=self.verbose,
+#                    termination_event=self.stop_flag,
+#                    on_exit_callback=self._close_out_cat,
+#                    on_input_read_error=None,
+#                    on_output_write_error=None,
+#                    read_type='pipe',
+#                    write_type=self.stdout_mode
+#                    )
+#
+#                self.in_cat.start()
+#                self.out_cat.start()
+#
+#            except:
+#                logging.exception(
+#                    "Some exception while starting cat threads"
+#                    )
+#                ret = 4
+#
+#        if ret == 0:
+#            self.wait('working')
+#        else:
+#            self.stop()
+#
+#        return ret
+#
+#    def stop(self):
+#
+#        logging.debug("Signaled stop for `{}'".format(self.program))
+#
+#        if self.stat() != 'stopped':
+#
+#            self.stop_flag.set()
+#
+#            if self.in_cat:
+#                self.in_cat.join()
+#
+#            if self.out_cat:
+#                self.out_cat.join()
+#
+#            self.wait('stopped')
+#
+#            self.clear()
+#
+#        return
+#
+#    def stat(self):
+#
+#        ret = 'unknown'
+#
+#        if (self.in_cat
+#            and self.out_cat
+#            and self.proc != None):
+#            ret = 'working'
+#
+#        if (not self.in_cat
+#            and not self.out_cat
+#            and self.proc == None):
+#            ret = 'stopped'
+#
+#        logging.debug("""\
+#status (for `{}'):
+#self.in_cat     {}
+#self.out_cat    {}
+#self.proc       {}
+#{}
+#""".format(self.program, self.in_cat, self.out_cat, self.proc, ret))
+#
+#        return ret
+#
+#    def wait(self, what='stopped'):
+#
+#        # TODO: add timeout
+#
+#        if not what in ['stopped', 'working']:
+#            raise ValueError("wrong `what' value")
+#
+#        while True:
+#
+#            logging.debug("Waiting for status `{}'".format(what))
+#
+#            if self.stat() == what:
+#                break
+#
+#            if self.stat() == 'stopped':
+#                if self.stop_flag.is_set():
+#                    break
+#
+#            time.sleep(0.2)
+#
+#        return self.returncode
+#
+#    def _close_in_cat(self):
+#        self.in_cat.join()
+#        self.in_cat = None
+#        return
+#
+#    def _close_out_cat(self):
+#        self.out_cat.join()
+#        self.out_cat = None
+#        return
+#
+#    def _proc_waiter(self):
+#
+#        while True:
+#
+#            self.proc.poll()
+#
+#            if isinstance(self.proc.returncode, int):
+#                self.returncode = self.proc.returncode
+#                break
+#
+#            time.sleep(0.2)
+#
+#        self.proc = None
+#        self.stop()
+#
+#        return
+
+
+#def process_stream(
+#    program,
+#    stdin,
+#    stdout,
+#    stderr,
+#    options=None,
+#    proc_bufsize=(2 * 1024 ** 2),
+#    cat_bufsize=(2 * 1024 ** 2),
+#    cwd=None,
+#    verbose=False,
+#    close_output_on_eof=True,
+#    flush_on_input_eof=True
+#    ):
+#
+#    if options == None:
+#        options = []
+#
+#    ps = ProcessStream()
+#
+#    ps.setValues(
+#        program=program,
+#        stdin=stdin,
+#        stdout=stdout,
+#        stderr=stderr,
+#        options=options,
+#        proc_bufsize=proc_bufsize,
+#        cat_bufsize=cat_bufsize,
+#        cwd=cwd,
+#        verbose=verbose,
+#        close_output_on_eof=close_output_on_eof,
+#        flush_on_input_eof=flush_on_input_eof
+#        )
+#
+#    res = ps.start()
+#
+#    logging.debug("ps.start() == {}".format(res))
+#
+#    ret = ps.wait()
+#
+#    logging.debug("ps.wait() == {}".format(ret))
+#
+#    if ret == None:
+#        ret = 222
+#
+#    return ret
 
 
 def process_stream(
     program,
     stdin,
     stdout,
-    stderr,
+    stderr=subprocess.DEVNULL,
     options=None,
-    proc_bufsize=(2 * 1024 ** 2),
-    cat_bufsize=(2 * 1024 ** 2),
     cwd=None,
-    verbose=False,
-    close_output_on_eof=False,
-    flush_on_input_eof=False
+    bufsize=(2 * 1024 ** 2)
     ):
 
     if options == None:
         options = []
 
-    ps = ProcessStream()
+    try:
+        p = subprocess.Popen(
+            [program] + options,
+            cwd=cwd,
+            stdin=stdin,
+            stdout=stdout,
+            bufsize=bufsize
+            )
+    except:
+        logging.exception("Error starting {} + {}".format([program], options))
+        ret = 333
 
-    ps.setValues(
-        program=program,
-        stdin=stdin,
-        stdout=stdout,
-        stderr=stderr,
-        options=options,
-        proc_bufsize=proc_bufsize,
-        cat_bufsize=cat_bufsize,
-        cwd=cwd,
-        verbose=verbose,
-        close_output_on_eof=close_output_on_eof,
-        flush_on_input_eof=flush_on_input_eof
-        )
-
-    res = ps.start()
-
-    logging.debug("ps.start() == {}".format(res))
-
-    ret = ps.wait()
-
-    logging.debug("ps.wait() == {}".format(ret))
-
-    if ret == None:
+    try:
+        ret = p.wait()
+    except:
+        logging.exception("Error waiting for {}".format(p))
         ret = 222
 
     return ret
@@ -617,12 +654,10 @@ def process_file(
     program,
     infile,
     outfile,
-    stderr,
+    stderr=subprocess.DEVNULL,
     options=None,
-    proc_bufsize=(2 * 1024 ** 2),
-    cat_bufsize=(2 * 1024 ** 2),
     cwd=None,
-    verbose=False
+    bufsize=(2 * 1024 ** 2)
     ):
 
     if options == None:
@@ -655,10 +690,7 @@ def process_file(
                         fo,
                         stderr=stderr,
                         options=options,
-                        proc_bufsize=proc_bufsize,
-                        cat_bufsize=cat_bufsize,
                         cwd=cwd,
-                        verbose=verbose
                         )
 
                     if ec != 0:
