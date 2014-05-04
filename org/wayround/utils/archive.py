@@ -324,13 +324,17 @@ def extract_tar_canonical(
     dirname,
     compressor,
     verbose_tar=False,
-    verbose_compressor=False
+    verbose_compressor=False,
+    add_tar_options=None
     ):
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
             "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
             )
+
+    if add_tar_options == None:
+        add_tar_options = []
 
     ret = 0
     try:
@@ -345,7 +349,8 @@ def extract_tar_canonical(
                 dirname,
                 compressor,
                 verbose_tar,
-                verbose_compressor
+                verbose_compressor,
+                add_tar_options
                 )
         finally:
             fobj.close()
@@ -365,6 +370,9 @@ def extract_tar_canonical_fobj(
         raise ValueError(
             "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
             )
+
+    if add_tar_options == None:
+        add_tar_options = []
 
     dirname = org.wayround.utils.path.abspath(dirname)
 
