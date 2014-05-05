@@ -306,6 +306,7 @@ class ProcessStream:
             self.stdout_mode = None
 
             self.proc = None
+            self._wait_thread = None
 
             self.in_cat = None
             self.out_cat = None
@@ -501,14 +502,18 @@ class ProcessStream:
 
         ret = 'unknown'
 
-        if (self.in_cat
-            and self.out_cat
-            and self.proc != None):
+        v1 = self.in_cat
+        v2 = self.out_cat
+        v3 = self._wait_thread
+
+        if (v1 != None
+            and v2 != None
+            and v3 != None):
             ret = 'working'
 
-        if (not self.in_cat
-            and not self.out_cat
-            and self.proc == None):
+        if (v1 == None
+            and v2 == None
+            and v3 == None):
             ret = 'stopped'
 
         logging.debug("""\
@@ -582,8 +587,7 @@ self.proc       {}
 #                break
 
         self._wait_thread = None
-        self.proc = None
-        self.stop()
+#        self.stop()
 
         return
 
