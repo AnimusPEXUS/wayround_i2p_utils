@@ -3,6 +3,8 @@ import logging
 import os.path
 import threading
 import time
+import weakref
+
 
 try:
     from gi.repository import Gtk
@@ -342,7 +344,7 @@ else:
 
         def __init__(self):
 
-            self._lock = threading.Lock()
+            self._lock = threading.RLock()
             self.clear(init=True)
 
         def clear(self, init=False):
@@ -350,7 +352,9 @@ else:
             self._constructor_cbs = {}
 
             self._singles = {}
-            self._multiples = set()
+            self._multiples = weakref.WeakSet()
+
+            return
 
         def _window_methods_check(self, window):
 
@@ -408,36 +412,6 @@ else:
 
             ret = None
 
-            if name in self._singles:
-                ret = self._singles[name]
-
-            return ret
-
-        def destroy_window(self, name):
-            res = self.get(name)
-            if res != None:
-                res.destroy()
-            return
-
-        def show_threaded(self, name, *args, **kwargs):
-
-            self._check_name(name)
-
-            threading.Thread(
-                name="Thread for window `{}'".format(name),
-                target=self.show,
-                args=(name,) + args,
-                kwargs=kwargs
-                ).start()
-
-            return
-
-        def show(self, name, *args, **kwargs):
-
-            self._check_name(name)
-
-            ret = None
-
             self._lock.acquire()
 
             try:
@@ -445,27 +419,18 @@ else:
 
                 if cdata['single']:
                     if name in self._singles:
-                        self._singles[name].show()
+                        ret = self._singles[name]
                     else:
                         window = cdata['cb']()
                         self._window_methods_check(window)
                         self._singles[name] = window
-                        self._lock.release()
-                        ret = window.run(*args, **kwargs)
-                        self._lock.acquire()
-                        if name in self._singles:
-                            self._singles[name].destroy()
-                            del self._singles[name]
+                        ret = window
 
                 else:
                     window = cdata['cb']()
                     self._window_methods_check(window)
                     self._multiples.add(window)
-                    self._lock.release()
-                    ret = window.run(*args, **kwargs)
-                    self._lock.acquire()
-                    while window in self._multiples:
-                        self._multiples.remove(window)
+                    ret = window
 
             except:
                 logging.exception("Exception")
@@ -474,14 +439,26 @@ else:
 
             return ret
 
+        def destroy_window(self, name):
+
+            self._lock.acquire()
+
+            names = list(self._singles)
+            if name in names:
+                self._singles[name].destroy()
+                del self._singles[name]
+
+            self._lock.release()
+
+            return
+
         def destroy_windows(self):
 
             self._lock.acquire()
 
             names = list(self._singles)
             for i in names:
-                self._singles[i].destroy()
-                del self._singles[i]
+                self.destroy_window(i)
 
             for i in list(self._multiples):
                 i.destroy()
@@ -541,9 +518,14 @@ else:
     def process_events():
         while Gtk.events_pending():
             Gtk.main_iteration_do(False)
+        return
 
 
 class ToIdle:
+
+    """
+    can be strange behavior with 'popup-menu' signal
+    """
 
     @classmethod
     def new_from_callable(cls, action):
@@ -553,10 +535,20 @@ class ToIdle:
         if not callable(action):
             raise ValueError("`action' must be callable")
         self._action = action
+        return
 
     def __call__(self, *args, **kwargs):
         GLib.idle_add(self._action, *args, **kwargs)
+        return
 
 
 def to_idle(action):
+    """
+    Read ToIdle class docs
+    """
     return ToIdle.new_from_callable(action)
+
+
+def hide_on_delete(widget, event, *args):
+    return Gtk.Widget.hide_on_delete(widget)
+
