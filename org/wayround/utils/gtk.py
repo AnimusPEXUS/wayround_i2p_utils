@@ -266,6 +266,12 @@ else:
 
     class Waiter:
 
+        @classmethod
+        def wait_thread(cls, thread):
+            w = cls(thread.join, None, thread.is_alive)
+            w.wait()
+            return
+
         def __init__(
             self,
             wait_or_join_meth,
@@ -328,8 +334,8 @@ else:
                         != self._ret_val_good_for_loop):
                         break
 
-                while Gtk.events_pending():
-                    Gtk.main_iteration_do(False)
+#                while Gtk.events_pending():
+#                    Gtk.main_iteration_do(False)
 
                 time.sleep(self._waiter_sleep_time)
 
@@ -547,6 +553,13 @@ def to_idle(action):
     Read ToIdle class docs
     """
     return ToIdle.new_from_callable(action)
+
+
+def idle_add(*args, **kwargs):
+    """
+    shortcut
+    """
+    return GLib.idle_add(*args, **kwargs)
 
 
 def hide_on_delete(widget, event, *args):

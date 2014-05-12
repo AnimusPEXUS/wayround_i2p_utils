@@ -207,26 +207,21 @@ class Streamer:
                         pass
 
                     except ssl.SSLWantReadError:
-                        pass
-                        # TODO: try to replace with self._wait_input_avail()
-#                        select.select(
-#                            [self._descriptor_to_wait_for],
-#                            [self._descriptor_to_wait_for],
-##                            [],
-#                            []
-#                            )
+                        select.select(
+                            [self._descriptor_to_wait_for],
+                            [],
+                            [],
+                            0.2
+                            )
 
                     except ssl.SSLWantWriteError:
-                        pass
-                        # TODO: try to replace with self._wait_input_avail()
-#                        select.select(
-#                            [self._descriptor_to_wait_for],
-##                            [],
-#                            [self._descriptor_to_wait_for],
-#                            []
-#                            )
+                        select.select(
+                            [],
+                            [self._descriptor_to_wait_for],
+                            [],
+                            0.2
+                            )
                     else:
-                        #                        ret_closed = True
                         break
 
             else:
