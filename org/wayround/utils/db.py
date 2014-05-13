@@ -110,10 +110,10 @@ class BasicDB:
 
         return
 
-    def __del__(self):
-        if self:
-            self.close()
-        return
+#    def __del__(self):
+#        if self:
+#            self.close()
+#        return
 
     def create_all(self):
         self.Base.metadata.create_all()
