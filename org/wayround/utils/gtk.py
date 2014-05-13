@@ -254,7 +254,7 @@ else:
 
         def destroy(self, *args, **kwargs):
             self.wayround_org_iteration_loop.stop()
-            self.wayround_org_iteration_loop = None
+#            self.wayround_org_iteration_loop = None
             return super().destroy(*args, **kwargs)
 
         def wayround_org_response_listener(self, dialog, response_id):
