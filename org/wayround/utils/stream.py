@@ -108,10 +108,26 @@ class Streamer:
                         self._descriptor_to_wait_for
                         )
                     )
+            if isinstance(self._stream_object, ssl.SSLSocket):
+                logging.debug(
+                    "{}: {} pending {}".format(
+                        self._thread_name,
+                        self._stream_object,
+                        self._stream_object.pending()
+                        )
+                    )
+
+                if self._stream_object.pending() != 0:
+                    logging.debug(
+                        "{}: receiving pending data".format(
+                            self._thread_name
+                            )
+                        )
+                    break
 
         if self._debug:
             logging.debug(
-                "{}: input descriptor {} - ready".format(
+                "{}: input descriptor - ready - {}".format(
                     self._thread_name,
                     self._descriptor_to_wait_for
                     )
@@ -147,7 +163,7 @@ class Streamer:
 
         if self._debug:
             logging.debug(
-                "{}: output descriptor {} - ready".format(
+                "{}: output descriptor - ready - {}".format(
                     self._thread_name,
                     self._descriptor_to_wait_for
                     )
@@ -166,10 +182,7 @@ class Streamer:
 
         try:
 
-            if self._stream_object_mode in ['file', 'pipe', 'socket']:
-
-                if self._stream_object_mode in SELECTABLE:
-                    self._wait_input_avail()
+            if self._stream_object_mode in ['file', 'pipe', 'socket', 'ssl']:
 
                 if (self._termination_event
                     and self._termination_event.is_set()):
@@ -191,10 +204,11 @@ class Streamer:
             elif (self._stream_object_mode
                   in ['socket-nb', 'ssl-nb', 'pipe-nb']):
 
-                while True:
-
-                    if self._stream_object_mode in SELECTABLE:
+                if self._stream_object_mode in SELECTABLE:
+                    if self._descriptor_to_wait_for != None:
                         self._wait_input_avail()
+
+                while True:
 
                     if (self._termination_event
                         and self._termination_event.is_set()):
@@ -207,6 +221,7 @@ class Streamer:
                         pass
 
                     except ssl.SSLWantReadError:
+                        logging.debug("ssl.SSLWantReadError")
                         select.select(
                             [self._descriptor_to_wait_for],
                             [],
@@ -215,6 +230,7 @@ class Streamer:
                             )
 
                     except ssl.SSLWantWriteError:
+                        logging.debug("ssl.SSLWantWriteError")
                         select.select(
                             [],
                             [self._descriptor_to_wait_for],
@@ -223,6 +239,10 @@ class Streamer:
                             )
                     else:
                         break
+#                        if ret_buff != None and len(ret_buff) != 0:
+#                            break
+#                        else:
+#                            time.sleep(0.2)
 
             else:
                 raise Exception(
@@ -288,7 +308,8 @@ class Streamer:
                 while len(buff) != 0:
 
                     if self._stream_object_mode in SELECTABLE:
-                        self._wait_output_avail()
+                        if self._descriptor_to_wait_for != None:
+                            self._wait_output_avail()
 
                     sb = buff[:self._bs]
                     buff = buff[self._bs:]
@@ -495,7 +516,7 @@ def cat(
 
             closed, buff = s1.read()
 
-            if not closed:
+            if not closed and buff != None and len(buff) != 0:
 
                 if debug:
 
@@ -755,8 +776,8 @@ class SocketStreamer:
                 read_type='pipe-nb',
                 write_type=sock_type,
                 exit_on_input_eof=True,
-                descriptor_to_wait_for_input=self._strin.fileno(),
-                descriptor_to_wait_for_output=self.socket.fileno(),
+                descriptor_to_wait_for_input=self._strin,
+                descriptor_to_wait_for_output=self.socket,
                 apply_input_seek=False,
                 apply_output_seek=False,
                 flush_on_input_eof=False,
@@ -780,8 +801,8 @@ class SocketStreamer:
                 read_type=sock_type,
                 write_type='pipe-nb',
                 exit_on_input_eof=True,
-                descriptor_to_wait_for_input=self.socket.fileno(),
-                descriptor_to_wait_for_output=self._strout.fileno(),
+                descriptor_to_wait_for_input=self.socket,
+                descriptor_to_wait_for_output=self._strout,
                 apply_input_seek=False,
                 apply_output_seek=False,
                 flush_on_input_eof=True,
@@ -923,6 +944,7 @@ class SocketStreamer:
                 del kwargs['sock']
 
             kwargs['do_handshake_on_connect'] = False
+            #            kwargs['suppress_ragged_eofs'] = False
 
             socket_wrap_result = None
 
@@ -980,6 +1002,8 @@ compression:
                     )
 
                 self.socket = socket_wrap_result
+
+                #                self.socket.settimeout(0)
 
                 logging.debug('after wrap sock is {}'.format(self.socket))
 
