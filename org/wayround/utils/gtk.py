@@ -357,8 +357,9 @@ else:
 
             self._constructor_cbs = {}
 
+            # do not make _singles and _multiples weak
             self._singles = {}
-            self._multiples = weakref.WeakSet()
+            self._multiples = set()
 
             return
 

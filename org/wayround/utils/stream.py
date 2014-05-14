@@ -109,20 +109,22 @@ class Streamer:
                         )
                     )
             if isinstance(self._stream_object, ssl.SSLSocket):
-                logging.debug(
-                    "{}: {} pending {}".format(
-                        self._thread_name,
-                        self._stream_object,
-                        self._stream_object.pending()
-                        )
-                    )
-
-                if self._stream_object.pending() != 0:
+                if self._debug:
                     logging.debug(
-                        "{}: receiving pending data".format(
-                            self._thread_name
+                        "{}: {} pending {}".format(
+                            self._thread_name,
+                            self._stream_object,
+                            self._stream_object.pending()
                             )
                         )
+
+                if self._stream_object.pending() != 0:
+                    if self._debug:
+                        logging.debug(
+                            "{}: receiving pending data".format(
+                                self._thread_name
+                                )
+                            )
                     break
 
         if self._debug:
@@ -239,10 +241,6 @@ class Streamer:
                             )
                     else:
                         break
-#                        if ret_buff != None and len(ret_buff) != 0:
-#                            break
-#                        else:
-#                            time.sleep(0.2)
 
             else:
                 raise Exception(
