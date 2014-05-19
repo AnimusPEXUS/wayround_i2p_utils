@@ -527,42 +527,56 @@ else:
             Gtk.main_iteration_do(False)
         return
 
+    class ToIdle:
 
-class ToIdle:
+        """
+        can be strange behavior with 'popup-menu' signal
+        """
 
-    """
-    can be strange behavior with 'popup-menu' signal
-    """
+        @classmethod
+        def new_from_callable(cls, action):
+            return cls(action)
 
-    @classmethod
-    def new_from_callable(cls, action):
-        return cls(action)
+        def __init__(self, action):
+            if not callable(action):
+                raise ValueError("`action' must be callable")
+            self._action = action
+            return
 
-    def __init__(self, action):
-        if not callable(action):
-            raise ValueError("`action' must be callable")
-        self._action = action
-        return
+        def __call__(self, *args, **kwargs):
+            GLib.idle_add(self._action, *args, **kwargs)
+            return
 
-    def __call__(self, *args, **kwargs):
-        GLib.idle_add(self._action, *args, **kwargs)
-        return
+    def to_idle(action):
+        """
+        Read ToIdle class docs
+        """
+        return ToIdle.new_from_callable(action)
 
+    def idle_add(*args, **kwargs):
+        """
+        shortcut
+        """
+        return GLib.idle_add(*args, **kwargs)
 
-def to_idle(action):
-    """
-    Read ToIdle class docs
-    """
-    return ToIdle.new_from_callable(action)
+    def hide_on_delete(widget, event, *args):
+        return Gtk.Widget.hide_on_delete(widget)
 
+    def get_root_gtk_window(widget, limit=100):
 
-def idle_add(*args, **kwargs):
-    """
-    shortcut
-    """
-    return GLib.idle_add(*args, **kwargs)
+        ret = None
 
+        n = widget
 
-def hide_on_delete(widget, event, *args):
-    return Gtk.Widget.hide_on_delete(widget)
+        while not isinstance(n, Gtk.Window) and limit > 0:
 
+            if not hasattr(n, 'get_parent') or not callable(n.get_parent):
+                break
+
+            n = n.get_parent()
+            limit -= 1
+
+        if isinstance(n, Gtk.Window):
+            ret = n
+
+        return ret
