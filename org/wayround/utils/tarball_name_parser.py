@@ -26,6 +26,7 @@ DIFFICULT_NAMES = [
     'lynx2.8.7rel.1.tar.bz2',
     'name.tar.gz',
     'ogre_src_v1-8-1.tar.bz2',
+    'openjdk-8-src-b132-03_mar_2014.zip',
     'openssl-0.9.7a.tar.gz',
     'org.apache.felix.ipojo.manipulator-1.8.4-project.tar.gz',
     'pkcs11-helper-1.05.tar.bz2',

@@ -31,8 +31,11 @@ def source_version_comparator(
         acceptable_source_name_extensions
         )
 
-    if d1 == None or d2 == None:
-        raise Exception("Can't parse filename")
+    if d1 == None:
+        raise Exception("Can't parse filename: {}".format(name1))
+
+    if d2 == None:
+        raise Exception("Can't parse filename: {}".format(name2))
 
     if d1['groups']['name'] != d2['groups']['name']:
         raise ValueError(
