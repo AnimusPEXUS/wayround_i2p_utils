@@ -263,9 +263,9 @@ def program(command_name, commands, additional_data=None):
         additional_data
         )
 
-    print(ret['message'])
-
-    logging.info("Exit Code: {}".format(ret['code']))
+    logging.info(
+        "Exit Code: {} ({})".format(ret['code'], ret['message'])
+        )
 
     return ret['code']
 
