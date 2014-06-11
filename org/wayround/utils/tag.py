@@ -184,13 +184,14 @@ class TagEngine:
 
         if isinstance(obj, list):
 
-            for i in range(int(len(obj) / 100) + 1):
-                self.session.query(self.Tag).filter(
-                        self.Tag.obj.in_(
-                            obj[i * 100:(i + 1) * 100])
-                            ).delete(
-                                synchronize_session=synchronize_session
-                                )
+            if len(obj) > 0:
+                for i in range(int(len(obj) / 100) + 1):
+                    self.session.query(self.Tag).filter(
+                            self.Tag.obj.in_(
+                                obj[i * 100:(i + 1) * 100])
+                                ).delete(
+                                    synchronize_session=synchronize_session
+                                    )
 
         else:
             self.session.query(self.Tag).filter_by(obj=obj).delete(
