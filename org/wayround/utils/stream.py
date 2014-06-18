@@ -190,7 +190,23 @@ class Streamer:
                     and self._termination_event.is_set()):
                     raise CatTerminationFlagFound()
 
+                if self._debug:
+                    logging.debug(
+                        "Reading `{}' bytes using `{}'".format(
+                            self._bs,
+                            self._stream_object_read_meth
+                            )
+                        )
+
                 res = self._stream_object_read_meth(self._bs)
+
+                if self._debug:
+                    logging.debug(
+                        "Readed `{}' bytes using `{}'".format(
+                            len(res),
+                            self._stream_object_read_meth
+                            )
+                        )
 
                 if len(res) == 0:
                     ret_closed = True

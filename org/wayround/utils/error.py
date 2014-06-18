@@ -36,9 +36,10 @@ def print_exception_info(e):
     return
 
 
-def prompt(g=None, l=None, prompt='-> '):
+def prompt(g=None, l=None, prompt='-> ', readline_=True):
 
-    import readline
+    if readline_:
+        import readline
 
     bk = False
 

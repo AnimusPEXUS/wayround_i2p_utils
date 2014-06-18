@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 
 import copy
 import inspect
@@ -7,6 +6,7 @@ import sys
 
 import org.wayround.utils.error
 import org.wayround.utils.getopt
+import org.wayround.utils.logging
 
 
 NO_DOCUMENTATION = '(No documentation)'
@@ -36,7 +36,7 @@ def logging_setup(loglevel='INFO'):
     if '--loglevel' in opts:
         log_level_u = opts['--loglevel'].upper()
 
-        if not log_level_u in list(logging._levelNames):
+        if not log_level_u in org.wayround.utils.logging.LEVEL_NAMES:
             print("-e- Wrong --loglevel parameter")
         else:
             log_level = log_level_u
@@ -398,8 +398,14 @@ def program_help(command_name, commands, command, subcommand, warnings=False):
 
             commands_text = _get_commands_text(commands, warnings)
 
+            command_name_text = ''
+            sp1 = ''
+            if command_name != None:
+                command_name_text = command_name
+                sp1 = ' '
+
             ret = """\
-Usage: {command_name} [command] [subcommand] [options] [parameters]
+Usage: {command_name}{sp1}[command] [subcommand] [options] [parameters]
 
 commands:
 
@@ -407,18 +413,27 @@ commands:
 
     --help          see this help or help for command
     --version       version info
-""".format(commands_text, command_name=command_name)
+""".format(
+                commands_text,
+                command_name=command_name_text,
+                sp1=sp1
+                )
 
         elif subcommand == None:
             commands_text = _get_subcommands_text(commands, command, warnings)
 
             command_help = NO_DOCUMENTATION
+            command_name_text = ''
+            sp1 = ''
+            if command_name != None:
+                command_name_text = command_name
+                sp1 = ' '
 
             if '_help' in commands[command]:
                 command_help = commands[command]['_help']
 
             ret = """\
-Usage: {command_name} {command} [subcommand] [options] [parameters]
+Usage: {command_name}{sp1}{command} [subcommand] [options] [parameters]
 
 {command_help}
 
@@ -428,27 +443,35 @@ subcommands:
 
     --help          see this help or help for subcommand
 """.format(
-               command=command,
-               commands_text=commands_text,
-               command_help=command_help,
-               command_name=command_name
-               )
+                command=command,
+                commands_text=commands_text,
+                command_help=command_help,
+                command_name=command_name_text,
+                sp1=sp1
+                )
         else:
             commands_text = inspect.getdoc(commands[command][subcommand])
+
+            command_name_text = ''
+            sp1 = ''
+            if command_name != None:
+                command_name_text = command_name
+                sp1 = ' '
 
             if not isinstance(ret, str):
                 commands_text = NO_DOCUMENTATION
 
             ret = """\
-Usage: {command_name} {command} {subcommand} [options] [parameters]
+Usage: {command_name}{sp1}{command} {subcommand} [options] [parameters]
 
 {commands_text}
 
 """.format(
-               command=command,
-               subcommand=subcommand,
-               commands_text=commands_text,
-               command_name=command_name
-               )
+                command=command,
+                subcommand=subcommand,
+                commands_text=commands_text,
+                command_name=command_name_text,
+                sp1=sp1
+                )
 
     return ret

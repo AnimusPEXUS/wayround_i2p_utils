@@ -1,16 +1,15 @@
 
 import logging
-import copy
+
 
 def getopt(args):
     """
     Parser as command line arguments and options
 
-    It's not compatible with CPython getopt module.
+    It's not compatible with CPython getopt module. It's work differently in
+    many ways.
 
-    It's work differently in many ways.
-
-    Parameter must be list of strings -- Simple sys.argv will go.
+    Parameter must be list of strings: Simple sys.argv will go.
 
     Example:
 
@@ -27,9 +26,9 @@ def getopt(args):
 
     """
 
+    # TODO: add '--' delimiter
 
     ret_args = []
-
     ret_opts = []
 
     if not isinstance(args, list):
@@ -64,13 +63,14 @@ def getopt(args):
 
                         eq_pos = args[i].find('=')
                         if eq_pos != -1:
-                            ret_opts.append((args[i][:eq_pos], args[i][eq_pos + 1:]))
+                            ret_opts.append(
+                                (args[i][:eq_pos], args[i][eq_pos + 1:])
+                                )
                         else:
                             ret_opts.append((args[i], None))
 
                     else:
                         ret_args.append(args[i])
-
 
             else:
                 ret_args.append(args[i])
@@ -78,6 +78,7 @@ def getopt(args):
         i += 1
 
     return ret_opts, ret_args
+
 
 def getopt_keyed(args):
     opts, args = getopt(args)
@@ -88,8 +89,10 @@ def getopt_keyed(args):
 
     return opts_k, args
 
+
 def _opt_strip(opt):
     return opt.lstrip('!').rstrip('=')
+
 
 def _opts_strip(opts_list):
 
@@ -99,6 +102,7 @@ def _opts_strip(opts_list):
         ret.append(_opt_strip(i))
 
     return ret
+
 
 def check_options(opts, opts_list, mute=False):
 
@@ -129,7 +133,9 @@ def check_options(opts, opts_list, mute=False):
         if required and not i_stripped in opts:
 
             if not mute:
-                logging.error("required parameter absent: {}".format(i_stripped))
+                logging.error(
+                    "required parameter absent: {}".format(i_stripped)
+                    )
 
             ret += 1
 
@@ -137,7 +143,9 @@ def check_options(opts, opts_list, mute=False):
             if value_required and opts[i_stripped] == None:
 
                 if not mute:
-                    logging.error("parameter `{}' must have value".format(i_stripped))
+                    logging.error(
+                        "parameter `{}' must have value".format(i_stripped)
+                        )
 
                 ret += 1
 

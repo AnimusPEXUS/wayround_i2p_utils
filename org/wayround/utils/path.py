@@ -255,6 +255,28 @@ def path_length(string):
     return len(split(string))
 
 
+def is_subpath(path_to_check, path):
+
+    if not isinstance(path, str):
+        raise ValueError("path must be str")
+
+    if not isinstance(path_to_check, str):
+        raise ValueError("path_to_check must be str")
+
+    p1 = split(realpath(path))
+    p2 = split(realpath(path_to_check))
+
+    error = False
+    for i in range(len(p1)):
+        if p1[i] != p2[i]:
+            error = True
+            break
+
+    ret = not error
+
+    return ret
+
+
 def select_by_prefered_extension(lst, ext_lst):
 
     ret = None

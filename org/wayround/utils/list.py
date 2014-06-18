@@ -1,6 +1,9 @@
 
 import copy
+import fnmatch
+import logging
 import re
+
 
 def remove_all_values(lst, lst2):
     """
@@ -9,6 +12,8 @@ def remove_all_values(lst, lst2):
     for i in lst2:
         while i in lst:
             lst.remove(i)
+    return
+
 
 def list_lstrip(lst, lst2):
     lst = copy.copy(lst)
@@ -17,6 +22,7 @@ def list_lstrip(lst, lst2):
         del lst[0]
     return lst
 
+
 def list_rstrip(lst, lst2):
     lst = copy.copy(lst)
     while (len(lst) > 0
@@ -24,14 +30,17 @@ def list_rstrip(lst, lst2):
         del lst[-1]
     return lst
 
+
 def list_strip(lst, lst2):
     return list_lstrip(list_rstrip(copy.copy(lst), lst2), lst2)
+
 
 def list_lower(lst):
     lst2 = []
     for i in lst:
         lst2.append(i.lower())
     return lst2
+
 
 def list_sort(lst, cmp=None):
 
@@ -40,7 +49,6 @@ def list_sort(lst, cmp=None):
     i = -1
     j = -1
     x = None
-
 
     if lst_l > 1:
         while True:
@@ -68,6 +76,7 @@ def list_sort(lst, cmp=None):
 
     return
 
+
 def list_remove_empty_lines(lst):
     ret = []
     for i in lst:
@@ -75,9 +84,11 @@ def list_remove_empty_lines(lst):
             ret.append(i)
     return ret
 
+
 def list_remove_duplicated_lines(lst):
     ret = list(set(lst))
     return ret
+
 
 def list_strip_lines(lst):
     ret = []
@@ -85,11 +96,13 @@ def list_strip_lines(lst):
         ret.append(i.strip())
     return ret
 
+
 def list_strip_filelines(lst):
     ret = []
     for i in lst:
         ret.append(i.strip('\n'))
     return ret
+
 
 def list_strip_remove_empty_remove_duplicated_lines(lst):
     """
@@ -104,6 +117,7 @@ def list_strip_remove_empty_remove_duplicated_lines(lst):
             )
         )
 
+
 def filelist_strip_remove_empty_remove_duplicated_lines(lst):
     """
     Does not strips spaces from file names.
@@ -117,7 +131,10 @@ def filelist_strip_remove_empty_remove_duplicated_lines(lst):
             )
         )
 
-def list_filter_list_white_or_black(in_str_list, in_filters_lst, white=True):
+
+def list_filter_list_white_or_black(
+    in_str_list, in_filters_lst, white=True
+    ):
 
     ret = []
 
@@ -134,5 +151,168 @@ def list_filter_list_white_or_black(in_str_list, in_filters_lst, white=True):
                 if not re.match(j, i):
                     ret.append(i)
                     break
+
+    return ret
+
+
+def filter_text_parse(filter_text, show_errors=False):
+    """
+    Returns list of command structures
+
+    ret = [
+        dict(
+            action   = '-' or '+',
+            function = <depends on subject> (no spaces allowed),
+            data     = <depends on subject> (can contain spaces)
+            )
+        ]
+
+    """
+    ret = []
+
+    lines = filter_text.splitlines()
+
+    for i in lines:
+        if i != '' and not i.isspace():
+            struct = i.split(' ', maxsplit=2)
+            if not len(struct) == 3:
+                if show_errors:
+                    logging.error("Wrong filter line: `{}'".format(i))
+                ret = None
+                break
+            else:
+                struct = dict(
+                    action=struct[0],
+                    function=struct[1],
+                    data=struct[2]
+                    )
+                ret.append(struct)
+
+    return ret
+
+
+def filter_list(input_list, filter_text):
+
+    """
+    Filters supplied list with supplied filter
+
+    subjects not in check_for_subjects will always be positive (but can be
+    filtered out by proper leading rules)
+    """
+
+    ret = []
+
+    inp_list = set(copy.copy(input_list))
+    out_list = copy.copy(inp_list)
+
+    filters = filter_text_parse(filter_text)
+
+    for f in filters:
+
+        action = f['action']
+        function = f['function']
+        no = False
+        cs = True
+        data = f['data']
+
+        if not action in ['+', '-']:
+            logging.error("Wrong action: `{}'".format(action))
+            ret = 10
+            break
+
+        if function.startswith('!'):
+            no = True
+            function = function[1:]
+
+        if function.endswith('!'):
+            cs = False
+            function = function[:-1]
+
+        if not function in ['begins', 'contains', 'ends', 'fm', 're']:
+            logging.error(
+                "Wrong `{}' function : `{}'".format(subject, function)
+                )
+            ret = 3
+            break
+
+        if not isinstance(ret, int):
+
+            working_list = None
+
+            if action == '+':
+                working_list = copy.copy(inp_list)
+
+            elif action == '-':
+                working_list = copy.copy(out_list)
+            else:
+                raise Exception("Programming Error")
+
+            for item in working_list:
+
+                working_item = item
+
+                if not cs:
+                    working_item = working_item.lower()
+
+                matched = False
+
+                if function == 'begins':
+                    working_data = data
+                    if not cs:
+                        working_data = working_data.lower()
+                    matched = working_item.startswith(working_data)
+
+                elif function == 'contains':
+                    working_data = data
+                    if not cs:
+                        working_data = working_data.lower()
+                    matched = working_item.find(working_data) != -1
+
+                elif function == 'end':
+                    working_data = data
+                    if not cs:
+                        working_data = working_data.lower()
+                    matched = working_item.endswith(working_data)
+
+                elif function == 're':
+                    working_data = data
+                    flags = 0
+                    if not cs:
+                        flags |= re.IGNORECASE
+                    matched = \
+                        re.match(working_data, working_item, flags) != None
+
+                elif function == 'fm':
+                    working_data = data
+                    if not cs:
+                        working_data = working_data.lower()
+                    matched = fnmatch.fnmatch(working_item, working_data)
+
+                else:
+                    raise Exception("Programming error")
+
+                if no:
+                    matched = not matched
+
+                if matched:
+
+                    if action == '+':
+                        out_list.add(item)
+
+                    elif action == '-':
+                        if item in out_list:
+                            out_list.remove(item)
+
+                    else:
+                        raise Exception("Programming error")
+
+                else:
+                    pass
+
+    if not isinstance(ret, int):
+        ret = out_list
+
+    if isinstance(ret, set):
+        ret = list(ret)
 
     return ret
