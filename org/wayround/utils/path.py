@@ -255,7 +255,54 @@ def path_length(string):
     return len(split(string))
 
 
+def get_subpath(basepath, fullpath):
+
+    if not isinstance(basepath, str):
+        raise ValueError("path must be str")
+
+    if not isinstance(fullpath, str):
+        raise ValueError("path_to_check must be str")
+
+    p1 = split(abspath(basepath))
+    p2 = split(abspath(fullpath))
+
+    ret = None
+
+    error = False
+    for i in range(len(p1)):
+        if p1[i] != p2[i]:
+            error = True
+            break
+
+    if not error:
+        ret = join(p2[len(p1):])
+
+    return ret
+
+
 def is_subpath(path_to_check, path):
+
+    if not isinstance(path, str):
+        raise ValueError("path must be str")
+
+    if not isinstance(path_to_check, str):
+        raise ValueError("path_to_check must be str")
+
+    p1 = split(abspath(path))
+    p2 = split(abspath(path_to_check))
+
+    error = False
+    for i in range(len(p1)):
+        if p1[i] != p2[i]:
+            error = True
+            break
+
+    ret = not error
+
+    return ret
+
+
+def is_subpath_real(path_to_check, path):
 
     if not isinstance(path, str):
         raise ValueError("path must be str")

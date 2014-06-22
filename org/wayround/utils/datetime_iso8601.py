@@ -218,7 +218,7 @@ def str_to_datetime(value):
     _debug = False
     ret = None
     ret_attributes = set()
-    t_index = value.index('T')
+    t_index = value.find('T')
     if t_index != -1:
         date_str = value[:t_index]
         time_str = value[t_index:]
@@ -261,6 +261,12 @@ def str_to_datetime(value):
             if not separator_error:
                 ret = datetime.datetime.combine(date, time)
                 ret_attributes = d_attrs | t_attrs
+
+    #else:
+    #    res, attr = str_to_date(value)
+    #
+    #    if res != None:
+    #        ret = res
 
     return ret, ret_attributes
 

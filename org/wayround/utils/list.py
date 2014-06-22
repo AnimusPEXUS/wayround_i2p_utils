@@ -173,7 +173,7 @@ def filter_text_parse(filter_text, show_errors=False):
     lines = filter_text.splitlines()
 
     for i in lines:
-        if i != '' and not i.isspace():
+        if i != '' and not i.isspace() and not i.startswith('#'):
             struct = i.split(' ', maxsplit=2)
             if not len(struct) == 3:
                 if show_errors:
