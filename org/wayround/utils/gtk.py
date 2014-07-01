@@ -3,63 +3,19 @@ import logging
 import os.path
 import threading
 import time
-import weakref
+
+import org.wayround.utils.path
 
 
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
+    from gi.repository import GdkPixbuf
     from gi.repository import GLib
 except:
     pass
-#    class InitException:
-#
-#        def __init__(self, *args, **kwargs):
-#            raise Exception("Gtk not available")
-#
-#    class GtkIteratedLoop(InitException): pass
-#    class MessageDialog(InitException): pass
 
 else:
-
-    class GtkSession:
-
-        def __init__(self, force=False):
-
-            if not force:
-                raise Exception(
-    "This code is deprecated but can be used to try Gtk.main() global locking"
-                    )
-
-            logging.debug("Init GtkSession")
-            self._gtk_session_started = False
-            self._thr = None
-
-        def _thread(self):
-
-            logging.debug("Thread Started")
-            self._gtk_session_started = True
-            Gtk.main()
-            self._gtk_session_started = False
-            logging.debug("Thread Exited")
-
-        def start(self):
-
-            if not self._gtk_session_started:
-                logging.debug("Creating new thread")
-                self._thr = threading.Thread(target=self._thread)
-    #            self._thr = multiprocessing.Process(target=self._thread)
-                self._thr.start()
-                logging.debug("Started new thread")
-
-        def stop(self):
-
-            if self._gtk_session_started:
-                logging.debug("Stopping main loop")
-                Gtk.main_quit()
-                logging.debug("Joining thread")
-                self._thr.join()
-                logging.debug("Joined thread")
 
     class TextView:
 
@@ -83,9 +39,9 @@ else:
                 self.ui['window1'],
                 Gtk.FileChooserAction.SAVE,
                 (
-                 Gtk.STOCK_SAVE, Gtk.ResponseType.OK,
-                 Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
-                 )
+                    Gtk.STOCK_SAVE, Gtk.ResponseType.OK,
+                    Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
+                    )
                 )
 
             rc_resp = fc.run()
@@ -133,11 +89,11 @@ else:
                     pass
 
                 if (
-                    (os.path.exists(path)
-                     and dialog_resp == Gtk.ResponseType.YES)
-                    or
-                    not os.path.exists(path)
-                    ):
+                        (os.path.exists(path)
+                         and dialog_resp == Gtk.ResponseType.YES)
+                        or
+                        not os.path.exists(path)
+                        ):
 
                     buff = self.ui['textview1'].get_buffer()
                     txt = buff.get_text(
@@ -212,11 +168,11 @@ else:
 #
 #                Gtk.main()
 #
-##                while not self._exit_event.is_set():
-##                    while Gtk.events_pending():
-##                        Gtk.main_iteration_do(False)
+# while not self._exit_event.is_set():
+# while Gtk.events_pending():
+# Gtk.main_iteration_do(False)
 ##
-##                    time.sleep(self._sleep_fraction)
+# time.sleep(self._sleep_fraction)
 #
 #                self._started = False
 #
@@ -273,23 +229,24 @@ else:
             return
 
         def __init__(
-            self,
-            wait_or_join_meth,
-            ret_val_good_for_loop,
-            is_alive_meth=None,
-            timeout=0.2,
-            waiter_sleep_time=0.01
-            ):
+                self,
+                wait_or_join_meth,
+                ret_val_good_for_loop,
+                is_alive_meth=None,
+                timeout=0.2,
+                waiter_sleep_time=0.01
+                ):
 
             if not callable(wait_or_join_meth):
                 raise TypeError("`wait_or_join_meth' must be callable")
 
-            if is_alive_meth != None and not callable(is_alive_meth):
+            if is_alive_meth is not None and not callable(is_alive_meth):
                 raise TypeError("`is_alivemeth' must be callable")
 
-            if is_alive_meth != None and waiter_sleep_time == 0:
+            if is_alive_meth is not None and waiter_sleep_time == 0:
                 raise ValueError(
-            "if `is_alivemeth' is set, `waiter_sleep_time' must not be 0"
+                    "if `is_alivemeth' is set,"
+                    " `waiter_sleep_time' must not be 0"
                     )
 
             self._timeout = timeout
@@ -306,7 +263,7 @@ else:
 
         def _start(self):
 
-            if self._thread == None:
+            if self._thread is None:
 
                 self._thread = threading.Thread(
                     target=self._waiter,
@@ -325,13 +282,13 @@ else:
 
             while True:
 
-                if self._is_alive_meth != None:
+                if self._is_alive_meth is not None:
                     if not self._is_alive_meth():
                         break
                 else:
 
                     if (self._wait_or_join_meth(self._timeout)
-                        != self._ret_val_good_for_loop):
+                            != self._ret_val_good_for_loop):
                         break
 
 #                while Gtk.events_pending():
@@ -403,7 +360,7 @@ else:
 
         def _check_name(self, name):
 
-            if not name in self._constructor_cbs:
+            if name not in self._constructor_cbs:
                 raise KeyError(
                     "{}:Constructor for `{}' not registered".format(
                         self,
@@ -526,6 +483,165 @@ else:
         while Gtk.events_pending():
             Gtk.main_iteration_do(False)
         return
+
+    class DirectoryTreeView(Gtk.TreeView):
+
+        def __init__(self):
+            super().__init__()
+
+            self._root_dir = os.path.expanduser('~')
+
+            self._show_hidden = False
+
+            self._store = Gtk.TreeStore(str, str)
+
+            self.set_headers_visible(False)
+
+            _c = Gtk.TreeViewColumn()
+            _r = Gtk.CellRendererPixbuf()
+            _c.pack_start(_r, False)
+            _c.add_attribute(_r, 'icon-name', 0)
+            _c.set_title('Icon')
+            self.append_column(_c)
+
+            _c = Gtk.TreeViewColumn()
+            _r = Gtk.CellRendererText()
+            _c.pack_start(_r, False)
+            _c.add_attribute(_r, 'text', 1)
+            _c.set_title('Name')
+            self.append_column(_c)
+
+            self.set_model(self._store)
+
+            self.connect('row-activated', self.on_item_acivated)
+
+            return
+
+        def set_root_directory(self, path):
+
+            if os.path.isdir(path):
+                self._root_dir = path
+
+            self.reload()
+
+            return
+
+        def get_root_directory(self):
+            return self._root_dir
+
+        def set_directory(self, path):
+            return
+
+        def set_show_hidden(self, value):
+            self._show_hidden = value
+
+        def get_show_hidden(self):
+            return self._show_hidden
+
+        def _list_expanded2(self, model, itera, list_to_fill):
+
+            while itera is not None:
+                p = model.get_path(itera)
+                if self.row_expanded(p):
+                    list_to_fill.append(p)
+                    childiter = model.iter_children(itera)
+                    self._list_expanded2(model, childiter, list_to_fill)
+                itera = model.iter_next(itera)
+
+            return
+
+        def _list_expanded(self):
+
+            ret = []
+
+            m = self.get_model()
+
+            itera = m.get_iter_first()
+
+            if iter is not None:
+
+                self._list_expanded2(m, itera, ret)
+
+            return
+
+        def reload(self):
+
+            # TODO:
+            # sel_rows = self.get_selection().get_selected_rows()
+            # exp_rows = self._list_expanded()
+
+            self.load_dir(None, self._root_dir)
+
+            return
+
+        def load_dir(self, itera, path):
+
+            m = self.get_model()
+
+            chi = m.iter_children(itera)
+            res = True
+
+            while chi != None and res != False:
+                res = m.remove(chi)
+
+            lst = os.listdir(path)
+
+            dirs = []
+            files = []
+
+            for i in lst:
+                if os.path.isdir(
+                        org.wayround.utils.path.join(path, i)
+                        ):
+
+                    dirs.append(i)
+                else:
+                    files.append(i)
+
+            dirs.sort()
+            files.sort()
+
+            for i in dirs:
+                m.append(itera, ['folder', i])
+
+            for i in files:
+                m.append(itera, ['txt', i])
+
+            return
+
+        def on_item_acivated(self, widget, path, column):
+
+            m = self.get_model()
+
+            pth = self.convert_indices_to_path(path.get_indices())
+
+            fpth = org.wayround.utils.path.join(self._root_dir, pth)
+
+            if os.path.isdir(fpth):
+
+                self.load_dir(
+                    m.get_iter(path),
+                    fpth
+                    )
+
+                if m.iter_has_child(m.get_iter(path)):
+                    self.expand_row(path, False)
+                    self.scroll_to_cell(path, None, True, 0.5, 0.0)
+
+            return
+
+        def convert_indices_to_path(self, indices):
+
+            lst = []
+
+            m = self.get_model()
+            for i in range(len(indices)):
+
+                value = m.get_iter(Gtk.TreePath(indices[:i + 1]))
+
+                lst.append(m[value][1])
+
+            return os.path.sep.join(lst)
 
     class ToIdle:
 

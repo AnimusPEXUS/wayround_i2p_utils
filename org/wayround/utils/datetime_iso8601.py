@@ -90,19 +90,19 @@ def _time_attrs_check(arr):
 def str_to_date(value):
 
     res, attr = date_truncated_str_to_dict(value)
-    if res != None:
+    if res is not None:
         ret = res, attr
     else:
         res, attr = date_ordinal_str_to_date(value)
-        if res != None:
+        if res is not None:
             ret = res, attr
         else:
             res, attr = date_week_str_to_date(value)
-            if res != None:
+            if res is not None:
                 ret = res, attr
             else:
                 res, attr = date_normal_str_to_date(value)
-                if res != None:
+                if res is not None:
                     ret = res, attr
                 else:
                     ret = None, None
@@ -124,7 +124,7 @@ def str_to_time(value):
 
         res = TIME_EXPRESSION.match(value)
 
-        if res == None:
+        if res is None:
             pass
         else:
             groupdict = res.groupdict()
@@ -138,30 +138,30 @@ def str_to_time(value):
             if separator == ':':
                 ret_attributes.add(':')
 
-            if (groupdict['sec'] != None
-                and groupdict['sep2'] != separator):
+            if (groupdict['sec'] is not None
+                    and groupdict['sep2'] != separator):
                 separator_error = True
 
-            if (groupdict['tz_min'] != None
-                and groupdict['sep3'] != separator):
+            if (groupdict['tz_min'] is not None
+                    and groupdict['sep3'] != separator):
                 separator_error = True
 
-            if groupdict['fract_sep'] != None:
+            if groupdict['fract_sep'] is not None:
                 ret_attributes.add(groupdict['fract_sep'])
 
             for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
-                if groupdict[i] != None:
+                if groupdict[i] is not None:
                     ret_attributes.add(i)
 
-            if groupdict['fract'] != None:
+            if groupdict['fract'] is not None:
                 fract = int(groupdict['fract'])
 
-                if groupdict['min'] == None:
+                if groupdict['min'] is None:
                     minute = float(60 * float('0.{}'.format(fract)))
                     groupdict['min'] = str(int(minute))
                     fract = int(str(minute).split('.')[1])
 
-                if groupdict['sec'] == None:
+                if groupdict['sec'] is None:
                     second = float(60 * float('0.{}'.format(fract)))
                     groupdict['sec'] = str(int(second))
                     fract = int(str(second).split('.')[1])
@@ -173,17 +173,17 @@ def str_to_time(value):
                     print("microseconds = {}".format(microseconds))
 
             for i in ['hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min']:
-                if groupdict[i] == None:
+                if groupdict[i] is None:
                     groupdict[i] = '00'
 
-            if groupdict['tz_sign'] == None:
+            if groupdict['tz_sign'] is None:
                 groupdict['tz_sign'] = '+'
 
             if separator_error:
                 pass
             else:
                 z = None
-                if groupdict['tz'] == None:
+                if groupdict['tz'] is None:
                     ret_attributes.add('local')
                     z = None
                 elif groupdict['tz'] == 'Z':
@@ -232,12 +232,12 @@ def str_to_datetime(value):
         time, t_attrs = str_to_time(time_str)
 
         if _debug:
-            if date == None:
+            if date is None:
                 print("Date not parsed")
-            if time == None:
+            if time is None:
                 print("Time not parsed")
 
-        if date != None and time != None:
+        if date is not None and time is not None:
 
             date_can_have_separators = (
                 'month' in d_attrs
@@ -262,7 +262,7 @@ def str_to_datetime(value):
                 ret = datetime.datetime.combine(date, time)
                 ret_attributes = d_attrs | t_attrs
 
-    #else:
+    # else:
     #    res, attr = str_to_date(value)
     #
     #    if res != None:
@@ -273,7 +273,7 @@ def str_to_datetime(value):
 
 def date_to_str(date, attr=None):
 
-    if attr == None:
+    if attr is None:
         attr = {'year', 'month', 'day'}
 
     if 'truncated_date' in attr:
@@ -371,7 +371,7 @@ def time_to_str(time, attr=None):
         ret = dict_to_truncated_time_str(time, attr)
     else:
 
-        if attr == None:
+        if attr is None:
             attr = {'-', 'hour', 'min', 'sec'}
 
         t = ''
@@ -388,7 +388,7 @@ def time_to_str(time, attr=None):
         if 'sec' in attr:
             second = '{:02d}'.format(time.second)
         else:
-    #        second = float('{}.{}'.format(time.second, fract))
+            #        second = float('{}.{}'.format(time.second, fract))
             second = float(time.second + fract)
             fract = second / 60
             second = ''
@@ -397,7 +397,7 @@ def time_to_str(time, attr=None):
         if 'min' in attr:
             minute = '{:02d}'.format(time.minute)
         else:
-    #        minute = float('{}.{}'.format(time.minute, fract))
+            #        minute = float('{}.{}'.format(time.minute, fract))
             minute = float(time.minute + fract)
             fract = minute / 60
             minute = ''
@@ -475,7 +475,7 @@ def date_truncated_str_to_dict(value):
 
     res = DATE_TRUNCATED_EXPRESSION.match(value)
 
-    if res == None:
+    if res is None:
         if _debug:
             print("no match")
     else:
@@ -508,7 +508,7 @@ def time_truncated_str_to_dict(value):
 
     res = TIME_TRUNCATED_EXPRESSION.match(value)
 
-    if res == None:
+    if res is None:
         if _debug:
             print("no match")
     else:
@@ -541,7 +541,7 @@ def date_ordinal_str_to_date(value):
 
     res = DATE_ORDINAL_EXPRESSION.match(value)
 
-    if res == None:
+    if res is None:
         if _debug:
             print("no match")
     else:
@@ -553,7 +553,7 @@ def date_ordinal_str_to_date(value):
         separator = groupdict['sep']
 
         for i in ['year', 'day']:
-            if groupdict[i] == None:
+            if groupdict[i] is None:
                 groupdict[i] = 1
             else:
                 ret_attributes.add(i)
@@ -588,7 +588,7 @@ def date_week_str_to_date(value):
 
     res = DATE_WEEK_EXPRESSION.match(value)
 
-    if res == None:
+    if res is None:
         if _debug:
             print("no match")
     else:
@@ -599,18 +599,18 @@ def date_week_str_to_date(value):
         separator_error = False
         separator = groupdict['sep1']
 
-        if (groupdict['day'] != None
-            and groupdict['sep2'] != separator):
+        if (groupdict['day'] is not None
+                and groupdict['sep2'] != separator):
             separator_error = True
 
         for i in ['week', 'day']:
-            if groupdict[i] == None:
+            if groupdict[i] is None:
                 groupdict[i] = '01'
             else:
                 ret_attributes.add(i)
 
         for i in ['year']:
-            if groupdict[i] == None:
+            if groupdict[i] is None:
                 groupdict[i] = '0001'
             else:
                 ret_attributes.add(i)
@@ -647,7 +647,7 @@ def date_normal_str_to_date(value):
 
     res = DATE_EXPRESSION.match(value)
 
-    if res == None:
+    if res is None:
         if _debug:
             print("no match")
     else:
@@ -658,18 +658,18 @@ def date_normal_str_to_date(value):
         separator_error = False
         separator = groupdict['sep1']
 
-        if (groupdict['day'] != None
-            and groupdict['sep2'] != separator):
+        if (groupdict['day'] is not None
+                and groupdict['sep2'] != separator):
             separator_error = True
 
-        if len(groupdict['year']) == 2 and groupdict['not_year'] == None:
+        if len(groupdict['year']) == 2 and groupdict['not_year'] is None:
             groupdict['year'] += '00'
             ret_attributes.add('century')
         else:
             ret_attributes.add('year')
 
         for i in ['month', 'day']:
-            if groupdict[i] == None:
+            if groupdict[i] is None:
                 groupdict[i] = '01'
             else:
                 ret_attributes.add(i)
@@ -696,11 +696,11 @@ def date_normal_str_to_date(value):
 def dict_to_truncated_date_str(value, attr):
 
     day = ''
-    if 'day' in attr and value['day'] != None:
+    if 'day' in attr and value['day'] is not None:
         day = '{:02d}'.format(int(value['day']))
 
     month = ''
-    if 'month' in attr and value['month'] != None or value['month'] == '-':
+    if 'month' in attr and value['month'] is not None or value['month'] == '-':
         month = '{:02d}'.format(int(value['month']))
 
     if not 'month' in attr:
@@ -723,11 +723,11 @@ def dict_to_truncated_date_str(value, attr):
 def dict_to_truncated_time_str(value, attr):
 
     sec = ''
-    if 'sec' in attr and value['sec'] != None:
+    if 'sec' in attr and value['sec'] is not None:
         sec = '{:02d}'.format(int(value['sec']))
 
     minu = ''
-    if 'min' in attr and value['min'] != None or value['min'] == '-':
+    if 'min' in attr and value['min'] is not None or value['min'] == '-':
         minu = '{:02d}'.format(int(value['min']))
 
     if not 'min' in attr:
@@ -762,7 +762,7 @@ def format_tz(value, sep=True, minu=True, zed=False):
 
     ret = None
 
-    if value == None:
+    if value is None:
         ret = ''
     else:
         a = value.utcoffset(None)
@@ -805,14 +805,14 @@ def _test(variants, callab, callab2):
 
         res = callab(i)
 
-        if res[0] == None:
+        if res[0] is None:
             print("'{}' not matches".format(i))
         else:
             print("forward result {}".format(repr(res)))
 
             res = callab2(res[0], res[1])
 
-            if res == None:
+            if res is None:
                 print("'{}' not matches".format(i))
             else:
                 print("reverse result\n{}".format(res))
