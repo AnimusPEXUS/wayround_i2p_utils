@@ -13,7 +13,7 @@ import org.wayround.utils.tag
 import org.wayround.utils.text
 
 
-#Difficult name examples:
+# Difficult name examples:
 DIFFICULT_NAMES = [
     'GeSHi-1.0.2-beta-1.tar.bz2',
     'Perl-Dist-Strawberry-BuildPerl-5101-2.11_10.tar.gz',
@@ -36,6 +36,10 @@ DIFFICULT_NAMES = [
     'xc-1.tar.gz',
     'xf86-input-acecad-1.5.0.tar.bz2',
     'xf86-input-elo2300-1.1.2.tar.bz2',
+
+    # delimiters missing between version numbers :-
+    'unzip60.tar.gz',
+    'zip30.tar.gz'
     ]
 """
 Testing tarbal names
@@ -83,19 +87,19 @@ def _find_possible_chared_versions_and_singles(name_sliced, separator='.'):
 
         if i.isdecimal():
 
-            if version_started == None:
+            if version_started is None:
                 version_started = index
 
             version_ended = index
 
         else:
 
-            if version_started != None:
+            if version_started is not None:
                 if i != separator:
                     versions.append((version_started, version_ended + 1,))
                     version_started = None
 
-    if version_started != None:
+    if version_started is not None:
         versions.append((version_started, version_ended + 1,))
         version_started = None
 
@@ -139,7 +143,7 @@ def _find_all_versions_and_singles(name_sliced):
     return ret
 
 
-def _find_most_possible_version(name_sliced, mute=False):
+def standard_version_finder(name_sliced, mute=False):
     """
     Find most possible version in sliced package name
     """
@@ -152,8 +156,8 @@ def _find_most_possible_version(name_sliced, mute=False):
     logging.debug(
         "possible_versions_and_singles_grouped_by_delimeter: {}".format(
             repr(
-                 possible_versions_and_singles_grouped_by_delimeter
-                 )
+                possible_versions_and_singles_grouped_by_delimeter
+                )
             )
         )
 
@@ -177,7 +181,7 @@ def _find_most_possible_version(name_sliced, mute=False):
             len(possible_versions_grouped_by_delimeter[i])
             )
 
-        if  l_possible_versions_grouped_by_delimeter_i == 0:
+        if l_possible_versions_grouped_by_delimeter_i == 0:
             pass
 
         elif l_possible_versions_grouped_by_delimeter_i == 1:
@@ -234,7 +238,7 @@ def _find_most_possible_version(name_sliced, mute=False):
                     ret = most_possible_version2
                     break
 
-    if ret == None:
+    if ret is None:
         for i in ALL_DELIMITERS:
 
             if isinstance(ret, (tuple, int)):
@@ -244,7 +248,7 @@ def _find_most_possible_version(name_sliced, mute=False):
                 len(possible_singles_grouped_by_delimeter[i])
                 )
 
-            if  l_possible_singles_grouped_by_delimeter_i == 0:
+            if l_possible_singles_grouped_by_delimeter_i == 0:
                 pass
 
             elif l_possible_singles_grouped_by_delimeter_i == 1:
@@ -272,15 +276,128 @@ def _find_most_possible_version(name_sliced, mute=False):
     return ret
 
 
-def _source_name_parse_delicate(
-    filename, mute=False, acceptable_source_name_extensions=None
-    ):
+def standard_version_splitter(name_sliced, most_possible_version):
 
-    """
-    Main source name parsing function
+    ret = dict(
+        version=None,
+        version_list_dirty=None,
+        version_list=None,
+        version_dirty=None
+        )
 
-    Do not use this directly, use source_name_parse() instead.
+    ret['version_list_dirty'] = \
+        name_sliced[most_possible_version[0]:most_possible_version[1]]
+
+    ret['version_list'] = \
+        copy.copy(ret['version_list_dirty'])
+
+    org.wayround.utils.list.remove_all_values(
+        ret['version_list'],
+        ALL_DELIMITERS
+        )
+
+    ret['version'] = '.'.join(ret['version_list'])
+
+    ret['version_dirty'] = ''.join(ret['version_list_dirty'])
+
+    return ret
+
+
+def infozip_version_finder(name_sliced, mute=False):
+    return 1, 1
+
+
+def infozip_version_splitter(name_sliced, most_possible_version):
+
+    ret = dict(
+        version=None,
+        version_list_dirty=None,
+        version_list=None,
+        version_dirty=None
+        )
+
+    value = list(name_sliced[1])
+
+    ret['version_list_dirty'] = value
+
+    ret['version_list'] = \
+        copy.copy(ret['version_list_dirty'])
+
+    ret['version'] = '.'.join(ret['version_list'])
+
+    ret['version_dirty'] = ''.join(ret['version_list_dirty'])
+
+    return ret
+
+
+def standard_version_functions_selector(filebn, subject):
+
+    ret = None
+
+    if not subject in ['finder', 'splitter']:
+        raise ValueError("invalid `subject' value")
+
+    if filebn.startswith('zip') or filebn.startswith('unzip'):
+
+        if subject == 'finder':
+            ret = infozip_version_finder
+
+        elif subject == 'splitter':
+            ret = infozip_version_splitter
+
+    else:
+
+        if subject == 'finder':
+            ret = standard_version_finder
+
+        elif subject == 'splitter':
+            ret = standard_version_splitter
+
+    return ret
+
+
+def parse_tarball_name(
+        filename, mute=False, acceptable_source_name_extensions=None,
+        version_functions_selector=None
+        ):
     """
+    Parse source tarball name
+
+    If this function succeeded, dict is returned::
+
+        {
+            'name': None,
+            'groups': {
+                'name'              : None,
+                'extension'         : None,
+
+                'version'           : None,
+                'version_list_dirty': None,
+                'version_list'      : None,
+                'version_dirty'     : None,
+
+                'status'            : None,
+                'status_list_dirty' : None,
+                'status_dirty'      : None,
+                'status_list'       : None,
+                }
+            }
+
+    .. NOTE:: ret['group']['version'] numbers are always joined with point(s)
+
+    see standard_version_finder for reference version finder
+
+    see standard_version_splitter for reference version finder
+    """
+
+    if not isinstance(filename, str):
+        raise TypeError("filename must be str")
+
+    if acceptable_source_name_extensions is None:
+        acceptable_source_name_extensions = ACCEPTABLE_SOURCE_NAME_EXTENSIONS
+
+    if version_functions_selector is None:
+        version_functions_selector = standard_version_functions_selector
 
     filename = os.path.basename(filename)
 
@@ -293,7 +410,7 @@ def _source_name_parse_delicate(
         if filename.endswith(i):
             extension = i
 
-    if extension == None:
+    if extension is None:
         s = "Wrong extension"
         if not mute:
             logging.error(s)
@@ -303,11 +420,14 @@ def _source_name_parse_delicate(
     else:
         without_extension = filename[:-len(extension)]
 
+        # TODO: copy this parser to this module
         name_sliced = org.wayround.utils.text.slice_string_to_sections(
             without_extension
             )
 
-        most_possible_version = _find_most_possible_version(name_sliced, mute)
+        version_finder = version_functions_selector(filename, 'finder')
+
+        most_possible_version = version_finder(name_sliced, mute)
 
         if not isinstance(most_possible_version, tuple):
             ret = None
@@ -315,18 +435,18 @@ def _source_name_parse_delicate(
             ret = {
                 'name': None,
                 'groups': {
-                    'name'              : None,
-                    'extension'         : None,
+                    'name': None,
+                    'extension': None,
 
-                    'version'           : None,
+                    'version': None,
                     'version_list_dirty': None,
-                    'version_list'      : None,
-                    'version_dirty'     : None,
+                    'version_list': None,
+                    'version_dirty': None,
 
-                    'status'            : None,
-                    'status_list_dirty' : None,
-                    'status_dirty'      : None,
-                    'status_list'       : None,
+                    'status': None,
+                    'status_list_dirty': None,
+                    'status_dirty': None,
+                    'status_list': None,
                     }
                 }
 
@@ -338,25 +458,10 @@ def _source_name_parse_delicate(
 
             # version operations
 
-            ret['groups']['version_list_dirty'] = (
-                name_sliced[most_possible_version[0]:most_possible_version[1]]
-                )
+            version_splitter = version_functions_selector(filename, 'splitter')
 
-            ret['groups']['version_list'] = (
-                copy.copy(ret['groups']['version_list_dirty'])
-                )
-
-            org.wayround.utils.list.remove_all_values(
-                ret['groups']['version_list'],
-                ALL_DELIMITERS
-                )
-
-            ret['groups']['version'] = (
-                '.'.join(ret['groups']['version_list'])
-                )
-
-            ret['groups']['version_dirty'] = (
-                ''.join(ret['groups']['version_list_dirty'])
+            ret['groups'].update(
+                version_splitter(name_sliced, most_possible_version)
                 )
 
             # status operations
@@ -396,61 +501,6 @@ def _source_name_parse_delicate(
             # extension
 
             ret['groups']['extension'] = extension
-
-    return ret
-
-
-def parse_tarball_name(
-    filename,
-    mute=False,
-    acceptable_source_name_extensions=None
-    ):
-    """
-    Parse source file name and do some more actions on success
-
-    If this function succeeded but not passed version check -
-    return None.
-
-    If this function succided, passeed version check and
-    \`modify_info_file\' is True -
-    update infofile in info directory.
-
-    If this function succeeded, dict is returned::
-
-        {
-            'name': None,
-            'groups': {
-                'name'              : None,
-                'extension'         : None,
-
-                'version'           : None,
-                'version_list_dirty': None,
-                'version_list'      : None,
-                'version_dirty'     : None,
-
-                'status'            : None,
-                'status_list_dirty' : None,
-                'status_dirty'      : None,
-                'status_list'       : None,
-                }
-            }
-
-    .. NOTE:: version numbers are always joined with \`.\'
-    """
-
-    # TODO: read off mute parameter and result printing
-
-    if not isinstance(filename, str):
-        raise TypeError("filename must be str")
-
-    if acceptable_source_name_extensions == None:
-        acceptable_source_name_extensions = ACCEPTABLE_SOURCE_NAME_EXTENSIONS
-
-    ret = _source_name_parse_delicate(
-        filename,
-        mute,
-        acceptable_source_name_extensions
-        )
 
     if not isinstance(ret, dict):
         if not mute:
