@@ -2,6 +2,7 @@
 import os
 import copy
 
+
 def env_vars_edit(var_list, mode='copy'):
     """
     Environment preparations
@@ -18,7 +19,7 @@ def env_vars_edit(var_list, mode='copy'):
 
     if mode != 'clean':
         for i in list(var_list.keys()):
-            if var_list[i] == None and i in ret:
+            if var_list[i] is None and i in ret:
                 del(ret[i])
             else:
                 ret[i] = var_list[i]

@@ -9,7 +9,13 @@ class LoopedTimer:
     Call for action every interval
     """
 
-    def __init__(self, interval, action, args, kwargs):
+    def __init__(self, interval, action, args=None, kwargs=None):
+
+        if args is None:
+            args = tuple()
+
+        if kwargs is None:
+            kwargs = dict()
 
         self._interval = interval
         self._action = action

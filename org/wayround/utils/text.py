@@ -4,49 +4,50 @@ import re
 
 import org.wayround.utils.terminal
 import org.wayround.utils.types
+import org.wayround.utils.range
 
 
 def columned_list_print(
-    lst, width=None, columns=None,
-    margin_right=' | ', margin_left=' | ', spacing=' | ',
-    fd=1
-    ):
+        lst, width=None, columns=None,
+        margin_right=' | ', margin_left=' | ', spacing=' | ',
+        fd=1
+        ):
     print(
         return_columned_list(
             lst, width=width, columns=columns,
             margin_right=margin_right, margin_left=margin_left,
             spacing=spacing, fd=fd
             )
-          )
+        )
 
 
 def return_columned_list(
-    lst, width=None, columns=None,
-    margin_right=' | ', margin_left=' | ', spacing=' | ',
-    fd=1
-    ):
+        lst, width=None, columns=None,
+        margin_right=' | ', margin_left=' | ', spacing=' | ',
+        fd=1
+        ):
 
     if not org.wayround.utils.types.struct_check(
-        lst,
-        {'t': list, '.': {'t': str}}
-        ):
+            lst,
+            {'t': list, '.': {'t': str}}
+            ):
         raise TypeError("`lst' must be list of str")
 
-    if width == None:
+    if width is None:
         if (
-            (isinstance(fd, int) and os.isatty(fd))
-            or (hasattr(fd, 'isatty') and fd.isatty())
-            ):
+                (isinstance(fd, int) and os.isatty(fd))
+                or (hasattr(fd, 'isatty') and fd.isatty())
+                ):
 
             size = org.wayround.utils.terminal.get_terminal_size(fd)
-            if size == None:
+            if size is None:
                 width = 80
             else:
                 width = size['ws_col']
         else:
             width = 80
 
-    #print "width " + str(width)
+    # print "width " + str(width)
 
     longest = 0
     lst_l = len(lst)
@@ -61,7 +62,7 @@ def return_columned_list(
 
     int_l = width - mrr_l - mrl_l
 
-    if columns == None:
+    if columns is None:
         columns = int((int_l / (longest + spc_l)))
 
     if columns < 1:
@@ -91,6 +92,7 @@ def return_columned_list(
 
 
 def fill(char=' ', count=80):
+    raise Exception("Deprecated")
     char = str(char)
 
     if len(char) < 1:
@@ -102,3 +104,29 @@ def fill(char=' ', count=80):
 
 def slice_string_to_sections(stri):
     return re.findall(r'[a-zA-Z]+|\d+|[\.\-\_\~\+]', stri)
+
+
+def get_line_ranges(txt, nl='\n'):
+
+    # TODO: make fix to correct lenght of nl
+
+    ret = []
+
+    x = 0
+
+    while True:
+
+        y = txt.find(nl, x)
+
+        if y == -1:
+            ret.append(range(x, len(txt)))
+            break
+        else:
+            ret.append(range(x, y + 1))
+            x = y + 1
+
+    return ret
+
+
+def get_line_index_at_offset(offset, ranges):
+    return org.wayround.utils.range.get_range_first_index(offset, ranges)

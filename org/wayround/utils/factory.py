@@ -10,7 +10,6 @@ import org.wayround.utils.types
 
 
 def class_generate_attributes(class_obj, attributes):
-
     """
     Installs get_* and set_* functions to set or get _* values
 
@@ -28,25 +27,25 @@ def class_generate_attributes(class_obj, attributes):
     case = None
 
     if org.wayround.utils.types.struct_check(
-        attributes,
-        {'t': list, '.': {'t': str}}
-        ):
+            attributes,
+            {'t': list, '.': {'t': str}}
+            ):
         case = 0
 
     if org.wayround.utils.types.struct_check(
-        attributes,
-        {'t': list, '.': {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}}
-        ):
+            attributes,
+            {'t': list, '.': {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}}
+            ):
         case = 1
 
-    if case == None:
+    if case is None:
         raise ValueError(
             "`attributes' must be list of strings or list of tuple of strings"
             )
 
     for i in attributes:
 
-        if type(i) == str:
+        if isinstance(i, str):
             i = (i,)
 
         signal_emiter = ''
@@ -93,7 +92,6 @@ del get_{name}
 
 
 def class_generate_check(class_obj, attributes):
-
     """
     Installs check function check(self, inst=None)
 
@@ -105,9 +103,9 @@ def class_generate_check(class_obj, attributes):
     """
 
     if not org.wayround.utils.types.struct_check(
-        attributes,
-        {'t': list, '.': {'t': str}}
-        ):
+            attributes,
+            {'t': list, '.': {'t': str}}
+            ):
         raise ValueError("`attributes' must be list of strings")
 
     central_check = """\

@@ -75,7 +75,7 @@ def _extract_tar_7z(file_name, output_dir):
             proc_tar.wait()
 
         finally:
-            if proc_tar.returncode == None:
+            if proc_tar.returncode is None:
                 proc_tar.terminate()
 
     return ret
@@ -130,7 +130,7 @@ def extract(file_name, output_dir):
     else:
         logging.error("Unsupported extension")
 
-    if ret == None:
+    if ret is None:
         raise Exception("Not implemented")
 
     return ret
@@ -177,13 +177,12 @@ def determine_extension_by_filename(file_name, mute=False):
 
 
 def canonical_compressor(
-    compressor,
-    stdin=None,
-    stdout=None,
-    stderr=None,
-    options=None,
-    ):
-
+        compressor,
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        options=None,
+        ):
     """
     Canonical compressor shortcut
 
@@ -191,7 +190,7 @@ def canonical_compressor(
     must support -0 .. -9 , -v and -d options in canonical way
     """.format(repr(list(CANONICAL_COMPRESSORS)))
 
-    if options == None:
+    if options is None:
         options = []
 
     if not compressor in CANONICAL_COMPRESSORS:
@@ -215,12 +214,12 @@ def canonical_compressor(
 
 
 def archive_tar_canonical(
-    dirname, output_filename,
-    compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    bufsize=(2 * 1024 ** 2)
-    ):
+        dirname, output_filename,
+        compressor,
+        verbose_tar=False,
+        verbose_compressor=False,
+        bufsize=(2 * 1024 ** 2)
+        ):
 
     ret = 0
     try:
@@ -248,13 +247,13 @@ def archive_tar_canonical(
 
 
 def archive_tar_canonical_fobj(
-    dirname,
-    output_fobj,
-    compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    bufsize=(2 * 1024 ** 2)
-    ):
+        dirname,
+        output_fobj,
+        compressor,
+        verbose_tar=False,
+        verbose_compressor=False,
+        bufsize=(2 * 1024 ** 2)
+        ):
 
     ret = 0
 
@@ -300,12 +299,12 @@ def archive_tar_canonical_fobj(
                 options += ['-9']
 
                 if canonical_compressor(
-                    compressor,
-                    options=options,
-                    stdin=tarproc.stdout,
-                    stdout=output_fobj,
-                    stderr=stderr
-                    ) != 0:
+                        compressor,
+                        options=options,
+                        stdin=tarproc.stdout,
+                        stdout=output_fobj,
+                        stderr=stderr
+                        ) != 0:
                     ret = 3
                 tarproc.wait()
             except:
@@ -313,27 +312,27 @@ def archive_tar_canonical_fobj(
 
         finally:
             tarproc.poll()
-            if tarproc.returncode == None:
+            if tarproc.returncode is None:
                 tarproc.terminate()
 
     return ret
 
 
 def extract_tar_canonical(
-    input_filename,
-    dirname,
-    compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    add_tar_options=None
-    ):
+        input_filename,
+        dirname,
+        compressor,
+        verbose_tar=False,
+        verbose_compressor=False,
+        add_tar_options=None
+        ):
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
             "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
             )
 
-    if add_tar_options == None:
+    if add_tar_options is None:
         add_tar_options = []
 
     ret = 0
@@ -358,20 +357,20 @@ def extract_tar_canonical(
 
 
 def extract_tar_canonical_fobj(
-    input_fobj,
-    dirname,
-    compressor,
-    verbose_tar=False,
-    verbose_compressor=False,
-    add_tar_options=[]
-    ):
+        input_fobj,
+        dirname,
+        compressor,
+        verbose_tar=False,
+        verbose_compressor=False,
+        add_tar_options=[]
+        ):
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
             "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
             )
 
-    if add_tar_options == None:
+    if add_tar_options is None:
         add_tar_options = []
 
     dirname = org.wayround.utils.path.abspath(dirname)
@@ -416,29 +415,29 @@ def extract_tar_canonical_fobj(
                 options += ['-d']
 
                 if canonical_compressor(
-                    compressor,
-                    stdin=input_fobj,
-                    stdout=tarproc.stdin,
-                    options=options,
-                    stderr=sys.stderr
-                    ) != 0:
+                        compressor,
+                        stdin=input_fobj,
+                        stdout=tarproc.stdin,
+                        options=options,
+                        stderr=sys.stderr
+                        ) != 0:
 
                     ret = 3
 
                 ret = tarproc.wait()
 
             finally:
-                if tarproc.returncode == None:
+                if tarproc.returncode is None:
                     tarproc.terminate()
 
     return ret
 
 
 def pack_dir_contents_tar(
-    dirname,
-    output_filename,
-    verbose_tar=False
-    ):
+        dirname,
+        output_filename,
+        verbose_tar=False
+        ):
 
     ret = 0
 
@@ -608,14 +607,14 @@ def xzcat(stdin, convert_to_str=None):
 
 
 def extract_low(
-    log,
-    tmpdir,
-    tarball,
-    outdir,
-    unwrap_dir=False,
-    rename_dir=False,
-    more_when_one_extracted_ok=False
-    ):
+        log,
+        tmpdir,
+        tarball,
+        outdir,
+        unwrap_dir=False,
+        rename_dir=False,
+        more_when_one_extracted_ok=False
+        ):
 
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
@@ -694,7 +693,6 @@ def extract_low(
 
 
 def tarobj_check_member_sum(tarobj, sums, member_name):
-
     """
     Check tarball member checksum.
 

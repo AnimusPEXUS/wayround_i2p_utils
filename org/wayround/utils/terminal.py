@@ -67,9 +67,7 @@ def progress_write(line_to_write, new_line=False):
     line_to_out = '\r{ltw}{spaces}{new_line}\r'.format_map(
         {
             'ltw': line_to_write,
-            'spaces': org.wayround.utils.text.fill(
-                ' ', width - line_to_write_l
-                ),
+            'spaces': ' ' * (width - line_to_write_l),
             'new_line': new_line_str
             }
         )

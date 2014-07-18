@@ -17,6 +17,36 @@ except:
 
 else:
 
+    class GtkIteratedLoop:
+
+        # NOTE: this class is tending to be deprecated. we must obey to use
+        # Gtk+ threading rules
+
+        def __init__(self, sleep_fraction=0.01):
+            self._exit_event = threading.Event()
+            self._started = False
+            self._sleep_fraction = sleep_fraction
+
+        def wait(self, timeout=None):
+
+            if self._started:
+                self._exit_event.wait(timeout)
+            else:
+                self._started = True
+
+                self._exit_event.clear()
+
+                while not self._exit_event.is_set():
+                    while Gtk.events_pending():
+                        Gtk.main_iteration_do(False)
+
+                    time.sleep(self._sleep_fraction)
+
+                self._started = False
+
+        def stop(self):
+            self._exit_event.set()
+
     class TextView:
 
         def __init__(self):
@@ -120,66 +150,6 @@ else:
 
             return
 
-    class GtkIteratedLoop:
-
-        # NOTE: this class is tending to be deprecated. we must obey to use
-        #       Gtk+ threading rules
-
-        def __init__(self, sleep_fraction=0.01):
-            self._exit_event = threading.Event()
-            self._started = False
-            self._sleep_fraction = sleep_fraction
-
-        def wait(self, timeout=None):
-
-            if self._started:
-                self._exit_event.wait(timeout)
-            else:
-                self._started = True
-
-                self._exit_event.clear()
-
-                while not self._exit_event.is_set():
-                    while Gtk.events_pending():
-                        Gtk.main_iteration_do(False)
-
-                    time.sleep(self._sleep_fraction)
-
-                self._started = False
-
-        def stop(self):
-            self._exit_event.set()
-
-#    class GtkIteratedLoop:
-#
-#        def __init__(self, sleep_fraction=0.01):
-#            self._exit_event = threading.Event()
-#            self._started = False
-#            self._sleep_fraction = sleep_fraction
-#
-#        def wait(self, timeout=None):
-#
-#            if self._started:
-#                self._exit_event.wait(timeout)
-#            else:
-#                self._started = True
-#
-#                self._exit_event.clear()
-#
-#                Gtk.main()
-#
-# while not self._exit_event.is_set():
-# while Gtk.events_pending():
-# Gtk.main_iteration_do(False)
-##
-# time.sleep(self._sleep_fraction)
-#
-#                self._started = False
-#
-#        def stop(self):
-#            Gtk.main_quit()
-#            self._exit_event.set()
-
     class MessageDialog(Gtk.MessageDialog):
 
         """
@@ -191,7 +161,6 @@ else:
 
             self.set_modal(True)
             self.set_transient_for(args[0])
-            #            self.set_destroy_with_parent(True)
             self.set_type_hint(Gdk.WindowTypeHint.DIALOG)
 
             self.wayround_org_response = Gtk.ResponseType.NONE
@@ -210,7 +179,6 @@ else:
 
         def destroy(self, *args, **kwargs):
             self.wayround_org_iteration_loop.stop()
-#            self.wayround_org_iteration_loop = None
             return super().destroy(*args, **kwargs)
 
         def wayround_org_response_listener(self, dialog, response_id):
@@ -291,9 +259,6 @@ else:
                             != self._ret_val_good_for_loop):
                         break
 
-#                while Gtk.events_pending():
-#                    Gtk.main_iteration_do(False)
-
                 time.sleep(self._waiter_sleep_time)
 
                 if self._stop_event.is_set():
@@ -314,7 +279,6 @@ else:
 
             self._constructor_cbs = {}
 
-            # do not make _singles and _multiples weak
             self._singles = {}
             self._multiples = set()
 
@@ -501,14 +465,14 @@ else:
             _r = Gtk.CellRendererPixbuf()
             _c.pack_start(_r, False)
             _c.add_attribute(_r, 'icon-name', 0)
-            _c.set_title('Icon')
+            # _c.set_title('Icon')
             self.append_column(_c)
 
             _c = Gtk.TreeViewColumn()
             _r = Gtk.CellRendererText()
             _c.pack_start(_r, False)
             _c.add_attribute(_r, 'text', 1)
-            _c.set_title('Name')
+            # _c.set_title('Name')
             self.append_column(_c)
 
             self.set_model(self._store)
@@ -566,7 +530,7 @@ else:
 
         def reload(self):
 
-            # TODO:
+            # TODO: complete or remove
             # sel_rows = self.get_selection().get_selected_rows()
             # exp_rows = self._list_expanded()
 
@@ -581,7 +545,7 @@ else:
             chi = m.iter_children(itera)
             res = True
 
-            while chi != None and res != False:
+            while chi is not None and res != False:
                 res = m.remove(chi)
 
             lst = os.listdir(path)
@@ -643,6 +607,42 @@ else:
 
             return os.path.sep.join(lst)
 
+        def get_selected_path(self):
+
+            sel = self.get_selection()
+
+            model, itera = sel.get_selected()
+
+            ret = self.get_root_directory()
+
+            if itera:
+
+                path = model.get_path(itera)
+
+                pth = self.convert_indices_to_path(path.get_indices())
+
+                ret = org.wayround.utils.path.join(self._root_dir, pth)
+
+            return ret
+
+        def get_selected_iter(self):
+
+            sel = self.get_selection()
+
+            model, itera = sel.get_selected()
+
+            return itera
+
+        def get_selected_iter_parent(self):
+
+            sel = self.get_selection()
+
+            model, itera = sel.get_selected()
+
+            ret = gtk_tree_model_get_iter_parent(model, itera)
+
+            return ret
+
     class ToIdle:
 
         """
@@ -694,5 +694,26 @@ else:
 
         if isinstance(n, Gtk.Window):
             ret = n
+
+        return ret
+
+    def gtk_tree_model_get_iter_parent(treemodel, itera):
+
+        path = treemodel.get_path(itera)
+
+        indices = path.get_indices()
+
+        ret = None
+
+        len_indices = len(indices)
+
+        if len_indices > 1:
+
+            if len_indices == 1:
+                path = Gtk.TreePath.new_first()
+            else:
+                path = Gtk.TreePath(indices[:-1])
+
+            ret = treemodel.get_iter(path)
 
         return ret
