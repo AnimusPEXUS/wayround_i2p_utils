@@ -1,6 +1,7 @@
 
 import inspect
 
+
 def render_help(object_dic, order_list=None, only_titles=False, key=None):
 
     # FIXME: complete doc
@@ -29,13 +30,11 @@ def render_help(object_dic, order_list=None, only_titles=False, key=None):
     else:
         key_list = list(object_dic.keys())
 
-
     for i in key_list:
         if not isinstance(i, str):
             raise ValueError("all keys must be of type str")
 
     out = ''
-
 
     for i in key_list:
 
@@ -50,7 +49,7 @@ def render_help(object_dic, order_list=None, only_titles=False, key=None):
 
         if isinstance(txt, list):
             txt = '\n'.join(txt)
-        elif txt == None:
+        elif txt is None:
             txt = "(No documentation)"
         elif not isinstance(txt, str):
             txt = str(txt)
@@ -65,16 +64,14 @@ def render_help(object_dic, order_list=None, only_titles=False, key=None):
 
             txt = text
 
-
         out += (
-"""\
+            """\
     {key}
 {help}
 """.format(
-    key=i,
-    help=txt
-    )
+                key=i,
+                help=txt
                 )
-
+            )
 
     return out

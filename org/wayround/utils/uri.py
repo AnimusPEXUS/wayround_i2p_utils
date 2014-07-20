@@ -3,8 +3,6 @@ import urllib
 import re
 
 
-
-
 def paths_by_path(path, last_el_type=None, path_is_absolute=None):
     '''
     Returns dict with three values:
@@ -49,18 +47,18 @@ def paths_by_path(path, last_el_type=None, path_is_absolute=None):
         path_str = '/'.join(path)
         path_lst = copy.copy(path)
 
-        if last_el_type == None:
+        if last_el_type is None:
             last_el_type = 'dir'
 
     if isinstance(path, str):
 
-        if last_el_type == None:
+        if last_el_type is None:
             if path[-1:] == '/':
                 last_el_type = 'dir'
             else:
                 last_el_type = 'file'
 
-        if path_is_absolute == None:
+        if path_is_absolute is None:
             path_is_absolute = (path[0] == '/')
 
         t_path = path.strip('/')
@@ -77,13 +75,14 @@ def paths_by_path(path, last_el_type=None, path_is_absolute=None):
         if path_str[-1:] != '/':
             path_str += '/'
 
-    if path_is_absolute == None and path_str[0] != '/':
+    if path_is_absolute is None and path_str[0] != '/':
         path_str = '/' + path_str
 
     return {'path_str': path_str,
             'path_lst': copy.copy(path_lst),
             'last_el_type': last_el_type,
             'path_is_absolute': path_is_absolute}
+
 
 def ischild(path1, path2):
     """
@@ -107,6 +106,7 @@ def ischild(path1, path2):
 
 is_child = ischild
 
+
 def parse_scheme_and_data(uri, ret_data=['scheme', 'data']):
     '''
     Parses URI and returns requested data.
@@ -124,7 +124,7 @@ def parse_scheme_and_data(uri, ret_data=['scheme', 'data']):
 
     re_res = re.match(r'(.*?):(.*)', uri)
 
-    if re_res != None:
+    if re_res is not None:
 
         for i in ['scheme', 'data']:
             if i in ret_data:
@@ -134,6 +134,7 @@ def parse_scheme_and_data(uri, ret_data=['scheme', 'data']):
     else:
         return None
 
+
 def _parse_r(uri, part):
     s = parse_scheme_and_data(uri, [part])
     if s is None or s[part] is None:
@@ -142,15 +143,20 @@ def _parse_r(uri, part):
         ret = s[part]
     return ret
 
+
 def parse_scheme(uri):
     """Returns URI scheme part"""
     return _parse_r(uri, 'scheme')
+
 
 def parse_data(uri):
     """Returns URI data part"""
     return _parse_r(uri, 'data')
 
-def parse(url='http://login:password@example.net:80/some/path?with=parameters&an=d#anchor'):
+
+def parse(
+        url='http://login:password@example.net:80/some/path?with=parameters&an=d#anchor'
+        ):
     """
     Parse URI and return None if error or dict structure accordingly
     to scheme name.
@@ -163,12 +169,12 @@ def parse(url='http://login:password@example.net:80/some/path?with=parameters&an
     """
     scheme = parse_scheme(url)
 
-    if scheme == None:
+    if scheme is None:
         return None
 
     re_res = re.match(r'(.*?):(.*)', url)
 
-    if re_res != None:
+    if re_res is not None:
         scheme = re_res.group(1)
         data = re_res.group(2)
 
@@ -183,6 +189,7 @@ def parse(url='http://login:password@example.net:80/some/path?with=parameters&an
 def is_same_host(uri1, uri2):
 
     return is_same_site(uri1, uri2, False, False)
+
 
 def is_same_site(uri1,
                  uri2,
@@ -206,6 +213,7 @@ def is_same_site(uri1,
 
     return True
 
+
 def del_not_same_hosts(uri, lst):
     ret = list()
 
@@ -214,6 +222,7 @@ def del_not_same_hosts(uri, lst):
             ret.append(i)
 
     return ret
+
 
 def del_not_same_sites(uri,
                        lst,
@@ -240,6 +249,7 @@ def del_not_same_sites(uri,
 
     return ret
 
+
 def is_child_uri(uri1, uri2,
                  not_if_scheme_not_eql=True,
                  not_if_port_not_eql=True):
@@ -250,17 +260,17 @@ def is_child_uri(uri1, uri2,
     u1 = parse(uri1)
     u2 = parse(uri2)
 
-    if u1 == None or u2 == None:
+    if u1 is None or u2 is None:
         return None
 
-    if not is_same_site(uri1, uri2, not_if_scheme_not_eql, not_if_port_not_eql):
+    if not is_same_site(
+            uri1, uri2, not_if_scheme_not_eql, not_if_port_not_eql):
         return None
 
     if not is_child(u1['path_lst'], u2['path_lst']):
         return False
 
     return True
-
 
 
 def del_not_child_uris(uri, lst):
@@ -275,7 +285,6 @@ def del_not_child_uris(uri, lst):
             ret.append(i)
 
     return ret
-
 
 
 def parse_parameters(data):
@@ -306,6 +315,7 @@ def parse_parameters(data):
         para_list.append(para_splitted)
 
     return copy.copy(para_list)
+
 
 def parse_auth(data):
     """
@@ -345,15 +355,15 @@ def parse_auth(data):
        None
 
     """
-    if data == None or data == '':
+    if data is None or data == '':
         return None
 
     re_res = re.match(r'^(.*?)(:.*?)?@?$', data)
 
-    if re_res != None:
+    if re_res is not None:
         login = re_res.group(1)
         password = None
-        if re_res.group(2) != None:
+        if re_res.group(2) is not None:
             password = re_res.group(2)[1:]
         else:
             password = None
@@ -361,6 +371,7 @@ def parse_auth(data):
         return {'login': login, 'password': password}
     else:
         return None
+
 
 def parse_all_data(data):
     '''
@@ -382,8 +393,8 @@ def parse_all_data(data):
 
     '''
     ret = dict(
-        auth=None, # or dict {'login':'', 'password':
-            # ''}, where login must be string, and
+        auth=None,  # or dict {'login':'', 'password':
+        # ''}, where login must be string, and
         # password can be None
         host=None,
         port=None,
@@ -397,7 +408,7 @@ def parse_all_data(data):
 
     re_res = re.match(r'^//(.*@)?(.*?)(:\d*)?(/.*?)?(\?.*?)?(\#.*)?$', data)
 
-    if re_res != None:
+    if re_res is not None:
         # print 'auth: '+ repr(re_res.group(1))
         # print 'host: '+ repr(re_res.group(2))
         # print 'port: '+ repr(re_res.group(3))
@@ -408,15 +419,15 @@ def parse_all_data(data):
 
         ret['auth'] = parse_auth(re_res.group(1))
 
-        if re_res.group(2) != None:
+        if re_res.group(2) is not None:
             ret['host'] = re_res.group(2)
 
-        if re_res.group(3) != None:
+        if re_res.group(3) is not None:
             ret['port'] = re_res.group(3)[1:]
 
-        if re_res.group(4) != None:
+        if re_res.group(4) is not None:
             t_p = paths_by_path(re_res.group(4))
-            if t_p == None:
+            if t_p is None:
                 ret['path_str'] = None
                 ret['path_lst'] = None
                 ret['last_el_type'] = None
@@ -427,19 +438,19 @@ def parse_all_data(data):
                 ret['last_el_type'] = t_p['last_el_type']
                 ret['path_is_absolute'] = t_p['path_is_absolute']
 
-
-        if re_res.group(5) != None:
+        if re_res.group(5) is not None:
             ret['param_lst'] = parse_parameters(re_res.group(5))
 
-        if re_res.group(6) != None:
+        if re_res.group(6) is not None:
             ret['anchor'] = re_res.group(6)[1:]
 
         return ret
     return None
 
+
 def combine_data(scheme='http',
                  auth={'login': 'anonymous',
-                               'password': 'myemail'},
+                       'password': 'myemail'},
                  host='example.net',
                  port=80,
                  path='/',
@@ -465,13 +476,11 @@ def combine_data(scheme='http',
     anchor_str = ''
     use_anchor = False
 
-
-    if auth != None:
+    if auth is not None:
         auth_str = auth[0]
-        if auth[1] != None:
+        if auth[1] is not None:
             auth_str += ':' + auth[1]
         auth_str += '@'
-
 
     if scheme == 'http' and port != 80:
         use_port = True
@@ -482,7 +491,7 @@ def combine_data(scheme='http',
     if use_port:
         port_str = ':' + str(port)
 
-    if parameters != None and len(parameters.keys()) > 0:
+    if parameters is not None and len(parameters.keys()) > 0:
         use_param = True
 
     if isinstance(path, list):
@@ -504,7 +513,7 @@ def combine_data(scheme='http',
 
         param_str += '&'.join(param_lst)
 
-    if anchor != None and anchor != '':
+    if anchor is not None and anchor != '':
         use_anchor = True
 
     if use_anchor:

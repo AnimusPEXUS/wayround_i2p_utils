@@ -118,6 +118,19 @@ def realpath(path):
     return _remove_double_sep(os.path.realpath(path))
 
 
+def abspaths(lst, remove_duplications=True):
+
+    ret = list()
+
+    for i in lst:
+        ret.append(abspath(i))
+
+    if remove_duplications:
+        ret = list(set(ret))
+
+    return ret
+
+
 def realpaths(lst, remove_duplications=True):
 
     ret = list()
@@ -132,7 +145,7 @@ def realpaths(lst, remove_duplications=True):
 
 
 # NOTE: does not work
-#def eval_abs_paths(lst, g, l):
+# def eval_abs_paths(lst, g, l):
 #
 #    """
 #    Ensure(make) listed variables are(be) absolute path
@@ -171,7 +184,6 @@ def prepend_path(lst, base):
 
 
 def unprepend_path(lst, base):
-
     """
     Removes any trailing sep from base, and removes it from the start of every
     lst item.
@@ -215,7 +227,6 @@ def remove_base(path, base):
 
 
 def bases(lst):
-
     """
     Removes dirnames from paths
     """
@@ -335,7 +346,7 @@ def select_by_prefered_extension(lst, ext_lst):
                 if j.endswith(i):
                     found = j
                     break
-            if found != None:
+            if found is not None:
                 break
 
         if found:
