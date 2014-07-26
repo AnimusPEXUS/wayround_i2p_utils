@@ -241,7 +241,7 @@ def command_processor(
                     )
                 )
         else:
-            ret['message'] = txt
+            print(txt)
 
     return ret
 

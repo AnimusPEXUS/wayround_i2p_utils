@@ -4,6 +4,8 @@ import copy
 import logging
 import os.path
 import pprint
+import re
+import fnmatch
 
 import org.wayround.utils.list
 import org.wayround.utils.tag
