@@ -309,23 +309,27 @@ def infozip_version_finder(name_sliced, mute=False):
 
 def infozip_version_splitter(name_sliced, most_possible_version):
 
-    ret = dict(
-        version=None,
-        version_list_dirty=None,
-        version_list=None,
-        version_dirty=None
-        )
+    ret = None
 
-    value = list(name_sliced[1])
+    if len(name_sliced) > 1:
 
-    ret['version_list_dirty'] = value
+        ret = dict(
+            version=None,
+            version_list_dirty=None,
+            version_list=None,
+            version_dirty=None
+            )
 
-    ret['version_list'] = \
-        copy.copy(ret['version_list_dirty'])
+        value = list(name_sliced[1])
 
-    ret['version'] = '.'.join(ret['version_list'])
+        ret['version_list_dirty'] = value
 
-    ret['version_dirty'] = ''.join(ret['version_list_dirty'])
+        ret['version_list'] = \
+            copy.copy(ret['version_list_dirty'])
+
+        ret['version'] = '.'.join(ret['version_list'])
+
+        ret['version_dirty'] = ''.join(ret['version_list_dirty'])
 
     return ret
 
@@ -459,44 +463,50 @@ def parse_tarball_name(
             # version operations
 
             version_splitter = version_functions_selector(filename, 'splitter')
-
-            ret['groups'].update(
-                version_splitter(name_sliced, most_possible_version)
+            version_splitter_res = version_splitter(
+                name_sliced,
+                most_possible_version
                 )
 
-            # status operations
+            if version_splitter_res is not None:
 
-            ret['groups']['status_list_dirty'] = (
-                name_sliced[most_possible_version[1]:]
-                )
+                ret['groups'].update(version_splitter_res)
 
-            ret['groups']['status_list_dirty'] = (
-                org.wayround.utils.list.list_strip(
-                    ret['groups']['status_list_dirty'],
-                    STATUS_DELIMITERS
+                # status operations
+
+                ret['groups']['status_list_dirty'] = (
+                    name_sliced[most_possible_version[1]:]
                     )
-                )
 
-            ret['groups']['status_list'] = (
-                copy.copy(ret['groups']['status_list_dirty'])
-                )
+                ret['groups']['status_list_dirty'] = (
+                    org.wayround.utils.list.list_strip(
+                        ret['groups']['status_list_dirty'],
+                        STATUS_DELIMITERS
+                        )
+                    )
 
-            org.wayround.utils.list.remove_all_values(
-                ret['groups']['status_list'],
-                STATUS_DELIMITERS
-                )
+                ret['groups']['status_list'] = (
+                    copy.copy(ret['groups']['status_list_dirty'])
+                    )
 
-            ret['groups']['status_list'] = (
-                org.wayround.utils.list.list_strip(
+                org.wayround.utils.list.remove_all_values(
                     ret['groups']['status_list'],
                     STATUS_DELIMITERS
                     )
-                )
 
-            ret['groups']['status'] = '.'.join(ret['groups']['status_list'])
+                ret['groups']['status_list'] = (
+                    org.wayround.utils.list.list_strip(
+                        ret['groups']['status_list'],
+                        STATUS_DELIMITERS
+                        )
+                    )
 
-            ret['groups']['status_dirty'] = \
-                ''.join(ret['groups']['status_list_dirty'])
+                ret['groups']['status'] = '.'.join(
+                    ret['groups']['status_list']
+                    )
+
+                ret['groups']['status_dirty'] = \
+                    ''.join(ret['groups']['status_list_dirty'])
 
             # extension
 

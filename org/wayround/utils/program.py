@@ -18,13 +18,13 @@ def logging_setup(loglevel='INFO'):
 
     # Logging settings
     for i in [
-        (logging.CRITICAL, '-c-'),
-        (logging.ERROR, '-e-'),
-        (logging.WARN, '-w-'),
-        (logging.WARNING, '-w-'),
-        (logging.INFO, '-i-'),
-        (logging.DEBUG, '-d-')
-        ]:
+            (logging.CRITICAL, '-c-'),
+            (logging.ERROR, '-e-'),
+            (logging.WARN, '-w-'),
+            (logging.WARNING, '-w-'),
+            (logging.INFO, '-i-'),
+            (logging.DEBUG, '-d-')
+            ]:
         logging.addLevelName(i[0], i[1])
     del i
 
@@ -53,9 +53,8 @@ def logging_setup(loglevel='INFO'):
 
 
 def command_processor(
-    command_name, commands, opts_and_args_list, additional_data
-    ):
-
+        command_name, commands, opts_and_args_list, additional_data
+        ):
     """
     command_name used only for help rendering purposes, so if not given --
     program name will not be rendered in help
@@ -172,7 +171,8 @@ def command_processor(
                 except KeyboardInterrupt:
                     ret = dict(
                         code=1,
-                        message="Interrupted With Keyboard"
+                        message='error',
+                        main_message="Interrupted With Keyboard"
                         )
                 except:
                     e = sys.exc_info()
@@ -184,7 +184,8 @@ def command_processor(
 
                     ret = dict(
                         code=1,
-                        message=(
+                        message='error',
+                        main_message=(
                             "Error while executing command: {}::{}\n{}".format(
                                 command,
                                 subcommand,
@@ -211,13 +212,15 @@ def command_processor(
 
                         ret = dict(
                             code=res['code'],
-                            message=res['message']
+                            message='error',
+                            main_message=res['message']
                             )
 
                     else:
                         ret = dict(
                             code=1,
-                            message=(
+                            message='error',
+                            main_message=(
                                 "Command returned not integer and not "
                                 "dict (resetting to 1)."
                                 " It has returned(type:{}):\n{}".format(
@@ -235,19 +238,19 @@ def command_processor(
         if not isinstance(txt, str):
             ret = dict(
                 code=1,
-                message="Error getting help for: {}::{}".format(
+                message='error',
+                main_message="Error getting help for: {}::{}".format(
                     command,
                     subcommand
                     )
                 )
         else:
-            print(txt)
+            ret['main_message'] = txt
 
     return ret
 
 
 def program(command_name, commands, additional_data=None):
-
     """
     command_name used only for help rendering purposes, so if not given --
     program name will not be rendered in help.
@@ -262,6 +265,9 @@ def program(command_name, commands, additional_data=None):
         sys.argv[1:],
         additional_data
         )
+
+    if 'main_message' in ret and ret['main_message']:
+        print('{}'.format(ret['main_message']))
 
     logging.info(
         "Exit Code: {} ({})".format(ret['code'], ret['message'])
@@ -294,7 +300,7 @@ def _get_subcommands_text(commands_dict, command, warnings=False):
             order = commands_dict[command]['_order']
             del commands_dict[command]['_order']
 
-        if order == None:
+        if order is None:
             if warnings:
                 logging.warning("No subcommands order")
             order = []
@@ -338,7 +344,7 @@ def _get_commands_text(commands_dict, warnings=False):
         order = commands_dict['_order']
         del commands_dict['_order']
 
-    if order == None:
+    if order is None:
         if warnings:
             logging.warning("No commands order")
         order = []
@@ -376,13 +382,13 @@ def program_help(command_name, commands, command, subcommand, warnings=False):
 
     ret = ''
 
-    if command != None:
+    if command is not None:
 
         if not command in commands:
             logging.error("No such command: {}".format(command))
             ret = 1
         else:
-            if subcommand != None:
+            if subcommand is not None:
                 if not subcommand in commands[command]:
                     logging.error(
                         "No such subcommand: {}::{}".format(
@@ -394,13 +400,13 @@ def program_help(command_name, commands, command, subcommand, warnings=False):
     if not isinstance(ret, str):
         pass
     else:
-        if command == subcommand == None:
+        if command == subcommand is None:
 
             commands_text = _get_commands_text(commands, warnings)
 
             command_name_text = ''
             sp1 = ''
-            if command_name != None:
+            if command_name is not None:
                 command_name_text = command_name
                 sp1 = ' '
 
@@ -419,13 +425,13 @@ commands:
                 sp1=sp1
                 )
 
-        elif subcommand == None:
+        elif subcommand is None:
             commands_text = _get_subcommands_text(commands, command, warnings)
 
             command_help = NO_DOCUMENTATION
             command_name_text = ''
             sp1 = ''
-            if command_name != None:
+            if command_name is not None:
                 command_name_text = command_name
                 sp1 = ' '
 
@@ -454,7 +460,7 @@ subcommands:
 
             command_name_text = ''
             sp1 = ''
-            if command_name != None:
+            if command_name is not None:
                 command_name_text = command_name
                 sp1 = ' '
 

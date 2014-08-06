@@ -42,30 +42,33 @@ def join(*args):
             raise ValueError("arguments must be strings or lists")
 
     if len(args) == 0:
-        raise TypeError("missing 1 required positional argument: 'args'")
+        # raise TypeError("missing 1 required positional argument: 'args'")
+        ret = ''
 
-    abso = False
-    if len(args) != 0 and len(args[0]) != 0:
-        abso = args[0][0] == S_SEP
+    else:
 
-    ret_l = []
+        abso = False
+        if len(args) != 0 and len(args[0]) != 0:
+            abso = args[0][0] == S_SEP
 
-    for i in args:
+        ret_l = []
 
-        if isinstance(i, list):
+        for i in args:
 
-            ret_l += join(*i).split(S_SEP)
+            if isinstance(i, list):
 
-        else:
-            ret_l += i.split(S_SEP)
+                ret_l += join(*i).split(S_SEP)
 
-    while '' in ret_l:
-        ret_l.remove('')
+            else:
+                ret_l += i.split(S_SEP)
 
-    ret = S_SEP.join(ret_l)
+        while '' in ret_l:
+            ret_l.remove('')
 
-    if abso:
-        ret = S_SEP + ret
+        ret = S_SEP.join(ret_l)
+
+        if abso:
+            ret = S_SEP + ret
 
     return ret
 
