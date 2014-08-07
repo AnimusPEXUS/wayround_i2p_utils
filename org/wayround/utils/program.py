@@ -81,6 +81,9 @@ def command_processor(
         subtree = subtree[ii]
         level_depth.append(ii)
 
+        if callable(subtree):
+            break
+
     args = args[len(level_depth):]
 
     args_l = len(args)
@@ -95,7 +98,7 @@ def command_processor(
                 res = subtree(
                     level_depth,
                     opts,
-                    args[len(level_depth):],
+                    args,
                     additional_data
                     )
             except BrokenPipeError:
