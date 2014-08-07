@@ -53,199 +53,149 @@ def logging_setup(loglevel='INFO'):
 
 
 def command_processor(
-        command_name, commands, opts_and_args_list, additional_data
+        command_name,
+        commands,
+        opts_and_args_list,
+        additional_data
         ):
-    """
-    command_name used only for help rendering purposes, so if not given --
-    program name will not be rendered in help
-
-    returned value is a dict(code, message)
-
-    accepted ``commands`` must be dict of dicts with following example
-    structure:
-
-    dict(
-        _order = 'order in which commands appeared in generated help text',
-        command_name1 = dict(
-            _help = 'command help text',
-            _order = \
-                'order in which subcommands appeared in generated help text',
-            subcommand_name0 = callback,
-            subcommand_name1 = callback,
-            subcommand_name2 = callback,
-            subcommand_name3 = callback,
-            ...
-            subcommand_namen = callback
-            ),
-        command_name2 = dict(
-            _help = 'command help text',
-            _order = \
-                'order in which subcommands appeared in generated help text',
-            subcommand_name0 = callback,
-            subcommand_name1 = callback,
-            subcommand_name2 = callback,
-            subcommand_name3 = callback,
-            ...
-            subcommand_namen = callback
-            ),
-        ...
-        command_namen = dict(
-            _help = 'command help text',
-            _order = \
-                'order in which subcommands appeared in generated help text',
-            subcommand_name0 = callback,
-            subcommand_name1 = callback,
-            subcommand_name2 = callback,
-            subcommand_name3 = callback,
-            ...
-            subcommand_namen = callback
-            )
-        )
-
-    callbacks must accept 3 parameters:
-        comm - command and subcommand name wrapped woth puple. this can be used
-            if single callback is used for all commands in ``commands`` dict
-        opts - options which this function derives from opts_and_args_list
-        args - arguments which this function derives from opts_and_args_list
-        adds - additional data, which is simply passed from additional_data
-            parameter
-
-    In place of dicts you can use OrderedDicts, if you prefer. In this case
-    '_order' dict items not needed.
-
-    callbacks must return `int' or `dict' with structure:
-    dict(code=<int>, message=<str>)
-
-    this function returns `dict' with structure:
-    dict(code=<int>, message=<str>)
-    """
 
     opts, args = org.wayround.utils.getopt.getopt_keyed(opts_and_args_list)
 
     args_l = len(args)
 
-    command = None
-    subcommand = None
+    subtree = commands
 
-    if args_l > 0:
-        command = args[0]
+    level_depth = []
 
-    if args_l > 1:
-        subcommand = args[1]
+    for i in range(args_l):
+
+        ii = args[i]
+
+        if not ii in subtree:
+            raise ValueError(
+                "command tree has no level: {}".format(
+                    '>'.join(args[:i])
+                    )
+                )
+
+        subtree = subtree[ii]
+        level_depth.append(ii)
+
+    args = args[len(level_depth):]
+
+    args_l = len(args)
 
     show_help = '--help' in opts
 
-    ret = dict(code=0, message='No errors')
+    if callable(subtree):
 
-    if not show_help:
+        if not show_help:
 
-        if not command in commands:
-            ret = dict(
-                code=1,
-                message="No such command: {} (try '--help')".format(command)
-                )
-        else:
-            if not subcommand in commands[command]:
+            try:
+                res = subtree(
+                    level_depth,
+                    opts,
+                    args[len(level_depth):],
+                    additional_data
+                    )
+            except BrokenPipeError:
                 ret = dict(
                     code=1,
-                    message="No such subcommand: {}::{}".format(
-                        command,
-                        subcommand
+                    message="BrokenPipeError"
+                    )
+            except KeyboardInterrupt:
+                ret = dict(
+                    code=1,
+                    message='error',
+                    main_message="Interrupted Using Keyboard"
+                    )
+            except:
+                e = sys.exc_info()
+
+                ex_txt = org.wayround.utils.error.return_exception_info(
+                    e,
+                    tb=True
+                    )
+
+                ret = dict(
+                    code=1,
+                    message='error',
+                    main_message=(
+                        "Error while executing command: {}\n{}".format(
+                            ' '.join(level_depth),
+                            ex_txt
+                            )
                         )
                     )
 
             else:
 
-                try:
-                    res = commands[command][subcommand](
-                        (command, subcommand,),
-                        opts,
-                        args[2:],
-                        additional_data
-                        )
-                except BrokenPipeError:
+                if isinstance(res, int):
+                    txt = None
+
+                    if res == 0:
+                        txt = 'No errors'
+                    else:
+                        txt = 'Some error'
+
                     ret = dict(
-                        code=1,
-                        message="BrokenPipeError"
+                        code=res,
+                        message=txt
                         )
-                except KeyboardInterrupt:
+                elif isinstance(res, dict):
+
                     ret = dict(
-                        code=1,
+                        code=res['code'],
                         message='error',
-                        main_message="Interrupted With Keyboard"
-                        )
-                except:
-                    e = sys.exc_info()
-
-                    ex_txt = org.wayround.utils.error.return_exception_info(
-                        e,
-                        tb=True
+                        main_message=res['message']
                         )
 
+                else:
                     ret = dict(
                         code=1,
                         message='error',
                         main_message=(
-                            "Error while executing command: {}::{}\n{}".format(
-                                command,
-                                subcommand,
-                                ex_txt
+                            "Command returned not integer and not "
+                            "dict (resetting to 1)."
+                            " It has returned(type:{}):\n{}".format(
+                                type(res),
+                                res
                                 )
                             )
                         )
+        else:
 
-                else:
+            # show help
 
-                    if isinstance(res, int):
-                        txt = None
+            ret = {
+                'code': 0,
+                'message': "showing help",
+                'main_message': _format_command_help(level_depth, subtree)
+                }
 
-                        if res == 0:
-                            txt = 'No errors'
-                        else:
-                            txt = 'Some error'
+    elif isinstance(subtree, dict):
 
-                        ret = dict(
-                            code=res,
-                            message=txt
-                            )
-                    elif isinstance(res, dict):
-
-                        ret = dict(
-                            code=res['code'],
-                            message='error',
-                            main_message=res['message']
-                            )
-
-                    else:
-                        ret = dict(
-                            code=1,
-                            message='error',
-                            main_message=(
-                                "Command returned not integer and not "
-                                "dict (resetting to 1)."
-                                " It has returned(type:{}):\n{}".format(
-                                    type(res),
-                                    res
-                                    )
-                                )
-                            )
-
-    else:
-        ret['code'] = 0
-        txt = program_help(
-            command_name, commands, command, subcommand
-            )
-        if not isinstance(txt, str):
+        if not show_help:
             ret = dict(
                 code=1,
                 message='error',
-                main_message="Error getting help for: {}::{}".format(
-                    command,
-                    subcommand
+                main_message=(
+                    "Callable command not supplied. may be try use --help param."
                     )
                 )
         else:
-            ret['main_message'] = txt
+
+            ret = {
+                'code': 0,
+                'message': "showing help",
+                'main_message': _format_command_level_help(
+                    subtree,
+                    level_depth
+                    )
+                }
+
+    else:
+        raise ValueError("invalid command tree")
 
     return ret
 
@@ -274,103 +224,6 @@ def program(command_name, commands, additional_data=None):
         )
 
     return ret['code']
-
-
-def _get_subcommands_text(commands_dict, command, warnings=False):
-
-    commands_dict = copy.copy(commands_dict)
-
-    if '_help' in commands_dict:
-        del commands_dict['_help']
-
-    commands_text = ''
-
-    if not command in commands_dict:
-        logging.error("No command '{}' supported by this software")
-        commands_text = 1
-
-    else:
-
-        if '_help' in commands_dict[command]:
-            del commands_dict[command]['_help']
-
-        order = None
-
-        if '_order' in commands_dict[command]:
-            order = commands_dict[command]['_order']
-            del commands_dict[command]['_order']
-
-        if order is None:
-            if warnings:
-                logging.warning("No subcommands order")
-            order = []
-
-        kl = list(commands_dict[command].keys())
-
-        for i in kl:
-            if not i in order:
-                if warnings:
-                    logging.warning("subcommand not ordered: {}".format(i))
-                order.append(i)
-
-        for i in order:
-            command_help_text = inspect.getdoc(commands_dict[command][i])
-
-            if isinstance(command_help_text, str):
-                command_help_text = command_help_text.splitlines()[0].strip()
-
-            if not isinstance(command_help_text, str):
-                command_help_text = NO_DOCUMENTATION
-
-            commands_text += "    {command}\n        {doc}\n\n".format(
-                command=i,
-                doc=command_help_text
-                )
-
-    return commands_text
-
-
-def _get_commands_text(commands_dict, warnings=False):
-
-    commands_dict = copy.copy(commands_dict)
-
-    if '_help' in commands_dict:
-        del commands_dict['_help']
-
-    commands_text = ''
-
-    order = None
-    if '_order' in commands_dict:
-        order = commands_dict['_order']
-        del commands_dict['_order']
-
-    if order is None:
-        if warnings:
-            logging.warning("No commands order")
-        order = []
-
-    kl = list(commands_dict.keys())
-
-    for i in kl:
-        if not i in order:
-            if warnings:
-                logging.warning("command not ordered: {}".format(i))
-            order.append(i)
-
-    for i in order:
-        command_help_text = ''
-        if not '_help' in commands_dict[i]:
-            command_help_text = NO_DOCUMENTATION
-        else:
-            command_help_text = \
-                commands_dict[i]['_help'].splitlines()[0].strip()
-
-        commands_text += "    {command}\n        {doc}\n\n".format(
-            command=i,
-            doc=command_help_text
-            )
-
-    return commands_text
 
 
 def program_help(command_name, commands, command, subcommand, warnings=False):
@@ -479,5 +332,108 @@ Usage: {command_name}{sp1}{command} {subcommand} [options] [parameters]
                 command_name=command_name_text,
                 sp1=sp1
                 )
+
+    return ret
+
+
+def _format_command_help(level_depth, function):
+
+    command_text = inspect.getdoc(function)
+
+    if not isinstance(command_text, str):
+        command_text = NO_DOCUMENTATION
+
+    command_name_text = ' '.join(level_depth)
+
+    ret = """\
+Usage: {command_name_text} [options] [parameters]
+
+{command_text}
+
+""".format(
+        command_text=command_text,
+        command_name_text=command_name_text
+        )
+
+    return ret
+
+
+def _format_command_level_help(subtree, level_depth):
+
+    this_tree_help = NO_DOCUMENTATION
+    command_name_text = ' '.join(level_depth)
+    sections_text = ''
+    subcommands_text = ''
+    commands_text = ''
+
+    if '_help' in subtree:
+        this_tree_help = subtree['_help']
+
+    for i in subtree.keys():
+
+        if i == '_help':
+            continue
+
+        if callable(subtree[i]) or not isinstance(subtree[i], dict):
+            continue
+
+        command_help_text = NO_DOCUMENTATION
+
+        if '_help' in subtree[i]:
+            command_help_text = subtree[i]['_help']
+
+        if isinstance(command_help_text, str):
+            command_help_text = command_help_text.splitlines()[0].strip()
+
+        sections_text += """\
+    {cmd_name}
+        {cmd_short_descr}
+        
+""".format(
+            cmd_name=i,
+            cmd_short_descr=command_help_text)
+
+    for i in subtree.keys():
+
+        if i == '_help':
+            continue
+
+        if not callable(subtree[i]):
+            continue
+
+        command_help_text = inspect.getdoc(subtree[i])
+
+        if isinstance(command_help_text, str):
+            command_help_text = command_help_text.splitlines()[0].strip()
+
+        if not isinstance(command_help_text, str):
+            command_help_text = NO_DOCUMENTATION
+
+        commands_text += """\
+    {cmd_name}
+        {cmd_short_descr}
+        
+""".format(
+            cmd_name=i,
+            cmd_short_descr=command_help_text)
+
+    ret = """\
+Usage: {command_name_text} [options] [parameters]
+
+{this_tree_help}
+
+subsections:
+
+{sect_text}
+
+commands:
+
+{cmds_text}
+""".format(
+        this_tree_help=this_tree_help,
+        command_name_text=command_name_text,
+        sect_text=sections_text,
+        cmds_text=commands_text
+        )
 
     return ret
