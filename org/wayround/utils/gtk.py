@@ -460,6 +460,7 @@ else:
             self._store = Gtk.TreeStore(str, str)
 
             self.set_headers_visible(False)
+            self.set_search_column(1)
 
             _c = Gtk.TreeViewColumn()
             _r = Gtk.CellRendererPixbuf()
