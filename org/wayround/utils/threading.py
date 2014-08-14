@@ -11,8 +11,15 @@ import org.wayround.utils.weakref
 
 class Signal:
 
-    def __init__(self, object, signal_names=None, add_prefix=None, debug=False):
-
+    def __init__(
+            self,
+            subject,
+            signal_names=None,
+            add_prefix=None,
+            freezed=False,
+            disabled=False,
+            debug=False
+            ):
         """
         Initiates Signal Functionality
 
@@ -22,27 +29,29 @@ class Signal:
         ValueError will be raised
         """
 
-        if signal_names == None:
+        if signal_names is None:
             signal_names = []
 
         if not isinstance(signal_names, list):
             signal_names = [signal_names]
 
         if not org.wayround.utils.types.struct_check(
-            signal_names,
-            {'t': list, '.': {'t': str}}
-            ):
+                signal_names,
+                {'t': list, '.': {'t': str}}
+                ):
             raise ValueError("`signal_names' must be None, str or list of str")
 
-        self.object = object
+        self.subject = subject
 
         self._signals_debug = debug
+
+        self._disabled = disabled
 
         self._signal_names = []
 
         self._signals = {}
 
-        self._signal_obj_access_lock = threading.Lock()
+        self._signal_subj_access_lock = threading.Lock()
 
         self.set_names(signal_names, add_prefix=add_prefix)
 
@@ -50,7 +59,32 @@ class Signal:
         self._emition_locking_event.set()
         self._emition_locking_counter = 0
 
+        if freezed:
+            self.freeze_emition()
+
         return
+
+    def enable(self):
+        self.set_disabled(False)
+        return
+
+    def disable(self):
+        self.set_disabled(True)
+        return
+
+    def set_disabled(self, value):
+        self._disabled = bool(value)
+        if self._signals_debug:
+            logging.debug(
+                "{}: setting disabled to `{}'".format(
+                    self.subject.__class__,
+                    self._disabled
+                    )
+                )
+        return
+
+    def get_disabled(self):
+        return bool(self._disabled)
 
     def freeze_emition(self):
         if self._emition_locking_counter == 0:
@@ -82,7 +116,7 @@ class Signal:
         connect for simplicity. Don't get things hard!
         """
 
-        with self._signal_obj_access_lock:
+        with self._signal_subj_access_lock:
 
             try:
                 self._signal_names = _add_prefix(signal_names, add_prefix)
@@ -102,7 +136,7 @@ class Signal:
         return
 
     def get_names(self, add_prefix=None):
-        with self._signal_obj_access_lock:
+        with self._signal_subj_access_lock:
             ret = _add_prefix(self._signal_names, add_prefix=add_prefix)
         return ret
 
@@ -114,10 +148,25 @@ class Signal:
                 )
 
     def emit(self, name, *args, **kwargs):
+        """
+        Calls a callable attached to a signal with args and kwargs
+        """
+
+        if self._disabled:
+            if self._signals_debug:
+                logging.debug(
+                    "{}: disabled. dropping {}, {}, {}".format(
+                        self.subject.__class__,
+                        name,
+                        args,
+                        kwargs
+                        )
+                    )
+            return
 
         self._emition_locking_event.wait()
 
-        with self._signal_obj_access_lock:
+        with self._signal_subj_access_lock:
 
             try:
 
@@ -126,7 +175,7 @@ class Signal:
                 if self._signals_debug:
                     logging.debug(
                         "({}) preparing emiting signal `{}'".format(
-                            self.object.__class__, name
+                            self.subject.__class__, name
                             )
                         )
 
@@ -139,9 +188,9 @@ class Signal:
                             self._signals[name].remove(i)
                             if self._signals_debug:
                                 logging.debug(
-                            "({}) removed garbage `{}' from `{}'".format(
-                                self.object.__class__, i, name
-                                )
+                                    "({}) removed garbage `{}' from `{}'".format(
+                                        self.subject.__class__, i, name
+                                        )
                                     )
 
                     else:
@@ -150,13 +199,13 @@ class Signal:
 
                             logging.debug(
                                 "({}) emiting signal `{}'".format(
-                                    self.object.__class__, name
+                                    self.subject.__class__, name
                                     )
                                 )
 
                         threading.Thread(
                             name="{} :: Thread emiting signal `{}'".format(
-                                self.object.__class__, name
+                                self.subject.__class__, name
                                 ),
                             target=ref,
                             args=(name,) + args,
@@ -168,16 +217,15 @@ class Signal:
         return
 
     def connect(self, signal_name, callback):
-
         """
         Connect to some signal
 
-        _signal_name can be str, list of strings or True
+        signal_name can be str, list of strings or True
 
-        _signal_name == True - means connect to all signals
+        signal_name == True - means connect to all signals
         """
 
-        with self._signal_obj_access_lock:
+        with self._signal_subj_access_lock:
 
             try:
 
@@ -194,9 +242,9 @@ class Signal:
                         self._check(i)
 
                         if not i in self.is_connected(
-                            callback,
-                            signal_name=i
-                            ):
+                                callback,
+                                signal_name=i
+                                ):
 
                             if org.wayround.utils.types.is_method(callback):
                                 wr = org.wayround.utils.weakref.WeakMethod(
@@ -210,7 +258,10 @@ class Signal:
 
                                 logging.debug(
                                     "({}) connected `{}' ({}) to `{}'".format(
-                                        self.object.__class__, callback, wr, i
+                                        self.subject.__class__,
+                                        callback,
+                                        wr,
+                                        i
                                         )
                                     )
                         else:
@@ -218,9 +269,12 @@ class Signal:
                             if self._signals_debug:
 
                                 logging.debug(
-                            "({}) callbacl `{}' already connected to `{}'".\
-                                format(
-                                    self.object.__class__, callback, i
+                                    "({}) callbacl `{}' "
+                                    "already connected to `{}'".
+                                    format(
+                                        self.subject.__class__,
+                                        callback,
+                                        i
                                     )
                                     )
 
@@ -235,7 +289,7 @@ class Signal:
 
             logging.debug(
                 "({}) `{}' finalizes".format(
-                    self.object.__class__, wr
+                    self.subject.__class__, wr
                     )
                 )
 
@@ -244,7 +298,7 @@ class Signal:
         Disconnects callback from all signals or from certain signal
         """
 
-        with self._signal_obj_access_lock:
+        with self._signal_subj_access_lock:
 
             try:
 
@@ -255,9 +309,12 @@ class Signal:
 
                             if self._signals_debug:
                                 logging.debug(
-                            "({}) removed on request `{}' from `{}'".format(
-                                self.object.__class__, callback, signal_name
-                                )
+                                    "({}) removed on "
+                                    "request `{}' from `{}'".format(
+                                        self.subject.__class__,
+                                        callback,
+                                        signal_name
+                                        )
                                     )
 
                 else:
@@ -268,9 +325,12 @@ class Signal:
 
                             if self._signals_debug:
                                 logging.debug(
-                            "({}) removed on request `{}' from `{}'".format(
-                                self.object.__class__, callback, i
-                                )
+                                    "({}) removed on "
+                                    "request `{}' from `{}'".format(
+                                        self.subject.__class__,
+                                        callback,
+                                        i
+                                        )
                                     )
 
             except:
@@ -303,6 +363,7 @@ class Signal:
 
 
 class SignalWaiter:
+
     """
     Objects of this class are waiting for named signals on specified object
 
@@ -454,8 +515,7 @@ class Hub:
     def _dispatch(self, *args, **kwargs):
 
         w = copy.copy(self.waiters)
-        w_l = list(w.keys())
-        w_l.sort()
+        w_l = sorted(w.keys())
 
         for i in w_l:
 
@@ -513,10 +573,10 @@ class CallQueue:
 
     @classmethod
     def new_for_signal(
-        cls,
-        target_callable,
-        signal_instance=None, signal_name=None
-        ):
+            cls,
+            target_callable,
+            signal_instance=None, signal_name=None
+            ):
 
         ret = cls(target_callable)
         ret.set_signal(signal_instance, signal_name)
@@ -534,13 +594,13 @@ class CallQueue:
 
     def copy(self):
         if (not isinstance(self._signal_instance, Signal)
-            or self._signal_name == None
-            ):
+                or self._signal_name is None
+                ):
             raise ValueError(
                 "`signal_instance' and `signal_name' must be defined"
                 )
 
-        if self._queue == None:
+        if self._queue is None:
             raise Exception("this queue already dumped")
 
         with self._call_block:
@@ -591,7 +651,7 @@ class CallQueue:
 
         with self._call_block:
 
-            if self._queue != None:
+            if self._queue is not None:
                 self._queue.append({'args': args, 'kwargs': kwargs})
             else:
                 logging.debug(
@@ -630,7 +690,6 @@ class TimeoutForEternity:
         return a.call()
 
     def __init__(self, call, args, kwargs, timeout=10, default=None):
-
         """
         timeout - seconds
         """
@@ -653,7 +712,6 @@ class TimeoutForEternity:
         return
 
     def call(self):
-
         """
         return: correct_exit?, returned_value
         """
@@ -686,9 +744,9 @@ class TimeoutForEternity:
 def _add_prefix(signal_names=None, add_prefix=None):
 
     if not org.wayround.utils.types.struct_check(
-        signal_names,
-        {'t': list, '.': {'t': str}}
-        ):
+            signal_names,
+            {'t': list, '.': {'t': str}}
+            ):
         raise ValueError("`signal_names' must be None, str or list of str")
 
     lst = copy.copy(signal_names)
