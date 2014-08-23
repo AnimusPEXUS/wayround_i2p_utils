@@ -60,6 +60,12 @@ def command_processor(
         ):
 
     opts, args = org.wayround.utils.getopt.getopt_keyed(opts_and_args_list)
+    
+    ret = dict(
+        code=0,
+        message='Default Exit',
+        main_message="No Error"
+        )
 
     args_l = len(args)
 
@@ -72,133 +78,139 @@ def command_processor(
         ii = args[i]
 
         if not ii in subtree:
-            raise ValueError(
-                "command tree has no level: {}".format(
-                    '>'.join(args[:i])
-                    )
+            ret = dict(
+                code=100,
+                message='error',
+                main_message="invalid command or subsection name"
                 )
+            break                
 
         subtree = subtree[ii]
         level_depth.append(ii)
 
         if callable(subtree):
             break
+            
+    if ret['code'] != 0:
+        pass
+    else:
+    
+        args = args[len(level_depth):]
 
-    args = args[len(level_depth):]
+        args_l = len(args)
 
-    args_l = len(args)
+        show_help = '--help' in opts
 
-    show_help = '--help' in opts
+        if callable(subtree):
 
-    if callable(subtree):
+            if not show_help:
 
-        if not show_help:
-
-            try:
-                res = subtree(
-                    level_depth,
-                    opts,
-                    args,
-                    additional_data
-                    )
-            except BrokenPipeError:
-                ret = dict(
-                    code=1,
-                    message="BrokenPipeError"
-                    )
-            except KeyboardInterrupt:
-                ret = dict(
-                    code=1,
-                    message='error',
-                    main_message="Interrupted Using Keyboard"
-                    )
-            except:
-                e = sys.exc_info()
-
-                ex_txt = org.wayround.utils.error.return_exception_info(
-                    e,
-                    tb=True
-                    )
-
-                ret = dict(
-                    code=1,
-                    message='error',
-                    main_message=(
-                        "Error while executing command: {}\n{}".format(
-                            ' '.join(level_depth),
-                            ex_txt
-                            )
+                try:
+                    res = subtree(
+                        level_depth,
+                        opts,
+                        args,
+                        additional_data
                         )
-                    )
-
-            else:
-
-                if isinstance(res, int):
-                    txt = None
-
-                    if res == 0:
-                        txt = 'No errors'
-                    else:
-                        txt = 'Some error'
-
+                except BrokenPipeError:
                     ret = dict(
-                        code=res,
-                        message=txt
+                        code=1,
+                        message="BrokenPipeError"
                         )
-                elif isinstance(res, dict):
-
+                except KeyboardInterrupt:
                     ret = dict(
-                        code=res['code'],
+                        code=1,
                         message='error',
-                        main_message=res['message']
+                        main_message="Interrupted Using Keyboard"
+                        )
+                except:
+                    e = sys.exc_info()
+
+                    ex_txt = org.wayround.utils.error.return_exception_info(
+                        e,
+                        tb=True
                         )
 
-                else:
                     ret = dict(
                         code=1,
                         message='error',
                         main_message=(
-                            "Command returned not integer and not "
-                            "dict (resetting to 1)."
-                            " It has returned(type:{}):\n{}".format(
-                                type(res),
-                                res
+                            "Error while executing command: {}\n{}".format(
+                                ' '.join(level_depth),
+                                ex_txt
                                 )
                             )
                         )
-        else:
 
-            # show help
+                else:
 
-            ret = {
-                'code': 0,
-                'message': "showing help",
-                'main_message': _format_command_help(level_depth, subtree)
-                }
+                    if isinstance(res, int):
+                        txt = None
 
-    elif isinstance(subtree, dict):
+                        if res == 0:
+                            txt = 'No errors'
+                        else:
+                            txt = 'Some error'
 
-        if not show_help:
-            ret = dict(
-                code=1,
-                message='error',
-                main_message=(
-                    "Callable command not supplied. may be try use --help param."
+                        ret = dict(
+                            code=res,
+                            message=txt
+                            )
+                    elif isinstance(res, dict):
+
+                        ret = dict(
+                            code=res['code'],
+                            message='error',
+                            main_message=res['message']
+                            )
+
+                    else:
+                        ret = dict(
+                            code=1,
+                            message='error',
+                            main_message=(
+                                "Command returned not integer and not "
+                                "dict (resetting to 1)."
+                                " It has returned(type:{}):\n{}".format(
+                                    type(res),
+                                    res
+                                    )
+                                )
+                            )
+            else:
+
+                # show help
+
+                ret = {
+                    'code': 0,
+                    'message': "showing help",
+                    'main_message': _format_command_help(level_depth, subtree)
+                    }
+
+        elif isinstance(subtree, dict):
+
+            if not show_help:
+                ret = dict(
+                    code=1,
+                    message='error',
+                    main_message=(
+                        "Callable command not supplied. "
+                        "May be try use --help param."
+                        )
                     )
-                )
+            else:
+
+                ret = {
+                    'code': 0,
+                    'message': "showing help",
+                    'main_message': _format_command_level_help(
+                        subtree,
+                        level_depth
+                        )
+                    }
+
         else:
-
-            ret = {
-                'code': 0,
-                'message': "showing help",
-                'main_message': _format_command_level_help(
-                    subtree,
-                    level_depth
-                    )
-                }
-
-    else:
-        raise ValueError("invalid command tree")
+            raise ValueError("invalid command tree")
 
     return ret
 
