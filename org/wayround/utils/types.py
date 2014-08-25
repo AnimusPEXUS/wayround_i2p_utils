@@ -95,7 +95,6 @@ COMPARISON_TABLE = {
 
 
 def check_type_s(obj, name):
-
     """
     Check type using stranded method
     """
@@ -129,7 +128,6 @@ def check_type_s(obj, name):
 
 
 def types_s(obj):
-
     """
     Make list of types object in, using stranded method
     """
@@ -144,7 +142,6 @@ def types_s(obj):
 
 
 def check_type(obj, name):
-
     """
     Check type using native method
     """
@@ -156,7 +153,6 @@ def check_type(obj, name):
 
 
 def types(obj):
-
     """
     Make list of types object in, using native method
     """
@@ -172,7 +168,7 @@ def types(obj):
 
 for i in COMPARISON_TABLE.keys():
     exec(
-"""
+        """
 def is{name}_s(obj):
     return check_type_s(obj, {name})
 """.format(name=i)
@@ -182,7 +178,7 @@ del i
 
 for i in COMPARISON_TABLE.keys():
     exec(
-"""
+        """
 def is{name}(obj):
     return check_type(obj, {name})
 """.format(name=i)
@@ -195,7 +191,6 @@ STRUCT_CHECK_KEYS = ['t', 'te', 'None', '<', '>', '.', '', ' ', '{}']
 
 
 def struct_check(value, struct):
-
     """
     Check whatever value corresponds to struct
 
@@ -243,7 +238,7 @@ def struct_check(value, struct):
 
     ret = True
 
-    if not type(struct) == dict:
+    if not isinstance(struct, dict):
         raise TypeError("`struct' must be dict")
 
     for i in list(struct.keys()):
@@ -252,7 +247,7 @@ def struct_check(value, struct):
 
     typ = struct['t']
 
-    if type(typ) != tuple:
+    if not isinstance(typ, tuple):
         typ = typ,
 
     iterable_type = types(value)
@@ -271,47 +266,49 @@ def struct_check(value, struct):
     type_exact = True
     if 'te' in struct:
         type_exact = struct['te']
-        if type(type_exact) != bool:
+        if not isinstance(type_exact, bool):
             raise TypeError("`te' must be bool")
 
     can_be_none = False
     if 'None' in struct:
         can_be_none = struct['None']
-        if type(can_be_none) != bool:
+        if not isinstance(can_be_none, bool):
             raise TypeError("`None' must be bool")
 
     min_child_count = None
     if '<' in struct:
         min_child_count = struct['<']
-        if min_child_count != None and not type(min_child_count) == int:
+        if min_child_count is not None and not isinstance(
+                min_child_count, int):
             raise TypeError("`<' must be None or int")
 
     max_child_count = None
     if '>' in struct:
         max_child_count = struct['>']
-        if max_child_count != None and not type(max_child_count) == int:
+        if max_child_count is not None and not isinstance(
+                max_child_count, int):
             raise TypeError("`>' must be None or int")
 
     string_emptiness = True
     if '' in struct:
         string_emptiness = struct['']
-        if type(string_emptiness) != bool:
+        if not isinstance(string_emptiness, bool):
             raise TypeError("`' must be bool")
 
     string_is_space = True
     if ' ' in struct:
         string_is_space = struct[' ']
-        if type(string_is_space) != bool:
+        if not isinstance(string_is_space, bool):
             raise TypeError("` ' must be bool")
 
     next_test = None
     if '.' in struct:
         if value is not None:
             next_test = struct['.']
-            if next_test != None and not type(next_test) == dict:
+            if next_test is not None and not isinstance(next_test, dict):
                 raise TypeError("`.' must be None or dict")
 
-            if next_test != None and not iterable_type:
+            if next_test is not None and not iterable_type:
                 raise ValueError(
                     "`.' is not None so value must be a sequence"
                     )
@@ -329,10 +326,10 @@ def struct_check(value, struct):
         keys = list(dict_info.keys())
 
         for i in keys:
-            if not type(i) == str:
+            if not isinstance(i, str):
                 raise ValueError("keys in struct dict must be str")
 
-            if not type(dict_info[i]) == dict:
+            if not isinstance(dict_info[i], dict):
                 raise ValueError("values in struct dict must be dict")
 
     if can_be_none == True and value == None:
@@ -355,7 +352,7 @@ def struct_check(value, struct):
                                 found = True
                                 break
                     else:
-                        if type(value) == i:
+                        if isinstance(value, i):
                             found = True
                             break
 
@@ -366,42 +363,42 @@ def struct_check(value, struct):
                     ret = False
 
         if ret:
-            if min_child_count != None:
+            if min_child_count is not None:
                 if len(value) < min_child_count:
                     ret = False
 
         if ret:
-            if max_child_count != None:
+            if max_child_count is not None:
                 if len(value) > max_child_count:
                     ret = False
 
         if ret:
-            if (type(value) == str
-                and value == ''
-                and string_emptiness == False):
+            if (isinstance(value, str)
+                    and value == ''
+                    and string_emptiness == False):
                 ret = False
 
         if ret:
-            if (type(value) == bytes
-                and value == b''
-                and string_emptiness == False):
+            if (isinstance(value, bytes)
+                    and value == b''
+                    and string_emptiness == False):
                 ret = False
 
         if ret:
-            if (type(value) == str
-                and value.isspace()
-                and string_is_space == False):
+            if (isinstance(value, str)
+                    and value.isspace()
+                    and string_is_space == False):
                 ret = False
 
         if ret:
-            if (type(value) == bytes
-                and value.isspace()
-                and string_is_space == False):
+            if (isinstance(value, bytes)
+                    and value.isspace()
+                    and string_is_space == False):
                 ret = False
 
         if ret:
             if len(typ) == 1 and typ[0] == dict:
-                if type(dict_info) == dict:
+                if isinstance(dict_info, dict):
 
                     keys = list(dict_info.keys())
                     for i in keys:
@@ -432,7 +429,7 @@ def struct_check(value, struct):
                     raise Exception("Programming error")
 
         if ret:
-            if next_test != None:
+            if next_test is not None:
                 if iterable_type:
                     for i in value:
                         if struct_check(i, next_test) == False:
@@ -446,27 +443,27 @@ def struct_check(value, struct):
 
 
 def attrs_object_to_dict(object_, dict_, attrs_keys=None):
-
     """
     attrs_keys: list of tuples, each of wich ('attr_name', 'key_name')
     """
 
-    if  attrs_keys == None:
+    if attrs_keys is None:
         attrs_keys = list(object_.__dict__.keys())
 
     for i in attrs_keys:
         dict_[i[1]] = getattr(object_, i[0])
 
+    return
+
 
 def attrs_dict_to_object(
-    dict_, object_, attrs_keys=None, create_new_attributes=False
-    ):
-
+        dict_, object_, attrs_keys=None, create_new_attributes=False
+        ):
     """
     attrs_keys: list of tuples, each of wich ('attr_name', 'key_name')
     """
 
-    if attrs_keys == None:
+    if attrs_keys is None:
         attrs_keys = list(dict_.keys())
 
     for i in attrs_keys:
@@ -479,6 +476,8 @@ def attrs_dict_to_object(
                     i[0]
                     )
                 )
+
+    return
 
 
 def attrs_dict_to_object_same_names(lst):
@@ -493,3 +492,23 @@ def attrs_dict_to_object_same_names(lst):
 
 def is_method(obj):
     return hasattr(obj, '__self__')
+
+
+def value_to_bool(value):
+
+    ret = False
+
+    if isinstance(value, str):
+        ret = text_to_bool(value)
+    else:
+        ret = bool(value)
+
+    return ret
+
+
+def text_to_bool(text):
+
+    if not isinstance(text, str):
+        raise TypeError("`text' must be str")
+
+    return text.lower().strip() in ['1', 'yes', 'true', 'ok', 'y']

@@ -284,6 +284,16 @@ def get_subpath(basepath, fullpath):
 
     error = False
     for i in range(len(p1)):
+        # TODO: check this
+        if len(p1) < i + 1:
+            error = True
+            break
+
+        # TODO: check this
+        if len(p2) < i + 1:
+            error = True
+            break
+
         if p1[i] != p2[i]:
             error = True
             break
@@ -307,6 +317,16 @@ def is_subpath(path_to_check, path):
 
     error = False
     for i in range(len(p1)):
+        # TODO: check this
+        if len(p1) < i + 1:
+            error = True
+            break
+
+        # TODO: check this
+        if len(p2) < i + 1:
+            error = True
+            break
+
         if p1[i] != p2[i]:
             error = True
             break
@@ -329,6 +349,14 @@ def is_subpath_real(path_to_check, path):
 
     error = False
     for i in range(len(p1)):
+        if len(p1) < i + 1:
+            error = True
+            break
+
+        if len(p2) < i + 1:
+            error = True
+            break
+
         if p1[i] != p2[i]:
             error = True
             break
@@ -356,5 +384,33 @@ def select_by_prefered_extension(lst, ext_lst):
             ret = found
         else:
             ret = lst[0]
+
+    return ret
+
+
+def file_paths(filename):
+
+    abs_full = abspath(filename)
+    abs_dir = os.path.dirname(abs_full)
+    abs_dir_real = realpath(abs_dir)
+    abs_base = os.path.basename(abs_full)
+    abs_dir_real_full = join(abs_dir_real, abs_base)
+
+    real_full = realpath(abs_full)
+    real_dir = os.path.dirname(real_full)
+    real_base = os.path.basename(real_full)
+
+    ret = {
+        'abs_full': abs_full,
+        'abs_dir': abs_dir,
+        'abs_base': abs_base,
+
+        'abs_dir_real': abs_dir_real,
+        'abs_dir_real_full': abs_dir_real_full,
+
+        'real_full': real_full,
+        'real_dir': real_dir,
+        'real_base': real_base
+        }
 
     return ret
