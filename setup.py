@@ -3,8 +3,8 @@
 import subprocess
 import os.path
 
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup
+from setuptools import Extension
 
 py_compil_args = None
 py_link_args = None
@@ -21,7 +21,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='org_wayround_utils',
-    version='1.0',
+    version='1.0.1',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
