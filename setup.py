@@ -47,11 +47,12 @@ This package contains various useful modules functions and classes.
             extra_compile_args=py_compile_args,
             extra_link_args=py_link_args,
             ),
-        package_data={
-            'org.wayround.utils': [
-                'config.sub',
-                os.path.join('format', '*.c'),
-                os.path.join('format', '*.h')
+        ],
+    package_data={
+        'org.wayround.utils': [
+            'config.sub',
+            os.path.join('format', '*.c'),
+            os.path.join('format', '*.h')
             ]
         }
     )
