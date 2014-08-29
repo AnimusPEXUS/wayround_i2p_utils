@@ -2,35 +2,62 @@
 import copy
 import os.path
 
+import org.wayround.utils.types
+
 S_SEP = os.path.sep
 D_SEP = S_SEP * 2
 
+S_SEP_BYTES = bytes(S_SEP, 'ascii')
+D_SEP_BYTES = bytes(D_SEP, 'ascii')
+
 # TODO: documentation for all functions
+# TODO: make all functions support bytes as well as str
+
+
+def select_seps(str_in):
+    if not isinstance(str_in, (str, bytes)):
+        raise ValueError("str_in must be str or bytes")
+
+    ret = S_SEP, D_SEP
+    if isinstance(str_in, bytes):
+        ret = S_SEP_BYTES, D_SEP_BYTES
+    return ret
+
+
+def select_s_sep(str_in):
+    return select_seps(str_in)[0]
 
 
 def _remove_double_sep(str_in):
 
-    if not isinstance(str_in, str):
-        raise ValueError("str_in must be str")
+    if not isinstance(str_in, (str, bytes)):
+        raise ValueError("str_in must be str or bytes")
 
-    while D_SEP in str_in:
-        str_in = str_in.replace(D_SEP, S_SEP)
+    if isinstance(str_in, str):
+        while D_SEP in str_in:
+            str_in = str_in.replace(D_SEP, S_SEP)
+
+    elif isinstance(str_in, bytes):
+        while D_SEP_BYTES in str_in:
+            str_in = str_in.replace(D_SEP_BYTES, S_SEP_BYTES)
 
     return str_in
 
 
 def _remove_tariling_slash(str_in):
 
-    if not isinstance(str_in, str):
-        raise ValueError("str_in must be str")
+    if not isinstance(str_in, (str, bytes)):
+        raise ValueError("str_in must be str or bytes")
+
+    s_sep = select_s_sep(str_in)
 
     ret = str_in
 
-    while ret.endswith(S_SEP):
+    while ret.endswith(s_sep):
         ret = ret[:-1]
 
     if len(ret) == 0:
-        ret = S_SEP
+        ret = s_sep
 
     return ret
 
@@ -38,8 +65,14 @@ def _remove_tariling_slash(str_in):
 def join(*args):
 
     for i in args:
-        if not isinstance(i, (str, list,)):
-            raise ValueError("arguments must be strings or lists")
+        if not isinstance(i, (str, bytes, list,)):
+            raise ValueError("arguments must be str, bytes or lists")
+
+    res, res_t = org.wayround.utils.types.is_all_rec_bytes_str(args)
+    if not res:
+        raise ValueError(
+            "arguments must all be of same type: str, bytes or lists of them"
+            )
 
     if len(args) == 0:
         # raise TypeError("missing 1 required positional argument: 'args'")
@@ -49,7 +82,12 @@ def join(*args):
 
         abso = False
         if len(args) != 0 and len(args[0]) != 0:
-            abso = args[0][0] == S_SEP
+
+            s_sep = S_SEP
+            if isinstance(args[0][0], bytes):
+                s_sep = S_SEP_BYTES
+
+            abso = args[0][0] == s_sep
 
         ret_l = []
 
@@ -57,67 +95,92 @@ def join(*args):
 
             if isinstance(i, list):
 
-                ret_l += join(*i).split(S_SEP)
+                joined = join(*i)
+
+                s_sep = S_SEP
+                if isinstance(joined, bytes):
+                    s_sep = S_SEP_BYTES
+
+                ret_l += joined.split(s_sep)
 
             else:
-                ret_l += i.split(S_SEP)
 
-        while '' in ret_l:
-            ret_l.remove('')
+                s_sep = S_SEP
+                if isinstance(i, bytes):
+                    s_sep = S_SEP_BYTES
 
-        ret = S_SEP.join(ret_l)
+                ret_l += i.split(s_sep)
+
+        if len(ret_l) != 0:
+
+            while '' in ret_l:
+                ret_l.remove('')
+
+            while b'' in ret_l:
+                ret_l.remove(b'')
+
+        s_sep = S_SEP
+        if len(ret_l) != 0:
+            if isinstance(ret_l[0], bytes):
+                s_sep = S_SEP_BYTES
+    
+        ret = s_sep.join(ret_l)
 
         if abso:
-            ret = S_SEP + ret
+            ret = s_sep + ret
 
     return ret
 
 
 def split(path):
 
-    if not isinstance(path, str):
-        raise ValueError("path must be str")
+    if not isinstance(path, (str, bytes)):
+        raise ValueError("path must be str or bytes")
 
-    absp = path.startswith('/')
+    s_sep = select_s_sep(path)
+
+    absp = path.startswith(s_sep)
 
     path = _remove_double_sep(path)
     path = _remove_tariling_slash(path)
 
-    ret = path.split('/')
+    ret = path.split(s_sep)
 
     while '' in ret:
         ret.remove('')
 
-    if absp:
+    while b'' in ret:
+        ret.remove(b'')
 
-        ret.insert(0, '/')
+    if absp:
+        ret.insert(0, s_sep)
 
     return ret
 
 
 def normpath(path):
-    if not isinstance(path, str):
-        raise ValueError("path must be str")
+    if not isinstance(path, (str, bytes)):
+        raise ValueError("path must be str or bytes")
     return _remove_double_sep(os.path.normpath(path))
 
 
 def abspath(path):
-    if not isinstance(path, str):
-        raise ValueError("path must be str")
+    if not isinstance(path, (str, bytes)):
+        raise ValueError("path must be str or bytes")
     return _remove_double_sep(os.path.abspath(path))
 
 
 def relpath(path, start):
-    if not isinstance(path, str):
-        raise ValueError("path must be str")
-    if not isinstance(start, str):
-        raise ValueError("start must be str")
+    if not isinstance(path, (str, bytes)):
+        raise ValueError("path must be str or bytes")
+    if not isinstance(start, (str, bytes)):
+        raise ValueError("start must be str or bytes")
     return _remove_double_sep(os.path.relpath(path, start))
 
 
 def realpath(path):
-    if not isinstance(path, str):
-        raise ValueError("path must be str")
+    if not isinstance(path, (str, bytes)):
+        raise ValueError("path must be str or bytes")
     return _remove_double_sep(os.path.realpath(path))
 
 

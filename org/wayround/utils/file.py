@@ -16,13 +16,13 @@ POLL_CONSTS = {}
 
 _l = dir(select)
 for _i in [
-    'POLLIN',
-    'POLLPRI',
-    'POLLOUT',
-    'POLLERR',
-    'POLLHUP',
-    'POLLNVAL'
-    ]:
+        'POLLIN',
+        'POLLPRI',
+        'POLLOUT',
+        'POLLERR',
+        'POLLHUP',
+        'POLLNVAL'
+        ]:
     POLL_CONSTS[_i] = eval('select.{}'.format(_i))
 
 del _i
@@ -58,7 +58,7 @@ def _copy_symlink(src, dst, overwrite_dst=False):
 
     if ((os.path.isfile(dst)
          or os.path.islink(dst))
-        and overwrite_dst):
+            and overwrite_dst):
 
         os.unlink(dst)
 
@@ -79,11 +79,11 @@ def _copy_symlink(src, dst, overwrite_dst=False):
 
 
 def _copytree(
-    src_dir,
-    dst_dir,
-    overwrite_files=False,
-    stop_on_overwrite_error=True
-    ):
+        src_dir,
+        dst_dir,
+        overwrite_files=False,
+        stop_on_overwrite_error=True
+        ):
 
     # TODO: make verbose parameter
 
@@ -104,11 +104,11 @@ def _copytree(
         else:
 
             for path, dirs, files in os.walk(
-                src_dir,
-                topdown=True,
-                onerror=_copytree_on_error,
-                followlinks=False
-                ):
+                    src_dir,
+                    topdown=True,
+                    onerror=_copytree_on_error,
+                    followlinks=False
+                    ):
 
                 path_dst = org.wayround.utils.path.join(
                     full_dst_dir,
@@ -129,16 +129,17 @@ def _copytree(
                     if os.path.islink(joined):
 
                         if _copy_symlink(
-                            joined,
-                            joined_dst,
-                            overwrite_files
-                            ) != 0:
+                                joined,
+                                joined_dst,
+                                overwrite_files
+                                ) != 0:
                             ret = 3
 
                     else:
                         if create_if_not_exists_dir(joined_dst) != 0:
                             logging.error(
-                            "Can't create directory `{}'".format(joined_dst)
+                                "Can't create directory `{}'".format(
+                                    joined_dst)
                                 )
                             ret = 5
 
@@ -150,20 +151,20 @@ def _copytree(
                     if os.path.islink(joined):
 
                         if _copy_symlink(
-                            joined,
-                            joined_dst,
-                            overwrite_files
-                            ) != 0:
+                                joined,
+                                joined_dst,
+                                overwrite_files
+                                ) != 0:
                             ret = 3
                             break
 
                     elif os.path.isfile(joined):
 
                         if _copy_file(
-                            joined,
-                            joined_dst,
-                            overwrite_files
-                            ) != 0:
+                                joined,
+                                joined_dst,
+                                overwrite_files
+                                ) != 0:
                             ret = 4
                             break
 
@@ -182,12 +183,12 @@ def _copytree_on_error(err):
 
 
 def copytree(
-    src_dir,
-    dst_dir,
-    overwrite_files=False,
-    clear_before_copy=False,
-    dst_must_be_empty=True
-    ):
+        src_dir,
+        dst_dir,
+        overwrite_files=False,
+        clear_before_copy=False,
+        dst_must_be_empty=True
+        ):
 
     # TODO: think of hardlinks too..
 
@@ -217,7 +218,7 @@ def copytree(
             ret = 2
         else:
             if (_copytree(src_dir, dst_dir, overwrite_files=overwrite_files)
-                != 0):
+                    != 0):
                 logging.error(
                     "Some errors occurred while copying `{}' to `{}'".format(
                         src_dir,
@@ -338,18 +339,21 @@ def inderictory_copy_file(directory, file1, file2):
 
 
 def files_recurcive_list(
-    dirname,
-    onerror=None,
-    followlinks=False,
-    exclude_paths=None,
-    relative_to=None,
-    mute=True,
-    sort=False,
-    acceptable_endings=None,
-    print_found=False,
-    list_symlincs=True,
-    maxdepth=None
-    ):
+        dirname,
+        onerror=None,
+        followlinks=False,
+        exclude_paths=None,
+        relative_to=None,
+        mute=True,
+        sort=False,
+        acceptable_endings=None,
+        print_found=False,
+        list_symlincs=True,
+        maxdepth=None,
+        include_dirs=False
+        ):
+        
+    s_sep = org.wayround.utils.path.select_s_sep(dirname)
 
     if relative_to and not isinstance(relative_to, str):
         raise ValueError("relative_to must be str or None")
@@ -365,7 +369,7 @@ def files_recurcive_list(
 
     dirname = org.wayround.utils.path.normpath(dirname)
 
-    absp = dirname.startswith('/')
+    absp = dirname.startswith(s_sep)
     dirname = org.wayround.utils.path.abspath(dirname)
 
     lst = []
@@ -382,7 +386,7 @@ def files_recurcive_list(
 
             f_path = None
 
-            if i.startswith('/'):
+            if i.startswith(s_sep):
                 f_path = org.wayround.utils.path.abspath(i)
             else:
                 f_path = org.wayround.utils.path.abspath(
@@ -392,7 +396,7 @@ def files_recurcive_list(
                     )
 
             if ((dirname == os.path.sep and f_path.startswith(os.path.sep)) or
-                (f_path + os.path.sep).startswith(dirname + os.path.sep)):
+                    (f_path + os.path.sep).startswith(dirname + os.path.sep)):
                 exclude_paths2.append(f_path)
 
         exclude_paths = exclude_paths2
@@ -403,10 +407,10 @@ def files_recurcive_list(
     dirname_path_length = org.wayround.utils.path.path_length(dirname)
 
     for dire, dirs, files in os.walk(
-        dirname,
-        onerror=onerror,
-        followlinks=followlinks
-        ):
+            dirname,
+            onerror=onerror,
+            followlinks=followlinks
+            ):
 
         current_path_length = (
             org.wayround.utils.path.path_length(dire) - dirname_path_length
@@ -461,6 +465,21 @@ def files_recurcive_list(
                 if print_found and not mute:
                     print("    {}".format(f_path))
                 lst.append(f_path)
+
+        if include_dirs:
+            for f in dirs:
+
+                f_path = org.wayround.utils.path.join(dire, f)
+
+                append = True
+
+                if not list_symlincs and os.path.islink(f_path):
+                    append = False
+
+                if append:
+                    if print_found and not mute:
+                        print("    {}".format(f_path))
+                    lst.append(f_path)
 
         if not mute:
             pp = None
@@ -727,8 +746,8 @@ class FDStatusWatcher:
             raise TypeError("file descriptor must be given before start")
 
         if (not self._starting
-            and not self._stopping
-            and self.stat() == 'stopped'):
+                and not self._stopping
+                and self.stat() == 'stopped'):
 
             self._starting = True
 

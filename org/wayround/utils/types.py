@@ -170,7 +170,7 @@ for i in COMPARISON_TABLE.keys():
     exec(
         """
 def is{name}_s(obj):
-    return check_type_s(obj, {name})
+    return check_type_s(obj, '{name}')
 """.format(name=i)
         )
 
@@ -180,7 +180,7 @@ for i in COMPARISON_TABLE.keys():
     exec(
         """
 def is{name}(obj):
-    return check_type(obj, {name})
+    return check_type(obj, '{name}')
 """.format(name=i)
         )
 
@@ -512,3 +512,52 @@ def text_to_bool(text):
         raise TypeError("`text' must be str")
 
     return text.lower().strip() in ['1', 'yes', 'true', 'ok', 'y']
+
+
+def is_all_rec_bytes_str(args, empty_fails=False, _mb=None):
+    """
+    Check's what all values in args ar bytes or str, recurcevely
+
+    return bool, type (bool is True is passed. type is bytes, str or None)
+    """
+
+    if not isSequence(args):
+        raise TypeError("`args' must be sequence, not {}".format(type(args)))
+
+    if len(args) == 0:
+        ret = not empty_fails, _mb
+    else:
+
+        tt = _mb
+        error = False
+        for i in args:
+
+            if isinstance(i, list):
+                res, res_t = is_all_rec_bytes_str(i, empty_fails, tt)
+
+                if res == False:
+                    error = True
+                    break
+                else:
+                    if tt is None:
+                        tt = res_t
+                    else:
+                        if tt != res_t:
+                            error = True
+                            break
+
+            else:
+
+                if tt is None:
+                    tt = type(i)
+                else:
+                    if not isinstance(i, tt):
+                        error = True
+                        break
+
+        if error:
+            ret = False, None
+        else:
+            ret = True, tt
+
+    return ret
