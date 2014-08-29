@@ -11,3 +11,4 @@
 *~
 *.so
 /MANIFEST
+/org_wayround_utils.egg-info
