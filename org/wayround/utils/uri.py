@@ -2,6 +2,8 @@ import copy
 import urllib
 import re
 
+# TODO: this module requires deprications and deletions
+
 
 def paths_by_path(path, last_el_type=None, path_is_absolute=None):
     '''
@@ -95,14 +97,18 @@ def ischild(path1, path2):
     l1 = len(p1)
     l2 = len(p2)
 
+    ret = True
+
     if l2 != (l1 + 1):
-        return False
+        ret = False
 
-    for i in range(l1):
-        if urllib.parse.unquote(p1[i]) != urllib.parse.unquote(p2[i]):
-            return False
+    if ret:
+        for i in range(l1):
+            if urllib.parse.unquote(p1[i]) != urllib.parse.unquote(p2[i]):
+                ret = False
+                break
 
-    return True
+    return ret
 
 is_child = ischild
 
@@ -130,9 +136,10 @@ def parse_scheme_and_data(uri, ret_data=['scheme', 'data']):
             if i in ret_data:
                 ret[i] = eval(i)
 
-        return ret
     else:
-        return None
+        ret = None
+
+    return ret
 
 
 def _parse_r(uri, part):
@@ -169,32 +176,38 @@ def parse(
     """
     scheme = parse_scheme(url)
 
+    ret = None
+
     if scheme is None:
-        return None
+        ret = None
+    else:
+        re_res = re.match(r'(.*?):(.*)', url)
 
-    re_res = re.match(r'(.*?):(.*)', url)
+        if re_res is not None:
+            scheme = re_res.group(1)
+            data = re_res.group(2)
 
-    if re_res is not None:
-        scheme = re_res.group(1)
-        data = re_res.group(2)
+            if scheme in ['http', 'https', 'ftp']:
+                ret = parse_all_data(data)
+                ret['scheme'] = scheme
+            else:
+                ret = None
 
-        if scheme in ['http', 'https', 'ftp']:
-            ret = parse_all_data(data)
-            ret['scheme'] = scheme
-            return ret
-        else:
-            return None
+    return ret
 
 
 def is_same_host(uri1, uri2):
-
     return is_same_site(uri1, uri2, False, False)
 
 
-def is_same_site(uri1,
-                 uri2,
-                 not_if_scheme_not_eql=True,
-                 not_if_port_not_eql=True):
+def is_same_site(
+        uri1,
+        uri2,
+        not_if_scheme_not_eql=True,
+        not_if_port_not_eql=True
+        ):
+
+    ret = True
 
     u1 = parse(uri1)
     u2 = parse(uri2)
@@ -209,9 +222,10 @@ def is_same_site(uri1,
 
     for i in lst:
         if u1[i] != u2[i]:
-            return False
+            ret = False
+            break
 
-    return True
+    return ret
 
 
 def del_not_same_hosts(uri, lst):
@@ -224,11 +238,12 @@ def del_not_same_hosts(uri, lst):
     return ret
 
 
-def del_not_same_sites(uri,
-                       lst,
-                       not_if_scheme_not_eql=True,
-                       not_if_port_not_eql=True
-                       ):
+def del_not_same_sites(
+        uri,
+        lst,
+        not_if_scheme_not_eql=True,
+        not_if_port_not_eql=True
+        ):
     """
     Takes URI. Takes URI list. And then, compares lst items to uri,
     forming new list to return.
@@ -250,9 +265,12 @@ def del_not_same_sites(uri,
     return ret
 
 
-def is_child_uri(uri1, uri2,
-                 not_if_scheme_not_eql=True,
-                 not_if_port_not_eql=True):
+def is_child_uri(
+        uri1,
+        uri2,
+        not_if_scheme_not_eql=True,
+        not_if_port_not_eql=True
+        ):
     """
     Check is uri2 chiled to uri1
     """
@@ -260,17 +278,24 @@ def is_child_uri(uri1, uri2,
     u1 = parse(uri1)
     u2 = parse(uri2)
 
+    ret = True
+
     if u1 is None or u2 is None:
-        return None
+        ret = None
 
-    if not is_same_site(
-            uri1, uri2, not_if_scheme_not_eql, not_if_port_not_eql):
-        return None
+    else:
+        if not is_same_site(
+                uri1,
+                uri2,
+                not_if_scheme_not_eql,
+                not_if_port_not_eql
+                ):
+            ret = None
 
-    if not is_child(u1['path_lst'], u2['path_lst']):
-        return False
+        if not is_child(u1['path_lst'], u2['path_lst']):
+            ret = False
 
-    return True
+    return ret
 
 
 def del_not_child_uris(uri, lst):

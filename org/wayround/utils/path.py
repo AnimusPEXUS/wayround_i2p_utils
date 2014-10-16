@@ -25,7 +25,10 @@ def select_seps(str_in):
 
 
 def select_s_sep(str_in):
-    return select_seps(str_in)[0]
+    ret = S_SEP
+    if isinstance(str_in, bytes):
+        ret = S_SEP_BYTES
+    return ret
 
 
 def _remove_double_sep(str_in):
@@ -44,7 +47,7 @@ def _remove_double_sep(str_in):
     return str_in
 
 
-def _remove_tariling_slash(str_in):
+def _remove_trailing_slash(str_in):
 
     if not isinstance(str_in, (str, bytes)):
         raise ValueError("str_in must be str or bytes")
@@ -56,37 +59,42 @@ def _remove_tariling_slash(str_in):
     while ret.endswith(s_sep):
         ret = ret[:-1]
 
-    if len(ret) == 0:
-        ret = s_sep
+    # TODO: what is it? commented out 2014-08-30
+    # if len(ret) == 0:
+    #     ret = s_sep
 
     return ret
 
 
-def join(*args):
+def join(*args, must_be=str):
+
+    if not must_be in [str, bytes]:
+        raise ValueError("`must_be' must be in [str, bytes]")
+
+    s_sep = S_SEP
+    if must_be == bytes:
+        s_sep = S_SEP_BYTES
 
     for i in args:
         if not isinstance(i, (str, bytes, list,)):
             raise ValueError("arguments must be str, bytes or lists")
 
-    res, res_t = org.wayround.utils.types.is_all_rec_bytes_str(args)
+    res, res_t = org.wayround.utils.types.is_all_rec_bytes_str(
+        args,
+        must_be=must_be
+        )
     if not res:
         raise ValueError(
             "arguments must all be of same type: str, bytes or lists of them"
             )
 
     if len(args) == 0:
-        # raise TypeError("missing 1 required positional argument: 'args'")
-        ret = ''
+        ret = s_sep[0:0]
 
     else:
 
         abso = False
         if len(args) != 0 and len(args[0]) != 0:
-
-            s_sep = S_SEP
-            if isinstance(args[0][0], bytes):
-                s_sep = S_SEP_BYTES
-
             abso = args[0][0] == s_sep
 
         ret_l = []
@@ -95,19 +103,11 @@ def join(*args):
 
             if isinstance(i, list):
 
-                joined = join(*i)
-
-                s_sep = S_SEP
-                if isinstance(joined, bytes):
-                    s_sep = S_SEP_BYTES
+                joined = join(*i, must_be=must_be)
 
                 ret_l += joined.split(s_sep)
 
             else:
-
-                s_sep = S_SEP
-                if isinstance(i, bytes):
-                    s_sep = S_SEP_BYTES
 
                 ret_l += i.split(s_sep)
 
@@ -119,11 +119,6 @@ def join(*args):
             while b'' in ret_l:
                 ret_l.remove(b'')
 
-        s_sep = S_SEP
-        if len(ret_l) != 0:
-            if isinstance(ret_l[0], bytes):
-                s_sep = S_SEP_BYTES
-    
         ret = s_sep.join(ret_l)
 
         if abso:
@@ -142,7 +137,7 @@ def split(path):
     absp = path.startswith(s_sep)
 
     path = _remove_double_sep(path)
-    path = _remove_tariling_slash(path)
+    path = _remove_trailing_slash(path)
 
     ret = path.split(s_sep)
 
@@ -184,28 +179,22 @@ def realpath(path):
     return _remove_double_sep(os.path.realpath(path))
 
 
-def abspaths(lst, remove_duplications=True):
+def abspaths(lst):
 
     ret = list()
 
     for i in lst:
         ret.append(abspath(i))
 
-    if remove_duplications:
-        ret = list(set(ret))
-
     return ret
 
 
-def realpaths(lst, remove_duplications=True):
+def realpaths(lst):
 
     ret = list()
 
     for i in lst:
         ret.append(realpath(i))
-
-    if remove_duplications:
-        ret = list(set(ret))
 
     return ret
 
@@ -244,8 +233,6 @@ def prepend_path(lst, base):
 
         lst[i] = base + sep + lst[i]
 
-    lst = list(set(lst))
-
     return lst
 
 
@@ -274,8 +261,6 @@ def unprepend_path(lst, base):
     for i in range(len(lst)):
 
         lst[i] = lst[i][base_l:]
-
-    lst = list(set(lst))
 
     return lst
 
@@ -332,19 +317,7 @@ def path_length(string):
     return len(split(string))
 
 
-def get_subpath(basepath, fullpath):
-
-    if not isinstance(basepath, str):
-        raise ValueError("path must be str")
-
-    if not isinstance(fullpath, str):
-        raise ValueError("path_to_check must be str")
-
-    p1 = split(abspath(basepath))
-    p2 = split(abspath(fullpath))
-
-    ret = None
-
+def _is_subpath_range_error(p1, p2):
     error = False
     for i in range(len(p1)):
         # TODO: check this
@@ -360,6 +333,24 @@ def get_subpath(basepath, fullpath):
         if p1[i] != p2[i]:
             error = True
             break
+
+    return ret
+
+
+def get_subpath(basepath, fullpath):
+
+    if not isinstance(basepath, str):
+        raise ValueError("path must be str")
+
+    if not isinstance(fullpath, str):
+        raise ValueError("path_to_check must be str")
+
+    p1 = split(abspath(basepath))
+    p2 = split(abspath(fullpath))
+
+    ret = None
+
+    error = _is_subpath_range_error(p1, p2, i)
 
     if not error:
         ret = join(p2[len(p1):])
@@ -378,21 +369,7 @@ def is_subpath(path_to_check, path):
     p1 = split(abspath(path))
     p2 = split(abspath(path_to_check))
 
-    error = False
-    for i in range(len(p1)):
-        # TODO: check this
-        if len(p1) < i + 1:
-            error = True
-            break
-
-        # TODO: check this
-        if len(p2) < i + 1:
-            error = True
-            break
-
-        if p1[i] != p2[i]:
-            error = True
-            break
+    error = _is_subpath_range_error(p1, p2, i)
 
     ret = not error
 
@@ -410,19 +387,7 @@ def is_subpath_real(path_to_check, path):
     p1 = split(realpath(path))
     p2 = split(realpath(path_to_check))
 
-    error = False
-    for i in range(len(p1)):
-        if len(p1) < i + 1:
-            error = True
-            break
-
-        if len(p2) < i + 1:
-            error = True
-            break
-
-        if p1[i] != p2[i]:
-            error = True
-            break
+    error = _is_subpath_range_error(p1, p2, i)
 
     ret = not error
 

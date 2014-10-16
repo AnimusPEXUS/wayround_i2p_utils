@@ -6,6 +6,7 @@ import org.wayround.utils.path
 import org.wayround.utils.stream
 import org.wayround.utils.time
 
+
 def process_output_logger(process, log):
     t = org.wayround.utils.stream.lbl_write(
         process.stdout,
@@ -27,6 +28,7 @@ def process_output_logger(process, log):
 
     return
 
+
 class Log:
 
     def __init__(self, log_dir, logname, echo=True, timestamp=None):
@@ -46,9 +48,9 @@ class Log:
         else:
 
             if (
-                not os.path.isdir(log_dir)
-                or os.path.islink(log_dir)
-                ):
+                    not os.path.isdir(log_dir)
+                    or os.path.islink(log_dir)
+                    ):
                 logging.error(
                     "Current file type is not acceptable: {}".format(
                         log_dir
@@ -57,7 +59,7 @@ class Log:
                 ret = 2
 
         if ret == 0:
-            if timestamp == None:
+            if timestamp is None:
                 timestamp = org.wayround.utils.time.currenttime_stamp()
             filename = org.wayround.utils.path.abspath(
                 os.path.join(
@@ -102,7 +104,7 @@ class Log:
                         pass
 
     def stop(self, echo=True):
-        if self.fileobj == None:
+        if self.fileobj is None:
             raise Exception
 
         timestamp = org.wayround.utils.time.currenttime_stamp()
@@ -124,7 +126,7 @@ class Log:
         if not typ in ['info', 'error', 'warning']:
             raise ValueError("Wrong `typ' parameter")
 
-        if self.fileobj == None:
+        if self.fileobj is None:
             raise Exception("Log output file object is None")
 
         if timestamp:
@@ -170,5 +172,3 @@ class Log:
 
     def warning(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='warning', timestamp=timestamp)
-
-

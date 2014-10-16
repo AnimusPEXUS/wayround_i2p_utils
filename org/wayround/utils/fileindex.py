@@ -24,16 +24,16 @@ class FileIndexer:
             )
 
     def __init__(
-        self,
-        config_string,
-        add_commit_items_no=200,
-        del_commit_items_no=200,
-        ):
+            self,
+            config_string,
+            add_commit_items_no=200,
+            del_commit_items_no=200,
+            ):
 
         self._db_engine = \
             sqlalchemy.create_engine(
-            config_string,
-            echo=False
+                config_string,
+                echo=False
             )
 
         self.Base.metadata.bind = self._db_engine
@@ -89,7 +89,10 @@ class FileIndexer:
         logging.info("Searching for missing files")
 
         for i in names:
-            full_name = org.wayround.utils.path.abspath(basedir + os.path.sep + i.name)
+            full_name = org.wayround.utils.path.abspath(
+                basedir +
+                os.path.sep +
+                i.name)
             if not os.path.exists(full_name):
 
                 logging.debug("`{}' not found -- deleting".format(full_name))

@@ -25,3 +25,15 @@ def env_vars_edit(var_list, mode='copy'):
                 ret[i] = var_list[i]
 
     return ret
+
+
+def list_dirs_for_so_files():
+    """
+    Return list of system directories in which shared object (so) files are
+    stored. basicly it is lines from /etc/ld.co.conf + splitted values from
+    LD_LIBRARY_PATH environment variable
+    """
+
+    ret = []
+
+    return ret

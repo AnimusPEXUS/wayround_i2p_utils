@@ -134,6 +134,7 @@ def _copytree(
                                 overwrite_files
                                 ) != 0:
                             ret = 3
+                            # TODO: break?
 
                     else:
                         if create_if_not_exists_dir(joined_dst) != 0:
@@ -142,7 +143,9 @@ def _copytree(
                                     joined_dst)
                                 )
                             ret = 5
+                            # TODO: break?
 
+                # TODO: if ret == 0?
                 for i in files:
 
                     joined = org.wayround.utils.path.join(path, i)
@@ -352,7 +355,7 @@ def files_recurcive_list(
         maxdepth=None,
         include_dirs=False
         ):
-        
+
     s_sep = org.wayround.utils.path.select_s_sep(dirname)
 
     if relative_to and not isinstance(relative_to, str):

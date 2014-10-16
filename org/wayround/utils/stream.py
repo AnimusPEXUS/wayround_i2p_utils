@@ -31,23 +31,23 @@ class CatTerminationFlagFound(Exception):
 class Streamer:
 
     def __init__(
-        self,
-        stream_object,
-        stream_object_read_meth,
-        stream_object_write_meth,
-        stream_object_mode='file',
-        bs=2 * 1024 ** 2,
-        descriptor_to_wait_for=None,
-        flush_after_each_write=False,
-        standard_write_method_result=None,
-        thread_name='Thread',
-        termination_event=None,
-        verbose=False,
-        debug=False,
-        on_exit_callback=None,
-        on_input_read_error=None,
-        on_output_write_error=None
-        ):
+            self,
+            stream_object,
+            stream_object_read_meth,
+            stream_object_write_meth,
+            stream_object_mode='file',
+            bs=2 * 1024 ** 2,
+            descriptor_to_wait_for=None,
+            flush_after_each_write=False,
+            standard_write_method_result=None,
+            thread_name='Thread',
+            termination_event=None,
+            verbose=False,
+            debug=False,
+            on_exit_callback=None,
+            on_input_read_error=None,
+            on_output_write_error=None
+            ):
 
         if not stream_object_mode in CAT_READWRITE_TYPES:
             raise ValueError("invalid `descriptor_mode'")
@@ -94,11 +94,11 @@ class Streamer:
                 )
 
         while len(
-            select.select([self._descriptor_to_wait_for], [], [], 0.2)[0]
-            ) == 0:
+                select.select([self._descriptor_to_wait_for], [], [], 0.2)[0]
+                ) == 0:
 
             if (self._termination_event
-                and self._termination_event.is_set()):
+                    and self._termination_event.is_set()):
                 raise CatTerminationFlagFound()
 
             if self._debug:
@@ -148,19 +148,19 @@ class Streamer:
                 )
 
         while len(
-            select.select([], [self._descriptor_to_wait_for], [], 0.2)[1]
-            ) == 0:
+                select.select([], [self._descriptor_to_wait_for], [], 0.2)[1]
+                ) == 0:
 
             if (self._termination_event
-                and self._termination_event.is_set()):
+                    and self._termination_event.is_set()):
                 raise CatTerminationFlagFound()
 
             if self._debug:
                 logging.debug(
-            "{}: rewaiting for output descriptor {}".format(
-                self._thread_name,
-                self._descriptor_to_wait_for
-                )
+                    "{}: rewaiting for output descriptor {}".format(
+                        self._thread_name,
+                        self._descriptor_to_wait_for
+                        )
                     )
 
         if self._debug:
@@ -174,7 +174,6 @@ class Streamer:
         return
 
     def read(self):
-
         """
         ret[0] == True - stream closed
         """
@@ -187,7 +186,7 @@ class Streamer:
             if self._stream_object_mode in ['file', 'pipe', 'socket', 'ssl']:
 
                 if (self._termination_event
-                    and self._termination_event.is_set()):
+                        and self._termination_event.is_set()):
                     raise CatTerminationFlagFound()
 
                 if self._debug:
@@ -223,13 +222,13 @@ class Streamer:
                   in ['socket-nb', 'ssl-nb', 'pipe-nb']):
 
                 if self._stream_object_mode in SELECTABLE:
-                    if self._descriptor_to_wait_for != None:
+                    if self._descriptor_to_wait_for is not None:
                         self._wait_input_avail()
 
                 while True:
 
                     if (self._termination_event
-                        and self._termination_event.is_set()):
+                            and self._termination_event.is_set()):
                         raise CatTerminationFlagFound()
 
                     try:
@@ -296,10 +295,10 @@ class Streamer:
             ret_closed = True
             raise TypeError(
                 (
-                 "Can read only bytes buffer "
-                 "(Not str or anything other), but "
-                 "buffer is ({}):{}..."
-                 ).format(
+                    "Can read only bytes buffer "
+                    "(Not str or anything other), but "
+                    "buffer is ({}):{}..."
+                    ).format(
                     type(ret_buff),
                     repr(ret_buff)[:100]
                     )
@@ -314,7 +313,7 @@ class Streamer:
         if buff:
 
             if (self._termination_event
-                and self._termination_event.is_set()):
+                    and self._termination_event.is_set()):
                 raise CatTerminationFlagFound()
 
             try:
@@ -322,7 +321,7 @@ class Streamer:
                 while len(buff) != 0:
 
                     if self._stream_object_mode in SELECTABLE:
-                        if self._descriptor_to_wait_for != None:
+                        if self._descriptor_to_wait_for is not None:
                             self._wait_output_avail()
 
                     sb = buff[:self._bs]
@@ -335,8 +334,9 @@ class Streamer:
             except TypeError as err_val:
                 if err_val.args[0] == 'must be str, not bytes':
                     logging.warning(
-    "{}: hint: check that output is in bytes mode or do"
-    " conversion with convert_to_str option".format(self._thread_name)
+                        "{}: hint: check that output is in bytes mode or do"
+                        " conversion with convert_to_str option".format(
+                            self._thread_name)
                         )
                 raise
 
@@ -376,33 +376,33 @@ class Streamer:
 
 
 def cat(
-    stdin,
-    stdout,
-    bs=2 * 1024 ** 2,
-    count=None,
-    threaded=False,
-    thread_name='Thread',
-    verbose=False,
-    convert_to_str=None,
-    read_method_name='read',
-    write_method_name='write',
-    read_type='file',
-    write_type='file',
-    exit_on_input_eof=True,
-    flush_after_each_write=False,
-    flush_on_input_eof=False,
-    close_output_on_eof=False,
-    descriptor_to_wait_for_input=None,
-    descriptor_to_wait_for_output=None,
-    apply_input_seek=True,
-    apply_output_seek=True,
-    standard_write_method_result=True,
-    termination_event=None,
-    on_exit_callback=None,
-    on_input_read_error=None,
-    on_output_write_error=None,
-    debug=False
-    ):
+        stdin,
+        stdout,
+        bs=2 * 1024 ** 2,
+        count=None,
+        threaded=False,
+        thread_name='Thread',
+        verbose=False,
+        convert_to_str=None,
+        read_method_name='read',
+        write_method_name='write',
+        read_type='file',
+        write_type='file',
+        exit_on_input_eof=True,
+        flush_after_each_write=False,
+        flush_on_input_eof=False,
+        close_output_on_eof=False,
+        descriptor_to_wait_for_input=None,
+        descriptor_to_wait_for_output=None,
+        apply_input_seek=True,
+        apply_output_seek=True,
+        standard_write_method_result=True,
+        termination_event=None,
+        on_exit_callback=None,
+        on_input_read_error=None,
+        on_output_write_error=None,
+        debug=False
+        ):
 
     if not read_method_name.isidentifier():
         raise ValueError("Wrong `read_method_name' parameter")
@@ -431,14 +431,14 @@ def cat(
     elif convert_to_str == False:
         convert_to_str = None
 
-    if (convert_to_str != None
+    if (convert_to_str is not None
         and not isinstance(convert_to_str, str)
         ):
         raise ValueError(
             "convert_to_str can only be str(encoding name), bool or None"
             )
 
-    if thread_name == None:
+    if thread_name is None:
         thread_name = 'Thread'
 
     if threaded:
@@ -530,7 +530,7 @@ def cat(
 
             closed, buff = s1.read()
 
-            if not closed and buff != None and len(buff) != 0:
+            if not closed and buff is not None and len(buff) != 0:
 
                 if debug:
 
@@ -555,7 +555,7 @@ def cat(
                             write_method
                             )
                         )
-                if convert_to_str != None:
+                if convert_to_str is not None:
                     buff = str(buff, encoding=convert_to_str)
 
                 if termination_event and termination_event.is_set():
@@ -613,15 +613,15 @@ Ending `{name}' thread
        with buffer size {bufs} bytes ({bufm:4.2f} MiB)
     }}
 """.format_map({
-    'name': thread_name,
-    'num': c,
-    'size': bytes_counter,
-    'sizem': (float(bytes_counter) / 1024 / 1024),
-    'bufs': bs,
-    'bufm': (float(bs) / 1024 / 1024)
-    }
-    )
-)
+            'name': thread_name,
+            'num': c,
+            'size': bytes_counter,
+            'sizem': (float(bytes_counter) / 1024 / 1024),
+            'bufs': bs,
+            'bufm': (float(bs) / 1024 / 1024)
+            }
+            )
+            )
 
     if on_exit_callback:
         threading.Thread(
@@ -667,6 +667,7 @@ def lbl_write(stdin, stdout, threaded=False, typ='info'):
 
 
 class SocketStreamer:
+
     """
     Featured class for flexibly handling socket connection
 
@@ -844,10 +845,10 @@ class SocketStreamer:
             self._in_thread_stop_event.set()
             self._out_thread_stop_event.set()
 
-            if t_in != None:
+            if t_in is not None:
                 t_in.join()
 
-            if t_out != None:
+            if t_out is not None:
                 t_out.join()
 
             self._wait_threads('stopped')
@@ -872,10 +873,10 @@ class SocketStreamer:
         v1 = self._in_thread
         v2 = self._out_thread
 
-        if v1 != None and v2 != None:
+        if v1 is not None and v2 is not None:
             ret = 'working'
 
-        elif v1 == None and v2 == None:
+        elif v1 is None and v2 is None:
             ret = 'stopped'
 
         return ret
@@ -1098,7 +1099,7 @@ compression:
             #  and v3 != None
             ret = 'working'
 
-        elif threads == 'stopped' and v3 == None:
+        elif threads == 'stopped' and v3 is None:
             ret = 'stopped'
 
         return ret

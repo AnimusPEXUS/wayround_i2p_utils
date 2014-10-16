@@ -7,8 +7,8 @@ This module is not even developed yet
 
 import json
 
-def encrypt_data(data, password):
 
+def encrypt_data(data, password):
 
     ret = None
 
@@ -22,6 +22,7 @@ def encrypt_data(data, password):
         ret = None
 
     return ret
+
 
 def decrypt_data(data, password):
 

@@ -41,7 +41,7 @@ def split(str_line):
                     continue
 
                 p = find_quot(str_line, qc, i)
-                if p == None:
+                if p is None:
                     i = str_line_len
                     continue
                 i = p
@@ -55,6 +55,7 @@ def split(str_line):
                 i += 1
 
     return params
+
 
 def work_param(str_line):
     ret = correct_quotes_remove(str_line)
@@ -78,7 +79,7 @@ def correct_quotes_remove(str_line):
             cut0 = [0]
             q0 = find_chars(ret, start=0, chars=c)
 
-            if q0[0] == None:
+            if q0[0] is None:
                 break
 
             cut0.append(q0[1])
@@ -87,36 +88,37 @@ def correct_quotes_remove(str_line):
 
             q1 = find_chars(ret, start=cut1[0], chars=c)
 
-            if q1[0] == None:
+            if q1[0] is None:
                 break
 
             cut1.append(q1[1])
 
             cut2 = [q1[1] + 1, ret_len]
 
-            ret = ret[cut0[0]:cut0[1]] + ret[cut1[0]:cut1[1]] + ret[cut2[0]:cut2[1]]
+            ret = ret[cut0[0]:cut0[1]] + \
+                ret[cut1[0]:cut1[1]] + ret[cut2[0]:cut2[1]]
 
     return ret
+
 
 def unquote_chars(str_line, chars=" '\""):
     clst = []
     for c in chars:
         clst.append(c)
-    clst = list(set(clst))
-    clst.sort()
+    clst = sorted(set(clst))
 
     for c in clst:
         str_line.replace('\\' + c, c)
 
     return str_line
 
+
 def find_chars(str_line, start=0, chars=" '\""):
 
     clst = []
     for c in chars:
         clst.append(c)
-    clst = list(set(clst))
-    clst.sort()
+    clst = sorted(set(clst))
     lst = []
 
     for c in clst:
@@ -140,6 +142,7 @@ def find_chars(str_line, start=0, chars=" '\""):
                 ret = tuple(e)
 
     return ret
+
 
 def find_quot(str_line, qc, start):
 

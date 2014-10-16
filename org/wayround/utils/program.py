@@ -60,7 +60,7 @@ def command_processor(
         ):
 
     opts, args = org.wayround.utils.getopt.getopt_keyed(opts_and_args_list)
-    
+
     ret = dict(
         code=0,
         message='Default Exit',
@@ -83,18 +83,18 @@ def command_processor(
                 message='error',
                 main_message="invalid command or subsection name"
                 )
-            break                
+            break
 
         subtree = subtree[ii]
         level_depth.append(ii)
 
         if callable(subtree):
             break
-            
+
     if ret['code'] != 0:
         pass
     else:
-    
+
         args = args[len(level_depth):]
 
         args_l = len(args)

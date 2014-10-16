@@ -5,6 +5,7 @@ import logging
 NEW_DICT_KEY_TEMPLATE = '{last_placer_child_name}_auto_appended_key_{num:010d}'
 LAST_DICT_KEY_CHECK_RE = r'(.*)_auto_appended_key_(\d{10})'
 
+
 def append(indict, what_to_append):
 
     last_name = max(indict)

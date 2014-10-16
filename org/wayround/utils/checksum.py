@@ -10,9 +10,9 @@ import org.wayround.utils.terminal
 
 
 def make_dir_checksums(
-    dirname, output_filename,
-    rel_to=None, conv_to_rooted=True
-    ):
+        dirname, output_filename,
+        rel_to=None, conv_to_rooted=True
+        ):
 
     ret = 0
 
@@ -44,11 +44,11 @@ def make_dir_checksums(
 
 
 def make_dir_checksums_fo(
-    dirname,
-    output_fileobj,
-    rel_to=None,
-    conv_to_rooted=True
-    ):
+        dirname,
+        output_fileobj,
+        rel_to=None,
+        conv_to_rooted=True
+        ):
 
     if not isinstance(rel_to, str):
         rel_to = dirname
@@ -57,7 +57,7 @@ def make_dir_checksums_fo(
 
     dirname = org.wayround.utils.path.abspath(dirname)
 
-    if rel_to == None:
+    if rel_to is None:
         rel_to = dirname
 
     rel_to = org.wayround.utils.path.abspath(rel_to)
@@ -89,9 +89,9 @@ def make_dir_checksums_fo(
                         "    {}".format(rel_path)
                         )
                     if (os.path.isfile(root_f)
-                        and
-                        not os.path.islink(root_f)
-                        ):
+                            and
+                            not os.path.islink(root_f)
+                            ):
                         m = hashlib.sha512()
                         fd = None
                         try:
@@ -116,7 +116,7 @@ def make_dir_checksums_fo(
                                 wfn = rel_path
 
                                 if (conv_to_rooted
-                                    and not wfn.startswith(os.path.sep)):
+                                        and not wfn.startswith(os.path.sep)):
 
                                     wfn = os.path.sep + wfn
 
@@ -223,7 +223,7 @@ def parse_checksums_text(text):
         if ist != '':
             re_res = re.match(r'(.*?) \*(.*)', ist)
 
-            if re_res == None:
+            if re_res is None:
                 ret = 1
                 break
             else:

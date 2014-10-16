@@ -105,7 +105,6 @@ def _opts_strip(opts_list):
 
 
 def check_options(opts, opts_list, mute=False):
-
     """
     opts - list of opts returned by getopt (i.e.)
     opts_list - list of acceptable options:
@@ -140,7 +139,7 @@ def check_options(opts, opts_list, mute=False):
             ret += 1
 
         if i_stripped in opts:
-            if value_required and opts[i_stripped] == None:
+            if value_required and opts[i_stripped] is None:
 
                 if not mute:
                     logging.error(

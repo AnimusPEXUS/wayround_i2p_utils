@@ -9,9 +9,9 @@ import org.wayround.utils.tarball
 
 
 def source_version_comparator(
-    name1, name2,
-    acceptable_source_name_extensions
-    ):
+        name1, name2,
+        acceptable_source_name_extensions
+        ):
 
     ret = 0
 
@@ -31,10 +31,10 @@ def source_version_comparator(
         acceptable_source_name_extensions
         )
 
-    if d1 == None:
+    if d1 is None:
         raise Exception("Can't parse filename: {}".format(name1))
 
-    if d2 == None:
+    if d2 is None:
         raise Exception("Can't parse filename: {}".format(name2))
 
     if d1['groups']['name'] != d2['groups']['name']:
@@ -67,9 +67,9 @@ def source_version_comparator(
 
 
 def standard_comparator(
-    version1,
-    version2
-    ):
+        version1,
+        version2
+        ):
 
     logging.debug("standard_comparator: `{}', `{}'".format(version1, version2))
 
@@ -117,9 +117,9 @@ def standard_comparator(
 
 
 def standard_comparison(
-    version_list1, status_list1,
-    version_list2, status_list2
-    ):
+        version_list1, status_list1,
+        version_list2, status_list2
+        ):
 
     vers_comp_res = None
     stat_comp_res = None
@@ -163,8 +163,8 @@ def standard_comparison(
             continue
 
     # second comparison part
-    if vers_comp_res == None:
-        if longer != None:
+    if vers_comp_res is None:
+        if longer is not None:
             if longer == 'vers1':
                 logging.debug(str(vers1) + ' > ' + str(vers2))
                 vers_comp_res = +1
@@ -172,11 +172,11 @@ def standard_comparison(
                 logging.debug(str(vers1) + ' > ' + str(vers2))
                 vers_comp_res = -1
 
-    if vers_comp_res == None:
+    if vers_comp_res is None:
         vers_comp_res = 0
 
     if vers_comp_res == 0:
-        if status_list1 != None and status_list2 != None:
+        if status_list1 is not None and status_list2 is not None:
             s1 = '.'.join(status_list1)
             s2 = '.'.join(status_list2)
             if s1 > s2:

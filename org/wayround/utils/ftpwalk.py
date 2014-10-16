@@ -10,6 +10,7 @@ import org.wayround.utils.path
 def v(s):
     logging.debug(s)
 
+
 class FTPWalk:
 
     def __init__(self, ftp_connection, verbose=False):
@@ -21,14 +22,14 @@ class FTPWalk:
 
         self._init(verbose)
 
-
     def __del__(self):
         self.clean()
 
     def _init(self, verbose=False):
         self._verbose = verbose
 
-        self.re_ex = re.compile(r'(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*)')
+        self.re_ex = re.compile(
+            r'(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*?)([ \t]+)(.*)')
 
         self.clean()
 
@@ -45,7 +46,6 @@ class FTPWalk:
         self._fstats_cb_dir = ''
         self._fstats_cb_errors = False
 
-
     def _fstats_cb(self, string):
 
         if not isinstance(string, str):
@@ -56,7 +56,7 @@ class FTPWalk:
 
         m = self.re_ex.match(string)
 
-        if m != None:
+        if m is not None:
 
             self._file_lists[self._fstats_cb_dir][m.group(17)] = {
                 'mode': m.group(1),
@@ -73,13 +73,12 @@ class FTPWalk:
 
         del m
 
-
     def fstats(self, dirname, force=False):
 
         if self._verbose:
             v("Getting directory stats: {}".format(dirname))
 
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         if not isinstance(dirname, str):
@@ -119,17 +118,15 @@ class FTPWalk:
                 else:
                     return 'ok'
 
-
             elif r == False:
                 return 'not dir'
 
             else:
                 return 'errors'
 
-
     def fstat_d_n(self, dirname, name):
 
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         if not isinstance(dirname, str):
@@ -167,10 +164,9 @@ class FTPWalk:
             else:
                 return 'errors'
 
-
     def fstat(self, name):
 
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         if not isinstance(name, str):
@@ -184,9 +180,8 @@ class FTPWalk:
         name = os.path.basename(name)
         return self.fstat_d_n(fdir, name)
 
-
     def _is(self, name, c='-', no=False):
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         if not isinstance(name, str):
@@ -229,7 +224,6 @@ class FTPWalk:
             else:
                 return False
 
-
     def is_dir(self, name):
         return self._is(name, c='d')
 
@@ -242,10 +236,9 @@ class FTPWalk:
     def is_link(self, name):
         return self._is(name, c='l')
 
-
     def exists(self, name):
 
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         if not isinstance(name, str):
@@ -280,10 +273,9 @@ class FTPWalk:
         else:
             return True
 
-
     def get_all_files(self, dirname):
 
-        if self._ftpc == None:
+        if self._ftpc is None:
             return 'not connected'
 
         r = self.fstats(dirname)
@@ -293,7 +285,6 @@ class FTPWalk:
 
         else:
             return r
-
 
     def get(self, dirname, c='d', no=False):
         l = []
@@ -312,7 +303,6 @@ class FTPWalk:
                     if r[i]['mode'][0] == c:
                         l.append(i)
             return l
-
 
     def get_normal_files(self, dirname):
         return self.get(dirname, '-')
@@ -341,14 +331,13 @@ class FTPWalkSole(FTPWalk):
 
         self._init()
 
-
     def connect(self):
         isok = True
 
         if self._verbose:
             v("Connecting to {}".format(self._server))
 
-        if self._ftpc != None:
+        if self._ftpc is not None:
             return True
 
         try:
@@ -371,7 +360,6 @@ class FTPWalkSole(FTPWalk):
 
         return isok
 
-
     def disconnect(self):
         try:
             self._ftpc.quit()
@@ -385,11 +373,9 @@ class FTPWalkSole(FTPWalk):
 
         self._ftpc = None
 
-
     def reconnect(self):
         self.disconnect()
         return self.connect()
-
 
     def clean(self):
 

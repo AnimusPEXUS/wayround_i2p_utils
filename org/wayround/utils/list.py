@@ -18,7 +18,7 @@ def remove_all_values(lst, lst2):
 def list_lstrip(lst, lst2):
     lst = copy.copy(lst)
     while (len(lst) > 0
-           and  lst[0] in lst2):
+           and lst[0] in lst2):
         del lst[0]
     return lst
 
@@ -26,7 +26,7 @@ def list_lstrip(lst, lst2):
 def list_rstrip(lst, lst2):
     lst = copy.copy(lst)
     while (len(lst) > 0
-           and  lst[-1] in lst2):
+           and lst[-1] in lst2):
         del lst[-1]
     return lst
 
@@ -62,7 +62,7 @@ def list_sort(lst, cmp=None):
                     break
                 j += 1
 
-                if cmp == None:
+                if cmp is None:
                     if lst[i] > lst[j]:
                         x = lst[i]
                         lst[i] = lst[j]
@@ -133,8 +133,8 @@ def filelist_strip_remove_empty_remove_duplicated_lines(lst):
 
 
 def list_filter_list_white_or_black(
-    in_str_list, in_filters_lst, white=True
-    ):
+        in_str_list, in_filters_lst, white=True
+        ):
 
     ret = []
 
@@ -192,7 +192,6 @@ def filter_text_parse(filter_text, show_errors=False):
 
 
 def filter_list(input_list, filter_text):
-
     """
     Filters supplied list with supplied filter
 
@@ -280,7 +279,7 @@ def filter_list(input_list, filter_text):
                     if not cs:
                         flags |= re.IGNORECASE
                     matched = \
-                        re.match(working_data, working_item, flags) != None
+                        re.match(working_data, working_item, flags) is not None
 
                 elif function == 'fm':
                     working_data = data

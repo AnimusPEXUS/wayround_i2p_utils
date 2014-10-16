@@ -7,8 +7,10 @@ import org.wayround.utils.types
 
 def check_tagname_class_attrnames(tagname_class_attrnames):
     if not org.wayround.utils.types.struct_check(
-        tagname_class_attrnames, {'t': list, '.': {'t': tuple, '<': 3, '>': 6}}
-        ):
+            tagname_class_attrnames, {
+                't': list, '.': {
+                    't': tuple, '<': 3, '>': 6}}
+            ):
         raise TypeError("`tagname_class_attrnames' has invalid structure")
 
     for i in range(len(tagname_class_attrnames)):
@@ -17,15 +19,15 @@ def check_tagname_class_attrnames(tagname_class_attrnames):
             new_val = tuple(tagname_class_attrnames[i]) + ('',)
             tagname_class_attrnames[i] = new_val
 
-        if tagname_class_attrnames[i][3] == None:
+        if tagname_class_attrnames[i][3] is None:
             new_val = (i[0], i[1], i[2], '', i[4], i[5])
             tagname_class_attrnames[i] = new_val
 
-        if tagname_class_attrnames[i][4] == None:
+        if tagname_class_attrnames[i][4] is None:
             new_val = (i[0], i[1], i[2], i[3], '', i[5])
             tagname_class_attrnames[i] = new_val
 
-        if tagname_class_attrnames[i][5] == None:
+        if tagname_class_attrnames[i][5] is None:
             new_val = (i[0], i[1], i[2], i[3], i[4], '')
             tagname_class_attrnames[i] = new_val
 
@@ -38,10 +40,9 @@ def check_tagname_class_attrnames(tagname_class_attrnames):
 
 
 def subelems_to_object_props(
-    element, obj, tagname_class_attrnames,
-    must_be=False
-    ):
-
+        element, obj, tagname_class_attrnames,
+        must_be=False
+        ):
     """
     Find element by tag and convert it to object using additional information
 
@@ -62,7 +63,7 @@ def subelems_to_object_props(
     for i in tagname_class_attrnames:
 
         val = element.find(i[0])
-        if val != None:
+        if val is not None:
             getattr(obj, 'set_{}'.format(i[2]))(i[1].new_from_element(val))
         else:
             if must_be:
@@ -133,8 +134,8 @@ def subelems_to_object_props2(element, obj, tagname_class_attrnames):
 
 
 def subelemsm_to_object_propsm(
-    element, obj, tagname_class_attrnames, must_be=False
-    ):
+        element, obj, tagname_class_attrnames, must_be=False
+        ):
     """
     Find many elements by tag and convert them to objects using additional
     information
@@ -181,12 +182,12 @@ def elem_props_to_object_props(element, obj, names):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        names,
-        {'t': list, '.':
-         {'t': tuple, '<': 2, '>': 2, '.': {'t': str}
-          }
-         }
-        ):
+            names,
+            {'t': list, '.':
+             {'t': tuple, '<': 2, '>': 2, '.': {'t': str}
+              }
+             }
+            ):
         raise TypeError("`names' has invalid structure")
 
     for i in names:
@@ -206,14 +207,14 @@ def object_props_to_subelems(obj, element, names):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        names,
-        {'t': list, '.': {'t': str}}
-        ):
+            names,
+            {'t': list, '.': {'t': str}}
+            ):
         raise TypeError("`names' must be list of strings")
 
     for i in names:
         val = getattr(obj, 'get_{}'.format(i))()
-        if val != None:
+        if val is not None:
             element.append(val.gen_element())
 
     return
@@ -277,9 +278,9 @@ def object_propsm_to_subelemsm(obj, element, names):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        names,
-        {'t': list, '.': {'t': str}}
-        ):
+            names,
+            {'t': list, '.': {'t': str}}
+            ):
         raise TypeError("`names' must be list of strings")
 
     for i in names:
@@ -302,17 +303,17 @@ def object_props_to_elem_props(obj, element, names):
         raise TypeError("`element' must be lxml.etree.Element")
 
     if not org.wayround.utils.types.struct_check(
-        names,
-        {'t': list, '.':
-         {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}
-         }
-        ):
+            names,
+            {'t': list, '.':
+             {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}
+             }
+            ):
         raise TypeError("`names' has invalid structure")
 
     for i in names:
 
         val = getattr(obj, 'get_{}'.format(i[0]))()
-        if val != None:
+        if val is not None:
             element.set(i[1], val)
 
     return
@@ -341,7 +342,7 @@ def subelems_to_order(element, order, tagname_class_attrnames):
                     prop = j[2]
                     break
 
-            if cls != None:
+            if cls is not None:
                 try:
                     order.append((tag, cls.new_from_element(i), prop))
                 except:
@@ -366,7 +367,7 @@ def order_to_subelems(order, element):
 
 def parse_tag(inp_str, localname, namespaces=None):
 
-    if localname == None:
+    if localname is None:
         localname = []
 
     if not isinstance(localname, list):
@@ -376,15 +377,15 @@ def parse_tag(inp_str, localname, namespaces=None):
         namespaces = [namespaces]
 
     if not org.wayround.utils.types.struct_check(
-        localname,
-        {'t': list, '.': {'t': str}}
-        ):
+            localname,
+            {'t': list, '.': {'t': str}}
+            ):
         raise TypeError("`localname' must be list of strings")
 
     if not org.wayround.utils.types.struct_check(
-        namespaces,
-        {'t': list, 'None': True, '.': {'t': str}}
-        ):
+            namespaces,
+            {'t': list, 'None': True, '.': {'t': str}}
+            ):
         raise TypeError("`namespaces' has invalid structure")
 
     qname = lxml.etree.QName(inp_str)
@@ -392,7 +393,7 @@ def parse_tag(inp_str, localname, namespaces=None):
     ret = None, None
 
     if len(localname) == 0 or qname.localname in localname:
-        if namespaces == None:
+        if namespaces is None:
             ret = qname.localname, qname.namespace
         else:
             if qname.namespace in namespaces:
@@ -402,7 +403,6 @@ def parse_tag(inp_str, localname, namespaces=None):
 
 
 def parse_element_tag(element, localname, namespaces=None):
-
     """
     Tag parse routine
 
@@ -514,22 +514,21 @@ cles.check_{name}.__doc__ = doc
 
 del check
         """.format(name=i[2], check=check),
-        {'typ': typ, 'cles': cls, 'doc': doc,
-         'tagname_class_attrnames': tagname_class_attrnames}
-        )
+             {'typ': typ, 'cles': cls, 'doc': doc,
+              'tagname_class_attrnames': tagname_class_attrnames}
+             )
 
     return
 
 
 def simple_exchange_class_factory(
-    cls,
-    tag,
-    namespace,
-    subelements_struct,
-    properties_list,
-    value_name=None
-    ):
-
+        cls,
+        tag,
+        namespace,
+        subelements_struct,
+        properties_list,
+        value_name=None
+        ):
     """
     Factories simple class structure to handle simple lxml elements
 
@@ -552,7 +551,7 @@ def simple_exchange_class_factory(
 
     gw1 = ''
     gw2 = ''
-    if value_name != None:
+    if value_name is not None:
         gw1 = 'cl.set_{value_name}(element.text)'.format(
             value_name=value_name
             )
@@ -643,20 +642,20 @@ del gen_element
 del corresponding_tag
 
 """.format(
-    gw1=gw1,
-    gw2=gw2,
-    tag=tag,
-    namespace=namespace
+        gw1=gw1,
+        gw2=gw2,
+        tag=tag,
+        namespace=namespace
     ),
-    {
-     'PROPERTIES_LIST': properties_list,
-     'SUBELEMENTS_STRUCT': subelements_struct,
-     'clas': cls
+        {
+        'PROPERTIES_LIST': properties_list,
+        'SUBELEMENTS_STRUCT': subelements_struct,
+        'clas': cls
     }
     )
 
 
-#def is_lxml_tag_element(element):
+# def is_lxml_tag_element(element):
 #    return type(element) == lxml.etree._Element
 
 def is_lxml_tag_element(element):
@@ -671,7 +670,7 @@ def generate_initial_parameters_for_constructors(cls, element):
 
         if i[3] == '':
             found = element.find(i[0])
-            if found != None:
+            if found is not None:
                 nec_params[i[2]] = i[1].new_from_element(found)
             else:
                 raise ValueError(

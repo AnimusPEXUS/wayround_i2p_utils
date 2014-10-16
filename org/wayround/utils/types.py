@@ -514,7 +514,7 @@ def text_to_bool(text):
     return text.lower().strip() in ['1', 'yes', 'true', 'ok', 'y']
 
 
-def is_all_rec_bytes_str(args, empty_fails=False, _mb=None):
+def is_all_rec_bytes_str(args, empty_fails=False, must_be=None):
     """
     Check's what all values in args ar bytes or str, recurcevely
 
@@ -528,7 +528,7 @@ def is_all_rec_bytes_str(args, empty_fails=False, _mb=None):
         ret = not empty_fails, _mb
     else:
 
-        tt = _mb
+        tt = must_be
         error = False
         for i in args:
 

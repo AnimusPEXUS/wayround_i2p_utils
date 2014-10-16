@@ -11,16 +11,16 @@ import org.wayround.utils.stream
 
 
 def simple_exec(
-    program,
-    stdin=subprocess.DEVNULL,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-    options=None,
-    bufsize=(2 * 1024 ** 2),
-    cwd=None
-    ):
+        program,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        options=None,
+        bufsize=(2 * 1024 ** 2),
+        cwd=None
+        ):
 
-    if options == None:
+    if options is None:
         options = []
 
     p = None
@@ -40,11 +40,12 @@ def simple_exec(
     return p
 
 
-def pipe_subprocesses(processes_list,
-                      processes_names,
-                      bufsize=(2 * 1024 ** 2),
-                      verbose=False
-                      ):
+def pipe_subprocesses(
+        processes_list,
+        processes_names,
+        bufsize=(2 * 1024 ** 2),
+        verbose=False
+        ):
 
     if not isinstance(processes_list, list):
         raise ValueError("processes_list must be a list")
@@ -103,13 +104,13 @@ def pipe_subprocesses(processes_list,
 def test_pipes():
 
     for i in [
-        (logging.CRITICAL, '-c-'),
-        (logging.ERROR, '-e-'),
-        (logging.WARN, '-w-'),
-        (logging.WARNING, '-w-'),
-        (logging.INFO, '-i-'),
-        (logging.DEBUG, '-d-')
-        ]:
+            (logging.CRITICAL, '-c-'),
+            (logging.ERROR, '-e-'),
+            (logging.WARN, '-w-'),
+            (logging.WARNING, '-w-'),
+            (logging.INFO, '-i-'),
+            (logging.DEBUG, '-d-')
+            ]:
         logging.addLevelName(i[0], i[1])
 
     logging.basicConfig(level='DEBUG')
@@ -323,23 +324,23 @@ class ProcessStream:
         return ret
 
     def setValues(
-        self,
-        program,
-        stdin,
-        stdout,
-        stderr,
-        options=None,
-        proc_bufsize=0,
-        cat_bufsize=(2 * 1024 ** 2),
-        cwd=None,
-        verbose=False,
-        close_output_on_eof=False,
-        flush_on_input_eof=False,
-        stdin_mode='file',
-        stdout_mode='file'
-        ):
+            self,
+            program,
+            stdin,
+            stdout,
+            stderr,
+            options=None,
+            proc_bufsize=0,
+            cat_bufsize=(2 * 1024 ** 2),
+            cwd=None,
+            verbose=False,
+            close_output_on_eof=False,
+            flush_on_input_eof=False,
+            stdin_mode='file',
+            stdout_mode='file'
+            ):
 
-        if options == None:
+        if options is None:
             options = []
 
         ret = 0
@@ -472,8 +473,8 @@ class ProcessStream:
                 ret = 4
 
         if ret != 0:
-#            self.wait('working')
-#        else:
+            #            self.wait('working')
+            #        else:
             self.stop()
 
         return ret
@@ -506,14 +507,14 @@ class ProcessStream:
         v2 = self.out_cat
         v3 = self._wait_thread
 
-        if (v1 != None
-            and v2 != None
-            and v3 != None):
+        if (v1 is not None
+                and v2 is not None
+                and v3 is not None):
             ret = 'working'
 
-        if (v1 == None
-            and v2 == None
-            and v3 == None):
+        if (v1 is None
+                and v2 is None
+                and v3 is None):
             ret = 'stopped'
 
         logging.debug("""\
@@ -525,10 +526,10 @@ self.proc       {}
 """.format(self.program, self.in_cat, self.out_cat, self.proc, ret))
 
 #        print("""\
-#status (for `{}'):
-#self.in_cat     {}
-#self.out_cat    {}
-#self.proc       {}
+# status (for `{}'):
+# self.in_cat     {}
+# self.out_cat    {}
+# self.proc       {}
 #{}
 #""".format(self.program, self.in_cat, self.out_cat, self.proc, ret))
 
@@ -577,7 +578,7 @@ self.proc       {}
                 self.proc.wait(0.2)
             except subprocess.TimeoutExpired:
                 pass
-                #print("waiting")
+                # print("waiting")
             else:
                 self.returncode = self.proc.returncode
                 break
@@ -593,22 +594,22 @@ self.proc       {}
 
 
 def process_stream(
-    program,
-    stdin,
-    stdout,
-    stderr,
-    options=None,
-    proc_bufsize=(2 * 1024 ** 2),
-    cat_bufsize=(2 * 1024 ** 2),
-    cwd=None,
-    verbose=False,
-    close_output_on_eof=True,
-    flush_on_input_eof=True,
-    stdin_mode='file',
-    stdout_mode='file'
-    ):
+        program,
+        stdin,
+        stdout,
+        stderr,
+        options=None,
+        proc_bufsize=(2 * 1024 ** 2),
+        cat_bufsize=(2 * 1024 ** 2),
+        cwd=None,
+        verbose=False,
+        close_output_on_eof=True,
+        flush_on_input_eof=True,
+        stdin_mode='file',
+        stdout_mode='file'
+        ):
 
-    if options == None:
+    if options is None:
         options = []
 
     ps = ProcessStream()
@@ -637,24 +638,24 @@ def process_stream(
 
     logging.debug("ps.wait() == {}".format(ret))
 
-    if ret == None:
+    if ret is None:
         ret = 222
 
     return ret
 
 
 def process_file(
-    program,
-    infile,
-    outfile,
-    stderr=subprocess.DEVNULL,
-    options=None,
-    cwd=None,
-    bufsize=(2 * 1024 ** 2),
-    verbose=False
-    ):
+        program,
+        infile,
+        outfile,
+        stderr=subprocess.DEVNULL,
+        options=None,
+        cwd=None,
+        bufsize=(2 * 1024 ** 2),
+        verbose=False
+        ):
 
-    if options == None:
+    if options is None:
         options = []
 
     ret = 0
@@ -697,11 +698,11 @@ def process_file(
                             "Error processing file {in} to {out} through"
                             " {proc} (code {code})".format_map(
                                 {
-                                 'in': infile,
-                                 'out': outfile,
-                                 'proc': program,
-                                 'code': ec
-                                 }
+                                    'in': infile,
+                                    'out': outfile,
+                                    'proc': program,
+                                    'code': ec
+                                    }
                                 )
                             )
                         ret = 2

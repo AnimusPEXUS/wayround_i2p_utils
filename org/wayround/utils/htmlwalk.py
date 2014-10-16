@@ -42,6 +42,7 @@ def html_walk(html_text, maxdepth=10):
     # TODO: todo
     pass
 
+
 def list_rm_douplicates(lst=[]):
     """
     Routine for removal duplicated items from text list
@@ -53,6 +54,7 @@ def list_rm_douplicates(lst=[]):
             lst2.append(i)
 
     return lst2
+
 
 def html_link_get_links(url, tag_attr=[
         ('a', 'href'),
@@ -81,13 +83,20 @@ def html_link_get_links(url, tag_attr=[
 
     re_res = re.match(r'text/html(; *codepage=(.*))?', ct)
 
-    if re_res != None and re_res.group(1) != None and re_res.group(2) != None:
+    if re_res is not None and re_res.group(
+            1) is not None and re_res.group(2) is not None:
 
         text = url_object.read().decode(re_res.group(2))
         ret = html_text_get_links(text, tag_attr)
 
-        if ret == None:
-            logging.error("Can't parse document " + url + " as XML (codepage:" + repr(re_res.group(2)) + ")")
+        if ret is None:
+            logging.error(
+                "Can't parse document " +
+                url +
+                " as XML (codepage:" +
+                repr(
+                    re_res.group(2)) +
+                ")")
 
     # cleaningup for sure
     url_object.close()
@@ -95,6 +104,7 @@ def html_link_get_links(url, tag_attr=[
     del re_res
 
     return ret
+
 
 def html_text_get_links(html_text, base_url, tag_attr=[
         ('a', 'href'),
@@ -130,8 +140,7 @@ def html_text_get_links(html_text, base_url, tag_attr=[
         return None
 
     root = docum.documentElement
-    lst = dom_get_links(root)
-    lst.sort()
+    lst = sorted(dom_get_links(root))
     lst = list_rm_douplicates(lst)
     return lst
 
@@ -146,6 +155,7 @@ def html_text_get_links(html_text, base_url, tag_attr=[
 #             lst2.append(i)
 
 #     return lst2
+
 
 def dom_get_links(root, tag_attr=[
         ('a', 'href'),
@@ -175,11 +185,10 @@ def dom_get_links(root, tag_attr=[
             if len(i.childNodes) > 0:
                 lst += dom_get_links(i)
 
-
             for tag, attr in tag_attr:
 
                 if i.tagName == tag:
-                    if  i.hasAttribute(attr):
+                    if i.hasAttribute(attr):
                         t = i.getAttribute(attr)
                         lst.append(t)
                         del t

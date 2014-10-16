@@ -13,8 +13,8 @@ class SystemTypeInvalidFullName(Exception):
 class SystemType:
 
     def __init__(
-        self, fullname=None, cpu='i486', company='pc', kernel='linux', os='gnu'
-        ):
+            self, fullname=None, cpu='i486', company='pc', kernel='linux', os='gnu'
+            ):
 
         self.fullname = fullname
 

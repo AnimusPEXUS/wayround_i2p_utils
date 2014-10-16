@@ -41,7 +41,7 @@ class TagEngine:
     def __init__(self, config_string, commit_every=1000):
 
         self._db_engine = (
-                sqlalchemy.create_engine(
+            sqlalchemy.create_engine(
                 config_string,
                 echo=False
                 )
@@ -121,7 +121,7 @@ class TagEngine:
             raise ValueError("Wrong order selected")
 
         q = None
-        if order == None:
+        if order is None:
             q = self.session.query(self.Tag).all()
         elif order == 'tag':
             q = self.session.query(self.Tag).order_by(self.Tag.tag).all()
@@ -187,11 +187,11 @@ class TagEngine:
             if len(obj) > 0:
                 for i in range(int(len(obj) / 100) + 1):
                     self.session.query(self.Tag).filter(
-                            self.Tag.obj.in_(
-                                obj[i * 100:(i + 1) * 100])
-                                ).delete(
-                                    synchronize_session=synchronize_session
-                                    )
+                        self.Tag.obj.in_(
+                            obj[i * 100:(i + 1) * 100])
+                        ).delete(
+                        synchronize_session=synchronize_session
+                        )
 
         else:
             self.session.query(self.Tag).filter_by(obj=obj).delete(

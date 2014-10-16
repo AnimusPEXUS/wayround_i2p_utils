@@ -38,7 +38,6 @@ This package contains various useful modules functions and classes.
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Operating System :: POSIX',
-        'Development Status :: 5 - Production/Stable'
         ],
     ext_modules=[
         Extension(

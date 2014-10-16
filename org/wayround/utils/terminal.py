@@ -26,7 +26,7 @@ def get_terminal_size(fd=1):
         except:
             res = None
 
-    if res != None:
+    if res is not None:
         res = {
             'ws_row': res[0],
             'ws_col': res[1],
@@ -59,7 +59,7 @@ def progress_write(line_to_write, new_line=False):
 
     width = 80
     ts = get_terminal_size(sys.stdout.fileno())
-    if ts != None:
+    if ts is not None:
         width = ts['ws_col']
 
     line_to_write_l = len(line_to_write)
