@@ -336,12 +336,18 @@ class ProcessStream:
             verbose=False,
             close_output_on_eof=False,
             flush_on_input_eof=False,
-            stdin_mode='file',
-            stdout_mode='file'
+            stdin_mode='sync',
+            stdout_mode='sync'
             ):
 
         if options is None:
             options = []
+
+        if not stdin_mode in ['sync', 'async']:
+            raise ValueError("stdin_mode must be in ['sync', 'async']")
+
+        if not stdout_mode in ['sync', 'async']:
+            raise ValueError("stdout_mode must be in ['sync', 'async']")
 
         ret = 0
 
@@ -438,7 +444,7 @@ class ProcessStream:
                     on_input_read_error=None,
                     on_output_write_error=None,
                     read_type=self.stdin_mode,
-                    write_type='pipe'
+                    write_type='sync'
                     )
 
                 if self.verbose:
@@ -459,7 +465,7 @@ class ProcessStream:
                     on_exit_callback=self._close_out_cat,
                     on_input_read_error=None,
                     on_output_write_error=None,
-                    read_type='pipe',
+                    read_type='sync',
                     write_type=self.stdout_mode
                     )
 
@@ -524,14 +530,6 @@ self.out_cat    {}
 self.proc       {}
 {}
 """.format(self.program, self.in_cat, self.out_cat, self.proc, ret))
-
-#        print("""\
-# status (for `{}'):
-# self.in_cat     {}
-# self.out_cat    {}
-# self.proc       {}
-#{}
-#""".format(self.program, self.in_cat, self.out_cat, self.proc, ret))
 
         return ret
 
@@ -605,8 +603,8 @@ def process_stream(
         verbose=False,
         close_output_on_eof=True,
         flush_on_input_eof=True,
-        stdin_mode='file',
-        stdout_mode='file'
+        stdin_mode='sync',
+        stdout_mode='sync'
         ):
 
     if options is None:
@@ -689,8 +687,8 @@ def process_file(
                         verbose=verbose,
                         close_output_on_eof=True,
                         flush_on_input_eof=True,
-                        stdin_mode='file',
-                        stdout_mode='file'
+                        stdin_mode='sync',
+                        stdout_mode='sync'
                         )
 
                     if ec != 0:

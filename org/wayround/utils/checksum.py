@@ -258,7 +258,7 @@ def render_checksum_dict_to_txt(sums_dict, sort=False):
     ret = ''
 
     for i in keys:
-        ret += '{sum} *{path}\n'.format(sum=str(sums_dict[i]), path=str(i))
+        ret += '{summ} *{path}\n'.format(summ=str(sums_dict[i]), path=str(i))
 
     return ret
 

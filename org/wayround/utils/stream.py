@@ -9,20 +9,10 @@ import time
 
 import org.wayround.utils.threading
 
-# blockables
-CAT_READWRITE_B = ['file', 'pipe',
-                   'socket', 'ssl', 'pyopenssl']
+CAT_READWRITE_TYPES = ['sync', 'async']
 
-# non-blockables
-CAT_READWRITE_NB = ['pipe-nb',
-                    'socket-nb', 'ssl-nb', 'pyopenssl-nb']
-
-
-CAT_READWRITE_TYPES = CAT_READWRITE_NB + CAT_READWRITE_B
-
-
-SELECTABLE = ['socket-nb', 'ssl-nb', 'pyopenssl-nb', 'pipe-nb']
-
+SELECT_SLEEP= 0.02
+UNSELECTABLE_SLEEP = SELECT_SLEEP
 
 class CatTerminationFlagFound(Exception):
     pass
@@ -35,7 +25,9 @@ class Streamer:
             stream_object,
             stream_object_read_meth,
             stream_object_write_meth,
-            stream_object_mode='file',
+            stream_object_mode='sync',
+            stream_object_selectable=True,
+            stream_object_unselectable_sleep=0.2,
             bs=2 * 1024 ** 2,
             descriptor_to_wait_for=None,
             flush_after_each_write=False,
@@ -58,6 +50,9 @@ class Streamer:
         if not standard_write_method_result in [None, False, True]:
             raise ValueError("invalid `standard_write_method_result'")
 
+        if not isinstance(stream_object_selectable, bool):
+            raise TypeError("`stream_object_selectable' must be bool")
+
         self._verbose = verbose
         self._debug = debug
 
@@ -65,6 +60,9 @@ class Streamer:
 
         self._stream_object = stream_object
         self._stream_object_mode = stream_object_mode
+        self._stream_object_selectable = stream_object_selectable
+        self._stream_object_unselectable_sleep = \
+            stream_object_unselectable_sleep
 
         self._stream_object_read_meth = stream_object_read_meth
         self._stream_object_write_meth = stream_object_write_meth
@@ -94,7 +92,12 @@ class Streamer:
                 )
 
         while len(
-                select.select([self._descriptor_to_wait_for], [], [], 0.2)[0]
+                select.select(
+                    [self._descriptor_to_wait_for], 
+                    [], 
+                    [], 
+                    SELECT_SLEEP
+                    )[0]
                 ) == 0:
 
             if (self._termination_event
@@ -108,24 +111,33 @@ class Streamer:
                         self._descriptor_to_wait_for
                         )
                     )
-            if isinstance(self._stream_object, ssl.SSLSocket):
-                if self._debug:
-                    logging.debug(
-                        "{}: {} pending {}".format(
-                            self._thread_name,
-                            self._stream_object,
-                            self._stream_object.pending()
-                            )
-                        )
 
-                if self._stream_object.pending() != 0:
-                    if self._debug:
-                        logging.debug(
-                            "{}: receiving pending data".format(
-                                self._thread_name
-                                )
-                            )
-                    break
+            # the ssl.SSLSocket.pending() method is undocumented.
+            # as so, I can't use it her, as it can be removed from ssl
+            # socket class object at any time.
+            # Instead of it I'll use time.sleep().
+            # say thanks to /* Antoine Pitrou (pitrou) */
+            # http://bugs.python.org/issue21430
+            # .. commenting out
+
+            # if isinstance(self._stream_object, ssl.SSLSocket):
+            #     if self._debug:
+            #         logging.debug(
+            #             "{}: {} pending {}".format(
+            #                 self._thread_name,
+            #                 self._stream_object,
+            #                 self._stream_object.pending()
+            #                 )
+            #             )
+            #
+            #     if self._stream_object.pending() != 0:
+            #         if self._debug:
+            #             logging.debug(
+            #                 "{}: receiving pending data".format(
+            #                     self._thread_name
+            #                     )
+            #                 )
+            #         break
 
         if self._debug:
             logging.debug(
@@ -148,7 +160,12 @@ class Streamer:
                 )
 
         while len(
-                select.select([], [self._descriptor_to_wait_for], [], 0.2)[1]
+                select.select(
+                    [], 
+                    [self._descriptor_to_wait_for], 
+                    [], 
+                    SELECT_SLEEP
+                    )[1]
                 ) == 0:
 
             if (self._termination_event
@@ -183,7 +200,7 @@ class Streamer:
 
         try:
 
-            if self._stream_object_mode in ['file', 'pipe', 'socket', 'ssl']:
+            if self._stream_object_mode == 'sync':
 
                 if (self._termination_event
                         and self._termination_event.is_set()):
@@ -218,12 +235,13 @@ class Streamer:
                     ret_buff = res
                     res = None
 
-            elif (self._stream_object_mode
-                  in ['socket-nb', 'ssl-nb', 'pipe-nb']):
+            elif self._stream_object_mode == 'async':
 
-                if self._stream_object_mode in SELECTABLE:
+                if self._stream_object_selectable:
                     if self._descriptor_to_wait_for is not None:
                         self._wait_input_avail()
+                else:
+                    time.sleep(self._stream_object_unselectable_sleep)
 
                 while True:
 
@@ -238,22 +256,34 @@ class Streamer:
                         pass
 
                     except ssl.SSLWantReadError:
-                        logging.debug("ssl.SSLWantReadError")
-                        select.select(
-                            [self._descriptor_to_wait_for],
-                            [],
-                            [],
-                            0.2
-                            )
+                        # this is commented out, because withous use of
+                        # .pending() too many garbage debugging messages
+                        # are printed
+                        # logging.debug("ssl.SSLWantReadError")
+                        if self._stream_object_selectable:
+                            select.select(
+                                [self._descriptor_to_wait_for],
+                                [],
+                                [],
+                                SELECT_SLEEP
+                                )
+                        else:
+                            time.sleep(self._stream_object_unselectable_sleep)
 
                     except ssl.SSLWantWriteError:
-                        logging.debug("ssl.SSLWantWriteError")
-                        select.select(
-                            [],
-                            [self._descriptor_to_wait_for],
-                            [],
-                            0.2
-                            )
+                        # this is commented out, because withous use of
+                        # .pending() too many garbage debugging messages
+                        # are printed
+                        # logging.debug("ssl.SSLWantWriteError")
+                        if self._stream_object_selectable:
+                            select.select(
+                                [],
+                                [self._descriptor_to_wait_for],
+                                [],
+                                SELECT_SLEEP
+                                )
+                        else:
+                            time.sleep(self._stream_object_unselectable_sleep)
                     else:
                         break
 
@@ -320,9 +350,11 @@ class Streamer:
 
                 while len(buff) != 0:
 
-                    if self._stream_object_mode in SELECTABLE:
+                    if self._stream_object_selectable:
                         if self._descriptor_to_wait_for is not None:
                             self._wait_output_avail()
+                    else:
+                        time.sleep(self._stream_object_unselectable_sleep)
 
                     sb = buff[:self._bs]
                     buff = buff[self._bs:]
@@ -386,8 +418,12 @@ def cat(
         convert_to_str=None,
         read_method_name='read',
         write_method_name='write',
-        read_type='file',
-        write_type='file',
+        read_type='sync',
+        read_selectable=True,
+        read_unselectable_sleep=UNSELECTABLE_SLEEP,
+        write_type='sync',
+        write_selectable=False,
+        write_unselectable_sleep=UNSELECTABLE_SLEEP,
         exit_on_input_eof=True,
         flush_after_each_write=False,
         flush_on_input_eof=False,
@@ -411,10 +447,20 @@ def cat(
         raise ValueError("Wrong `write_method_name' parameter")
 
     if not read_type in CAT_READWRITE_TYPES:
-        raise ValueError("`read_type' must be file or socket")
+        raise ValueError(
+            "`read_type' must be in {}, not {}".format(
+                CAT_READWRITE_TYPES,
+                read_type
+                )
+            )
 
     if not write_type in CAT_READWRITE_TYPES:
-        raise ValueError("`write_type' must be file or socket")
+        raise ValueError(
+            "`write_type' must be in {}, not {}".format(
+                CAT_READWRITE_TYPES,
+                write_type
+                )
+            )
 
     if not hasattr(stdin, read_method_name):
         raise ValueError(
@@ -456,7 +502,11 @@ def cat(
                 read_method_name=read_method_name,
                 write_method_name=write_method_name,
                 read_type=read_type,
+                read_selectable=read_selectable,
+                read_unselectable_sleep=read_unselectable_sleep,
                 write_type=write_type,
+                write_selectable=write_selectable,
+                write_unselectable_sleep=write_unselectable_sleep,
                 exit_on_input_eof=exit_on_input_eof,
                 flush_after_each_write=flush_after_each_write,
                 flush_on_input_eof=flush_on_input_eof,
@@ -500,6 +550,8 @@ def cat(
         read_method,
         None,
         stream_object_mode=read_type,
+        stream_object_selectable=read_selectable,
+        stream_object_unselectable_sleep=read_unselectable_sleep,
         bs=bs,
         descriptor_to_wait_for=descriptor_to_wait_for_input,
         thread_name='Input Streamer {}'.format(thread_name),
@@ -513,6 +565,8 @@ def cat(
         None,
         write_method,
         stream_object_mode=write_type,
+        stream_object_selectable=write_selectable,
+        stream_object_unselectable_sleep=write_unselectable_sleep,
         bs=bs,
         descriptor_to_wait_for=descriptor_to_wait_for_output,
         thread_name='Output Streamer {}'.format(thread_name),
@@ -632,7 +686,12 @@ Ending `{name}' thread
     return
 
 
-def lbl_write(stdin, stdout, threaded=False, typ='info'):
+def lbl_write(
+        stdin,
+        stdout,
+        threaded=False,
+        typ='info'
+        ):
 
     if not typ in ['info', 'error', 'warning']:
         raise ValueError("Wrong `typ' value")
@@ -774,9 +833,9 @@ class SocketStreamer:
 
         if self._stat_threads() == 'stopped':
 
-            sock_type = 'socket-nb'
+            sock_selectable = True
             if self.is_ssl_working():
-                sock_type = 'ssl-nb'
+                sock_selectable = False
 
             self._in_thread = cat(
                 stdin=self._strin,
@@ -788,8 +847,11 @@ class SocketStreamer:
                 bs=self._socket_transfer_size,
                 convert_to_str=None,
                 read_method_name='read',
-                read_type='pipe-nb',
-                write_type=sock_type,
+                read_type='async',
+                read_selectable=True,
+                write_type='async',
+                write_selectable=sock_selectable,
+                write_unselectable_sleep=UNSELECTABLE_SLEEP,
                 exit_on_input_eof=True,
                 descriptor_to_wait_for_input=self._strin,
                 descriptor_to_wait_for_output=self.socket,
@@ -813,8 +875,11 @@ class SocketStreamer:
                 bs=self._socket_transfer_size,
                 convert_to_str=None,
                 read_method_name='recv',
-                read_type=sock_type,
-                write_type='pipe-nb',
+                read_type='async',
+                read_selectable=sock_selectable,
+                read_unselectable_sleep=UNSELECTABLE_SLEEP,
+                write_type='async',
+                write_selectable=True,
                 exit_on_input_eof=True,
                 descriptor_to_wait_for_input=self.socket,
                 descriptor_to_wait_for_output=self._strout,
@@ -983,12 +1048,12 @@ class SocketStreamer:
 
                     except ssl.SSLWantReadError:
                         select.select(
-                            [socket_wrap_result.fileno()], [], [], 0.2
+                            [socket_wrap_result.fileno()], [], [], SELECT_SLEEP
                             )
 
                     except ssl.SSLWantWriteError:
                         select.select(
-                            [], [socket_wrap_result.fileno()], [], 0.2
+                            [], [socket_wrap_result.fileno()], [], SELECT_SLEEP
                             )
 
                     except:
@@ -1120,7 +1185,7 @@ compression:
                 )
             if self.stat() == what:
                 break
-            time.sleep(0.2)
+            time.sleep(SELECT_SLEEP)
 
         return
 
@@ -1140,7 +1205,7 @@ compression:
                 )
             if self._stat_threads() == what:
                 break
-            time.sleep(0.2)
+            time.sleep(SELECT_SLEEP)
 
         return
 
@@ -1184,7 +1249,9 @@ compression:
 
         stopped_by_flag = False
 
-        while len(select.select([], [self.socket.fileno()], [], 0.2)[1]) == 0:
+        while len(
+            select.select([], [self.socket.fileno()], [], SELECT_SLEEP)[1]
+            ) == 0:
 
             if self._stop_flag:
                 stopped_by_flag = True
