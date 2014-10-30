@@ -72,6 +72,15 @@ TIME_ATTRIBUTES = {
     'T', ':', 'local', 'utc', ',', '.', 'Z', 'truncated_time'
     }
 
+DEFAULT_DATE_ATTRIBUTES = {
+    '-', 'year', 'day', 'month'
+    }
+
+DEFAULT_TIME_ATTRIBUTES = {
+    'hour', 'min', 'sec', 'fract', 'tz_hour', 'tz_min', 'fract_sep',
+    'T', ':', '.'
+    }
+
 
 def _date_attrs_check(arr):
     for i in arr:
@@ -274,7 +283,7 @@ def str_to_datetime(value):
 def date_to_str(date, attr=None):
 
     if attr is None:
-        attr = {'year', 'month', 'day'}
+        attr = DEFAULT_DATE_ATTRIBUTES
 
     if 'truncated_date' in attr:
 
@@ -372,7 +381,7 @@ def time_to_str(time, attr=None):
     else:
 
         if attr is None:
-            attr = {'-', 'hour', 'min', 'sec'}
+            attr = DEFAULT_TIME_ATTRIBUTES
 
         t = ''
         if 'T' in attr:
@@ -419,7 +428,11 @@ def time_to_str(time, attr=None):
         if not 'fract' in attr:
             fract = ''
         else:
-            fract = '{}'.format(str(fract).split('.')[1])
+            splitted_fract = str(fract).split('.')
+            if len(splitted_fract) > 1:
+                fract = str(splitted_fract[1])
+            else:
+                fract = '0'
 
         tz = format_tz(
             time.tzinfo,
@@ -445,7 +458,10 @@ def time_to_str(time, attr=None):
     return ret
 
 
-def datetime_to_str(value, attr):
+def datetime_to_str(value, attr=None):
+
+    if attr is None:
+        attr = DEFAULT_DATE_ATTRIBUTES | DEFAULT_TIME_ATTRIBUTES
 
     date = value.date()
     time = value.timetz()
