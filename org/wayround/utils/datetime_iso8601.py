@@ -397,7 +397,6 @@ def time_to_str(time, attr=None):
         if 'sec' in attr:
             second = '{:02d}'.format(time.second)
         else:
-            #        second = float('{}.{}'.format(time.second, fract))
             second = float(time.second + fract)
             fract = second / 60
             second = ''
@@ -406,7 +405,6 @@ def time_to_str(time, attr=None):
         if 'min' in attr:
             minute = '{:02d}'.format(time.minute)
         else:
-            #        minute = float('{}.{}'.format(time.minute, fract))
             minute = float(time.minute + fract)
             fract = minute / 60
             minute = ''
