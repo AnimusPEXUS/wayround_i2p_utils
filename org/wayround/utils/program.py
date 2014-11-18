@@ -293,7 +293,7 @@ def _format_command_level_help(subtree, level_depth):
         sections_text += """\
     {cmd_name}
         {cmd_short_descr}
-        
+
 """.format(
             cmd_name=i,
             cmd_short_descr=command_help_text)
@@ -317,28 +317,45 @@ def _format_command_level_help(subtree, level_depth):
         commands_text += """\
     {cmd_name}
         {cmd_short_descr}
-        
+
 """.format(
             cmd_name=i,
             cmd_short_descr=command_help_text)
 
-    ret = """\
-Usage: {command_name_text} [options] [parameters]
-
+    this_tree_help_text = ''
+    if this_tree_help != NO_DOCUMENTATION:
+        this_tree_help_text = """\
 {this_tree_help}
 
-subsections:
+""".format(this_tree_help=this_tree_help)
 
+    sub_sect_help_text = ''
+    if sections_text != '':
+        sub_sect_help_text = """\
+sections:
 {sect_text}
 
-commands:
+""".format(sect_text=sections_text)
 
+    sub_comm_help_text = ''
+    if commands_text != '':
+        sub_comm_help_text = """\
+commands:
 {cmds_text}
-""".format(
-        this_tree_help=this_tree_help,
-        command_name_text=command_name_text,
-        sect_text=sections_text,
-        cmds_text=commands_text
+
+""".format(cmds_text=commands_text)
+
+    ret = "Usage: {command_name_text} [options] [parameters]\n".format(
+        command_name_text=command_name_text
         )
+
+    if this_tree_help_text != '':
+        ret += '\n{}'.format(this_tree_help_text)
+
+    if sub_sect_help_text != '':
+        ret += '\n{}'.format(sub_sect_help_text)
+
+    if sub_comm_help_text != '':
+        ret += '\n{}'.format(sub_comm_help_text)
 
     return ret

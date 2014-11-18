@@ -334,7 +334,7 @@ def _is_subpath_range_error(p1, p2):
             error = True
             break
 
-    return ret
+    return error
 
 
 def get_subpath(basepath, fullpath):
@@ -350,7 +350,7 @@ def get_subpath(basepath, fullpath):
 
     ret = None
 
-    error = _is_subpath_range_error(p1, p2, i)
+    error = _is_subpath_range_error(p1, p2)
 
     if not error:
         ret = join(p2[len(p1):])

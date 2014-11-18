@@ -11,8 +11,9 @@ import org.wayround.utils.threading
 
 CAT_READWRITE_TYPES = ['sync', 'async']
 
-SELECT_SLEEP= 0.02
+SELECT_SLEEP = 0.02
 UNSELECTABLE_SLEEP = SELECT_SLEEP
+
 
 class CatTerminationFlagFound(Exception):
     pass
@@ -93,9 +94,9 @@ class Streamer:
 
         while len(
                 select.select(
-                    [self._descriptor_to_wait_for], 
-                    [], 
-                    [], 
+                    [self._descriptor_to_wait_for],
+                    [],
+                    [],
                     SELECT_SLEEP
                     )[0]
                 ) == 0:
@@ -161,9 +162,9 @@ class Streamer:
 
         while len(
                 select.select(
-                    [], 
-                    [self._descriptor_to_wait_for], 
-                    [], 
+                    [],
+                    [self._descriptor_to_wait_for],
+                    [],
                     SELECT_SLEEP
                     )[1]
                 ) == 0:
@@ -190,7 +191,7 @@ class Streamer:
 
         return
 
-    def read(self):
+    def read(self, data_size=None):
         """
         ret[0] == True - stream closed
         """
@@ -250,7 +251,17 @@ class Streamer:
                         raise CatTerminationFlagFound()
 
                     try:
-                        ret_buff = self._stream_object_read_meth(self._bs)
+                        if data_size is None:
+                            ret_buff = self._stream_object_read_meth(self._bs)
+                        else:
+                            if data_size > self._bs:
+                                ret_buff = self._stream_object_read_meth(
+                                    self._bs
+                                    )
+                            else:
+                                ret_buff = self._stream_object_read_meth(
+                                    data_size
+                                    )
 
                     except BlockingIOError:
                         pass
@@ -407,37 +418,62 @@ class Streamer:
         return
 
 
+def _is_cat_cycles_counter_enabled(verbose, count):
+    return verbose or count is not None
+
+
+def _is_cat_transferred_data_size_counter_enabled(
+        verbose,
+        maximum_total_data_transfer_size
+        ):
+    return verbose or maximum_total_data_transfer_size is not None
+
+
 def cat(
         stdin,
         stdout,
+
         bs=2 * 1024 ** 2,
         count=None,
+        maximum_total_data_transfer_size=None,
+
         threaded=False,
         thread_name='Thread',
-        verbose=False,
+
         convert_to_str=None,
+
         read_method_name='read',
         write_method_name='write',
+
         read_type='sync',
         read_selectable=True,
         read_unselectable_sleep=UNSELECTABLE_SLEEP,
+
         write_type='sync',
         write_selectable=False,
         write_unselectable_sleep=UNSELECTABLE_SLEEP,
+
         exit_on_input_eof=True,
         flush_after_each_write=False,
         flush_on_input_eof=False,
         close_output_on_eof=False,
+
         descriptor_to_wait_for_input=None,
         descriptor_to_wait_for_output=None,
+
         apply_input_seek=True,
         apply_output_seek=True,
+
         standard_write_method_result=True,
+
         termination_event=None,
+
+        verbose=False,
+        debug=False,
+
         on_exit_callback=None,
         on_input_read_error=None,
-        on_output_write_error=None,
-        debug=False
+        on_output_write_error=None
         ):
 
     if not read_method_name.isidentifier():
@@ -478,8 +514,8 @@ def cat(
         convert_to_str = None
 
     if (convert_to_str is not None
-        and not isinstance(convert_to_str, str)
-        ):
+                and not isinstance(convert_to_str, str)
+            ):
         raise ValueError(
             "convert_to_str can only be str(encoding name), bool or None"
             )
@@ -533,14 +569,20 @@ def cat(
 
     buff = None
 
-    c = 0
-    bytes_counter = 0
+    if _is_cat_cycles_counter_enabled(verbose, count):
+        c = 0
+
+    if _is_cat_transferred_data_size_counter_enabled(
+            verbose,
+            maximum_total_data_transfer_size
+            ):
+        bytes_counter = 0
 
     if apply_input_seek and hasattr(stdin, 'seek'):
         try:
             stdin.seek(0)
         except:
-            pass
+            logging.exception("Can't seek")
 
     read_method = getattr(stdin, read_method_name)
     write_method = getattr(stdout, write_method_name)
@@ -582,7 +624,15 @@ def cat(
             if termination_event and termination_event.is_set():
                 raise CatTerminationFlagFound()
 
-            closed, buff = s1.read()
+            if maximum_total_data_transfer_size is None:
+                closed, buff = s1.read()
+            else:
+                if bytes_counter + bs > maximum_total_data_transfer_size:
+                    closed, buff = s1.read(
+                        maximum_total_data_transfer_size - bytes_counter
+                        )
+                else:
+                    closed, buff = s1.read()
 
             if not closed and buff is not None and len(buff) != 0:
 
@@ -621,13 +671,26 @@ def cat(
                 if exit_on_input_eof:
                     break
 
-            c += 1
+            if _is_cat_cycles_counter_enabled(verbose, count):
+                c += 1
 
             if isinstance(buff, (bytes, str)):
-                if isinstance(buff, bytes):
-                    bytes_counter += len(buff)
-                if isinstance(buff, str):
-                    bytes_counter += len(bytes(buff, 'utf-8'))
+                if _is_cat_transferred_data_size_counter_enabled(
+                        verbose,
+                        maximum_total_data_transfer_size
+                        ):
+
+                    if isinstance(buff, bytes):
+                        bytes_counter += len(buff)
+                    if isinstance(buff, str):
+                        bytes_counter += len(bytes(buff, 'utf-8'))
+
+            if count is not None and count == c:
+                break
+
+            if (maximum_total_data_transfer_size is not None
+                    and bytes_counter >= maximum_total_data_transfer_size):
+                break
 
     except CatTerminationFlagFound:
         if debug:
@@ -653,9 +716,6 @@ def cat(
         if verbose:
             logging.info(" {}: Closing thread stdout".format(thread_name))
 
-#        if write_type in CAT_READWRITE_NB:
-#            stdout.write(b'')
-
         stdout.close()
 
     if verbose:
@@ -666,14 +726,15 @@ Ending `{name}' thread
        {size} bytes ({sizem:4.2f} MiB) transferred,
        with buffer size {bufs} bytes ({bufm:4.2f} MiB)
     }}
-""".format_map({
-            'name': thread_name,
-            'num': c,
-            'size': bytes_counter,
-            'sizem': (float(bytes_counter) / 1024 / 1024),
-            'bufs': bs,
-            'bufm': (float(bs) / 1024 / 1024)
-            }
+""".format_map(
+            {
+                'name': thread_name,
+                'num': c,
+                'size': bytes_counter,
+                'sizem': (float(bytes_counter) / 1024 / 1024),
+                'bufs': bs,
+                'bufm': (float(bs) / 1024 / 1024)
+                }
             )
             )
 
@@ -1250,8 +1311,8 @@ compression:
         stopped_by_flag = False
 
         while len(
-            select.select([], [self.socket.fileno()], [], SELECT_SLEEP)[1]
-            ) == 0:
+                select.select([], [self.socket.fileno()], [], SELECT_SLEEP)[1]
+                ) == 0:
 
             if self._stop_flag:
                 stopped_by_flag = True

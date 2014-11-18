@@ -518,14 +518,14 @@ def is_all_rec_bytes_str(args, empty_fails=False, must_be=None):
     """
     Check's what all values in args ar bytes or str, recurcevely
 
-    return bool, type (bool is True is passed. type is bytes, str or None)
+    return bool, type (bool is True if passed. type is bytes, str or None)
     """
 
     if not isSequence(args):
         raise TypeError("`args' must be sequence, not {}".format(type(args)))
 
     if len(args) == 0:
-        ret = not empty_fails, _mb
+        ret = not empty_fails, must_be
     else:
 
         tt = must_be
