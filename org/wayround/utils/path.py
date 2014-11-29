@@ -387,7 +387,7 @@ def is_subpath_real(path_to_check, path):
     p1 = split(realpath(path))
     p2 = split(realpath(path_to_check))
 
-    error = _is_subpath_range_error(p1, p2, i)
+    error = _is_subpath_range_error(p1, p2)
 
     ret = not error
 

@@ -76,7 +76,9 @@ class Streamer:
 
         self._flush_after_each_write = flush_after_each_write
 
+        self._on_exit_callback = on_exit_callback
         self._on_input_read_error = on_input_read_error
+        self._on_output_write_error = on_output_write_error
 
         self._termination_event = termination_event
 
@@ -514,7 +516,7 @@ def cat(
         convert_to_str = None
 
     if (convert_to_str is not None
-                and not isinstance(convert_to_str, str)
+            and not isinstance(convert_to_str, str)
             ):
         raise ValueError(
             "convert_to_str can only be str(encoding name), bool or None"

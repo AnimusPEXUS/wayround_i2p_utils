@@ -1,6 +1,8 @@
 
 """
 This module is for XHTML rendering
+
+Some sort of template engine
 """
 
 import logging
