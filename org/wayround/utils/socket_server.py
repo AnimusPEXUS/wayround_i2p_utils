@@ -29,9 +29,7 @@ def _ssfw(
         sock,
         addr
         )
-    print("SS callable exited")
     sock.shutdown(socket.SHUT_WR)
-    print("shutt down")
     return
 
 
@@ -94,7 +92,7 @@ class SocketServer:
         return
 
     def stop(self):
-        self._server_stop_flag.stop()
+        self._server_stop_flag.set()
         return
 
     def _acceptor_thread_method(self):
