@@ -444,7 +444,9 @@ class ProcessStream:
                     on_input_read_error=None,
                     on_output_write_error=None,
                     read_type=self.stdin_mode,
-                    write_type='sync'
+                    write_type='sync',
+                    apply_input_seek=False,
+                    apply_output_seek=False
                     )
 
                 if self.verbose:
@@ -466,7 +468,9 @@ class ProcessStream:
                     on_input_read_error=None,
                     on_output_write_error=None,
                     read_type='sync',
-                    write_type=self.stdout_mode
+                    write_type=self.stdout_mode,
+                    apply_input_seek=False,
+                    apply_output_seek=False
                     )
 
                 self.in_cat.start()

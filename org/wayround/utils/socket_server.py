@@ -93,6 +93,8 @@ class SocketServer:
 
     def stop(self):
         self._server_stop_flag.set()
+        if self._acceptor_thread:
+            self._acceptor_thread.join()
         return
 
     def _acceptor_thread_method(self):
