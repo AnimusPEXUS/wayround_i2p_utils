@@ -85,7 +85,9 @@ def pipe_subprocesses(
                 threaded=True,
                 close_output_on_eof=True,
                 bs=bufsize,
-                thread_name=thread_name
+                thread_name=thread_name,
+                apply_input_seek=False,
+                apply_output_seek=False
                 )
             )
 
@@ -483,8 +485,6 @@ class ProcessStream:
                 ret = 4
 
         if ret != 0:
-            #            self.wait('working')
-            #        else:
             self.stop()
 
         return ret
@@ -547,16 +547,11 @@ self.proc       {}
         while True:
 
             logging.debug("Waiting for status `{}'".format(what))
-#            print("Waiting for status `{}'".format(what))
 
             s = self.stat()
 
             if s == what:
                 break
-
-            #            if s == 'stopped':
-            #                if self.stop_flag.is_set():
-            #                    break
 
             time.sleep(0.2)
 
@@ -580,17 +575,11 @@ self.proc       {}
                 self.proc.wait(0.2)
             except subprocess.TimeoutExpired:
                 pass
-                # print("waiting")
             else:
                 self.returncode = self.proc.returncode
                 break
 
-#            if isinstance(self.proc.returncode, int):
-#                self.returncode = self.proc.returncode
-#                break
-
         self._wait_thread = None
-#        self.stop()
 
         return
 
