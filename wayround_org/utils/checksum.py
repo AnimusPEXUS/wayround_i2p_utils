@@ -4,9 +4,9 @@ import logging
 import os
 import re
 
-import org.wayround.utils.path
-import org.wayround.utils.stream
-import org.wayround.utils.terminal
+import wayround_org.utils.path
+import wayround_org.utils.stream
+import wayround_org.utils.terminal
 
 
 def make_dir_checksums(
@@ -16,7 +16,7 @@ def make_dir_checksums(
 
     ret = 0
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not is dir {}".format(dirname))
@@ -55,12 +55,12 @@ def make_dir_checksums_fo(
 
     ret = 0
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     if rel_to is None:
         rel_to = dirname
 
-    rel_to = org.wayround.utils.path.abspath(rel_to)
+    rel_to = wayround_org.utils.path.abspath(rel_to)
 
     if not os.path.isdir(dirname):
         logging.error("Not a dir {}".format(dirname))
@@ -79,13 +79,13 @@ def make_dir_checksums_fo(
                 files = wres[2]
 
                 for f in files:
-                    root_f = org.wayround.utils.path.join(root, f)
+                    root_f = wayround_org.utils.path.join(root, f)
 
-                    rel_path = org.wayround.utils.path.relpath(
+                    rel_path = wayround_org.utils.path.relpath(
                         root_f, rel_to
                         )
 
-                    org.wayround.utils.terminal.progress_write(
+                    wayround_org.utils.terminal.progress_write(
                         "    {}".format(rel_path)
                         )
                     if (os.path.isfile(root_f)
@@ -135,7 +135,7 @@ def make_dir_checksums_fo(
 
                         del(m)
 
-    org.wayround.utils.terminal.progress_write_finish()
+    wayround_org.utils.terminal.progress_write_finish()
     return ret
 
 
@@ -178,7 +178,7 @@ def make_fileobj_checksum(fileobj, method='sha512'):
             )
         ret = 1
     else:
-        org.wayround.utils.stream.cat(
+        wayround_org.utils.stream.cat(
             fileobj,
             hash_method_name,
             write_method_name='update',

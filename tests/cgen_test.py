@@ -1,26 +1,26 @@
-import org.wayround.utils.cgen
+import wayround_org.utils.cgen
 
 
-c_file = org.wayround.utils.cgen.Cfile()
+c_file = wayround_org.utils.cgen.Cfile()
 
-c_file.add_element(org.wayround.utils.cgen.Import('asm.h'))
+c_file.add_element(wayround_org.utils.cgen.Import('asm.h'))
 c_file.add_element(
-    org.wayround.utils.cgen.Struct(
+    wayround_org.utils.cgen.Struct(
         'MyStr',
         [
-            org.wayround.utils.cgen.Var('int', 'a'),
-            org.wayround.utils.cgen.Var('int', 'b'),
-            org.wayround.utils.cgen.Var('int', 'c'),
-            org.wayround.utils.cgen.Var('int', 'd')
+            wayround_org.utils.cgen.Var('int', 'a'),
+            wayround_org.utils.cgen.Var('int', 'b'),
+            wayround_org.utils.cgen.Var('int', 'c'),
+            wayround_org.utils.cgen.Var('int', 'd')
             ]
         )
     )
 c_file.add_element(
-    org.wayround.utils.cgen.Function(
+    wayround_org.utils.cgen.Function(
         'void',
         'main',
         [
-            org.wayround.utils.cgen.Var('void', '')
+            wayround_org.utils.cgen.Var('void', '')
             ],
         ''
         )

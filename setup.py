@@ -20,8 +20,8 @@ p.wait()
 py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
-    name='org_wayround_utils',
-    version='1.6.1',
+    name='wayround_org_utils',
+    version='1.7',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
@@ -30,10 +30,10 @@ This package contains various useful modules functions and classes.
 
     author='Alexey Gorshkov',
     author_email='animus@wayround.org',
-    url='https://github.com/AnimusPEXUS/org_wayround_utils',
+    url='https://github.com/AnimusPEXUS/wayround_org_utils',
     packages=[
-        'org.wayround.utils',
-        'org.wayround.utils.format'
+        'wayround_org.utils',
+        'wayround_org.utils.format'
         ],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
@@ -41,14 +41,14 @@ This package contains various useful modules functions and classes.
         ],
     ext_modules=[
         Extension(
-            "org.wayround.utils.format.elf_bin",
-            ["org/wayround/utils/format/elf_bin.c"],
+            "wayround_org.utils.format.elf_bin",
+            ["wayround_org/utils/format/elf_bin.c"],
             extra_compile_args=py_compile_args,
             extra_link_args=py_link_args,
             ),
         ],
     package_data={
-        'org.wayround.utils': [
+        'wayround_org.utils': [
             'config.sub',
             os.path.join('format', '*.c'),
             os.path.join('format', '*.h')

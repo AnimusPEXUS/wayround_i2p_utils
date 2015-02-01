@@ -2,20 +2,20 @@
 import logging
 import os
 
-import org.wayround.utils.path
-import org.wayround.utils.stream
-import org.wayround.utils.time
+import wayround_org.utils.path
+import wayround_org.utils.stream
+import wayround_org.utils.time
 
 
 def process_output_logger(process, log):
-    t = org.wayround.utils.stream.lbl_write(
+    t = wayround_org.utils.stream.lbl_write(
         process.stdout,
         log,
         True
         )
     t.start()
 
-    t2 = org.wayround.utils.stream.lbl_write(
+    t2 = wayround_org.utils.stream.lbl_write(
         process.stderr,
         log,
         True,
@@ -60,8 +60,8 @@ class Log:
 
         if ret == 0:
             if timestamp is None:
-                timestamp = org.wayround.utils.time.currenttime_stamp()
-            filename = org.wayround.utils.path.abspath(
+                timestamp = wayround_org.utils.time.currenttime_stamp()
+            filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
                     "{name}-{ts}.txt".format_map(
@@ -107,7 +107,7 @@ class Log:
         if self.fileobj is None:
             raise Exception
 
-        timestamp = org.wayround.utils.time.currenttime_stamp()
+        timestamp = wayround_org.utils.time.currenttime_stamp()
         self.info(
             "=///////= Stopping `{}' log =///////=" .format(
                 self.logname
@@ -132,7 +132,7 @@ class Log:
         if timestamp:
             pass
         else:
-            timestamp = org.wayround.utils.time.currenttime_stamp()
+            timestamp = wayround_org.utils.time.currenttime_stamp()
 
         if echo:
             msg1 = "[{}] {}".format(

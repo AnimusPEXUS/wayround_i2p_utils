@@ -7,7 +7,7 @@ import ssl
 import threading
 import time
 
-import org.wayround.utils.threading
+import wayround_org.utils.threading
 
 CAT_READWRITE_TYPES = ['sync', 'async']
 
@@ -807,7 +807,7 @@ class SocketStreamer:
 
     def __init__(self, sock, socket_transfer_size=4096, debug=False):
 
-        self.signal = org.wayround.utils.threading.Signal(
+        self.signal = wayround_org.utils.threading.Signal(
             self,
             ['start',
              'stop',

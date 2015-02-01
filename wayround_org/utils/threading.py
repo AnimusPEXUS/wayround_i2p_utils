@@ -5,8 +5,8 @@ import threading
 import time
 import weakref
 
-import org.wayround.utils.types
-import org.wayround.utils.weakref
+import wayround_org.utils.types
+import wayround_org.utils.weakref
 
 
 class Signal:
@@ -35,7 +35,7 @@ class Signal:
         if not isinstance(signal_names, list):
             signal_names = [signal_names]
 
-        if not org.wayround.utils.types.struct_check(
+        if not wayround_org.utils.types.struct_check(
                 signal_names,
                 {'t': list, '.': {'t': str}}
                 ):
@@ -246,8 +246,8 @@ class Signal:
                                 signal_name=i
                                 ):
 
-                            if org.wayround.utils.types.is_method(callback):
-                                wr = org.wayround.utils.weakref.WeakMethod(
+                            if wayround_org.utils.types.is_method(callback):
+                                wr = wayround_org.utils.weakref.WeakMethod(
                                     callback, self._print_wr_deletion
                                     )
                             else:
@@ -743,7 +743,7 @@ class TimeoutForEternity:
 
 def _add_prefix(signal_names=None, add_prefix=None):
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             signal_names,
             {'t': list, '.': {'t': str}}
             ):

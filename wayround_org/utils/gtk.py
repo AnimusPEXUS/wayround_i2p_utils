@@ -4,7 +4,7 @@ import os.path
 import threading
 import time
 
-import org.wayround.utils.path
+import wayround_org.utils.path
 
 
 try:
@@ -556,7 +556,7 @@ else:
 
             for i in lst:
                 if os.path.isdir(
-                        org.wayround.utils.path.join(path, i)
+                        wayround_org.utils.path.join(path, i)
                         ):
 
                     dirs.append(i)
@@ -580,7 +580,7 @@ else:
 
             pth = self.convert_indices_to_path(path.get_indices())
 
-            fpth = org.wayround.utils.path.join(self._root_dir, pth)
+            fpth = wayround_org.utils.path.join(self._root_dir, pth)
 
             if os.path.isdir(fpth):
 
@@ -622,7 +622,7 @@ else:
 
                 pth = self.convert_indices_to_path(path.get_indices())
 
-                ret = org.wayround.utils.path.join(self._root_dir, pth)
+                ret = wayround_org.utils.path.join(self._root_dir, pth)
 
             return ret
 

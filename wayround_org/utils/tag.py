@@ -7,7 +7,7 @@ import logging
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 
-import org.wayround.utils.terminal
+import wayround_org.utils.terminal
 
 
 class TagEngine:
@@ -233,7 +233,7 @@ class TagEngine:
             ii += 1
 
             if not mute:
-                org.wayround.utils.terminal.progress_write(
+                wayround_org.utils.terminal.progress_write(
                     "    {} of {} ({:.2f}%, deleted {})".format(
                         ii,
                         ic,
@@ -243,7 +243,7 @@ class TagEngine:
                     )
 
         if not mute:
-            org.wayround.utils.terminal.progress_write_finish()
+            wayround_org.utils.terminal.progress_write_finish()
 
         if changed:
             self.session.commit()

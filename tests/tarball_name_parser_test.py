@@ -1,3 +1,3 @@
-import org.wayround.utils.tarball
+import wayround_org.utils.tarball
 
-org.wayround.utils.tarball.parse_test()
+wayround_org.utils.tarball.parse_test()

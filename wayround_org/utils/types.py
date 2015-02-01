@@ -9,12 +9,12 @@ Examples of execution:
 
 import lxml.etree
 
-import org.wayround.utils.types
+import wayround_org.utils.types
 
->org.wayround.utils.types.types_n(lxml.etree.Element('q'))
+>wayround_org.utils.types.types_n(lxml.etree.Element('q'))
 ['Hashable', 'Sized', 'Iterable', 'Container']
 
->org.wayround.utils.types.types_s(lxml.etree.Element('q'))
+>wayround_org.utils.types.types_s(lxml.etree.Element('q'))
 ['Hashable', 'Sized', 'Mapping', 'Iterable', 'Container']
 """
 

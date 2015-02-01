@@ -2,9 +2,9 @@
 import os
 import re
 
-import org.wayround.utils.terminal
-import org.wayround.utils.types
-import org.wayround.utils.range
+import wayround_org.utils.terminal
+import wayround_org.utils.types
+import wayround_org.utils.range
 
 
 def columned_list_print(
@@ -27,7 +27,7 @@ def return_columned_list(
         fd=1
         ):
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             lst,
             {'t': list, '.': {'t': str}}
             ):
@@ -39,7 +39,7 @@ def return_columned_list(
                 or (hasattr(fd, 'isatty') and fd.isatty())
                 ):
 
-            size = org.wayround.utils.terminal.get_terminal_size(fd)
+            size = wayround_org.utils.terminal.get_terminal_size(fd)
             if size is None:
                 width = 80
             else:
@@ -129,4 +129,4 @@ def get_line_ranges(txt, nl='\n'):
 
 
 def get_line_index_at_offset(offset, ranges):
-    return org.wayround.utils.range.get_range_first_index(offset, ranges)
+    return wayround_org.utils.range.get_range_first_index(offset, ranges)

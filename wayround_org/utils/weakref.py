@@ -3,7 +3,7 @@ import weakref
 import logging
 import threading
 
-import org.wayround.utils.types
+import wayround_org.utils.types
 
 
 class WeakMethod:
@@ -13,7 +13,7 @@ class WeakMethod:
         if not callable(method):
             raise ValueError("callable must be provided")
 
-        if not org.wayround.utils.types.is_method(method):
+        if not wayround_org.utils.types.is_method(method):
             raise ValueError("provided callable not a method")
 
         if callback and not callable(callback):

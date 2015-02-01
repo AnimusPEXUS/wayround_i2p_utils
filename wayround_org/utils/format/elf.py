@@ -4,9 +4,9 @@ import mmap
 import os.path
 import logging
 
-from org.wayround.utils.format.elf_enum import *
+from wayround_org.utils.format.elf_enum import *
 
-from org.wayround.utils.format.elf_bin import (
+from wayround_org.utils.format.elf_bin import (
     read_e_ident,
     is_elf,
     e_ident_bitness,

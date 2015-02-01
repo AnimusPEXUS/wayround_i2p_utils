@@ -5,7 +5,7 @@ import os.path
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 
-import org.wayround.utils.path
+import wayround_org.utils.path
 
 
 class FileIndexer:
@@ -89,7 +89,7 @@ class FileIndexer:
         logging.info("Searching for missing files")
 
         for i in names:
-            full_name = org.wayround.utils.path.abspath(
+            full_name = wayround_org.utils.path.abspath(
                 basedir +
                 os.path.sep +
                 i.name)

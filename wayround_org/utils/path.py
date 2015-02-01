@@ -2,7 +2,7 @@
 import copy
 import os.path
 
-import org.wayround.utils.types
+import wayround_org.utils.types
 
 S_SEP = os.path.sep
 D_SEP = S_SEP * 2
@@ -79,7 +79,7 @@ def join(*args, must_be=str):
         if not isinstance(i, (str, bytes, list,)):
             raise ValueError("arguments must be str, bytes or lists")
 
-    res, res_t = org.wayround.utils.types.is_all_rec_bytes_str(
+    res, res_t = wayround_org.utils.types.is_all_rec_bytes_str(
         args,
         must_be=must_be
         )

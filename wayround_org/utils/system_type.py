@@ -3,7 +3,7 @@ import os.path
 import re
 import subprocess
 
-import org.wayround.utils.path
+import wayround_org.utils.path
 
 
 class SystemTypeInvalidFullName(Exception):
@@ -77,7 +77,7 @@ def parse_triplet(string):
 
     ret = None
 
-    wd = os.path.dirname(org.wayround.utils.path.abspath(__file__))
+    wd = os.path.dirname(wayround_org.utils.path.abspath(__file__))
 
     jd = os.path.join(wd, 'config.sub')
 

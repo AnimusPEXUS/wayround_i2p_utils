@@ -5,7 +5,7 @@ Version comparison utilities
 
 import logging
 
-import org.wayround.utils.tarball
+import wayround_org.utils.tarball
 
 
 def source_version_comparator(
@@ -19,13 +19,13 @@ def source_version_comparator(
         acceptable_source_name_extensions = \
             acceptable_source_name_extensions.split(' ')
 
-    d1 = org.wayround.utils.tarball.parse_tarball_name(
+    d1 = wayround_org.utils.tarball.parse_tarball_name(
         name1,
         True,
         acceptable_source_name_extensions
         )
 
-    d2 = org.wayround.utils.tarball.parse_tarball_name(
+    d2 = wayround_org.utils.tarball.parse_tarball_name(
         name2,
         True,
         acceptable_source_name_extensions

@@ -1,5 +1,5 @@
 
-from org.wayround.utils.types import struct_check
+from wayround_org.utils.types import struct_check
 from lxml.etree import Element, _Element
 
 

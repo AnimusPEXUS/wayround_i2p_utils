@@ -4,9 +4,9 @@ import inspect
 import logging
 import sys
 
-import org.wayround.utils.error
-import org.wayround.utils.getopt
-import org.wayround.utils.logging
+import wayround_org.utils.error
+import wayround_org.utils.getopt
+import wayround_org.utils.logging
 
 
 NO_DOCUMENTATION = '(No documentation)'
@@ -28,7 +28,7 @@ def logging_setup(loglevel='INFO'):
         logging.addLevelName(i[0], i[1])
     del i
 
-    opts = org.wayround.utils.getopt.getopt_keyed(sys.argv[1:])[0]
+    opts = wayround_org.utils.getopt.getopt_keyed(sys.argv[1:])[0]
 
     # Setup logging level and format
     log_level = loglevel
@@ -36,7 +36,7 @@ def logging_setup(loglevel='INFO'):
     if '--loglevel' in opts:
         log_level_u = opts['--loglevel'].upper()
 
-        if not log_level_u in org.wayround.utils.logging.LEVEL_NAMES:
+        if not log_level_u in wayround_org.utils.logging.LEVEL_NAMES:
             print("-e- Wrong --loglevel parameter")
         else:
             log_level = log_level_u
@@ -59,7 +59,7 @@ def command_processor(
         additional_data
         ):
 
-    opts, args = org.wayround.utils.getopt.getopt_keyed(opts_and_args_list)
+    opts, args = wayround_org.utils.getopt.getopt_keyed(opts_and_args_list)
 
     ret = dict(
         code=0,
@@ -126,7 +126,7 @@ def command_processor(
                 except:
                     e = sys.exc_info()
 
-                    ex_txt = org.wayround.utils.error.return_exception_info(
+                    ex_txt = wayround_org.utils.error.return_exception_info(
                         e,
                         tb=True
                         )

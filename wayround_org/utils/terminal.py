@@ -4,7 +4,7 @@ import struct
 import sys
 import termios
 
-import org.wayround.utils.text
+import wayround_org.utils.text
 
 
 def get_terminal_size(fd=1):

@@ -8,10 +8,10 @@ import sys
 import tarfile
 import lzma
 
-import org.wayround.utils.exec
-import org.wayround.utils.file
-import org.wayround.utils.path
-import org.wayround.utils.stream
+import wayround_org.utils.exec
+import wayround_org.utils.file
+import wayround_org.utils.path
+import wayround_org.utils.stream
 
 
 CANONICAL_COMPRESSORS = frozenset(['xz', 'lzma', 'bzip2', 'gzip'])
@@ -22,7 +22,7 @@ def _extract_zip(file_name, output_dir):
     ret = 0
 
     try:
-        proc = org.wayround.utils.exec.simple_exec(
+        proc = wayround_org.utils.exec.simple_exec(
             'unzip', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=sys.stderr,
             options=['-qq', '-o', file_name, '-d', output_dir],
@@ -41,7 +41,7 @@ def _extract_tar_7z(file_name, output_dir):
     ret = 0
 
     try:
-        proc_7z = org.wayround.utils.exec.simple_exec(
+        proc_7z = wayround_org.utils.exec.simple_exec(
             '7z',
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -55,7 +55,7 @@ def _extract_tar_7z(file_name, output_dir):
     else:
 
         try:
-            proc_tar = org.wayround.utils.exec.simple_exec(
+            proc_tar = wayround_org.utils.exec.simple_exec(
                 'tar',
                 stdin=proc_7z.stdout,
                 stdout=subprocess.PIPE,
@@ -202,7 +202,7 @@ def canonical_compressor(
                 )
             )
 
-    ret = org.wayround.utils.exec.process_stream(
+    ret = wayround_org.utils.exec.process_stream(
         compressor,
         stdin=stdin,
         stdout=stdout,
@@ -257,7 +257,7 @@ def archive_tar_canonical_fobj(
 
     ret = 0
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not a directory: {}".format(dirname))
@@ -274,7 +274,7 @@ def archive_tar_canonical_fobj(
         options += ['-c', '.']
 
         try:
-            tarproc = org.wayround.utils.exec.simple_exec(
+            tarproc = wayround_org.utils.exec.simple_exec(
                 'tar',
                 options=options,
                 stdin=subprocess.DEVNULL,
@@ -373,9 +373,9 @@ def extract_tar_canonical_fobj(
     if add_tar_options is None:
         add_tar_options = []
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
-    ret = org.wayround.utils.file.create_if_not_exists_dir(dirname)
+    ret = wayround_org.utils.file.create_if_not_exists_dir(dirname)
 
     if ret != 0:
         logging.error(
@@ -393,7 +393,7 @@ def extract_tar_canonical_fobj(
 
         tarproc = None
         try:
-            tarproc = org.wayround.utils.exec.simple_exec(
+            tarproc = wayround_org.utils.exec.simple_exec(
                 "tar",
                 options=options,
                 stdin=subprocess.PIPE,
@@ -441,7 +441,7 @@ def pack_dir_contents_tar(
 
     ret = 0
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     if not os.path.isdir(dirname):
         logging.error("Not a directory: {}".format(dirname))
@@ -466,7 +466,7 @@ def pack_dir_contents_tar(
 
                 options += ['-c', '.']
 
-                tarproc = org.wayround.utils.exec.simple_exec(
+                tarproc = wayround_org.utils.exec.simple_exec(
                     "tar",
                     options=options,
                     stdin=None,
@@ -548,7 +548,7 @@ def tar_member_get_extract_file_to(tarf, cont_name, output_filename):
                         )
                     ret = 2
                 else:
-                    org.wayround.utils.stream.cat(fobj, fd)
+                    wayround_org.utils.stream.cat(fobj, fd)
             finally:
                 fobj.close()
         finally:
@@ -712,7 +712,7 @@ def tarobj_check_member_sum(tarobj, sums, member_name):
         ret = False
     else:
 
-        summ = org.wayround.utils.checksum.make_fileobj_checksum(fobj)
+        summ = wayround_org.utils.checksum.make_fileobj_checksum(fobj)
 
         if summ == sums[member_name]:
             ret = True

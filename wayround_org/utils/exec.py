@@ -7,7 +7,7 @@ import sys
 import threading
 import time
 
-import org.wayround.utils.stream
+import wayround_org.utils.stream
 
 
 def simple_exec(
@@ -79,7 +79,7 @@ def pipe_subprocesses(
         logging.debug("Creating thread `{}'".format(thread_name))
 
         cats.append(
-            org.wayround.utils.stream.cat(
+            wayround_org.utils.stream.cat(
                 processes_list[i].stdout,
                 processes_list[i + 1].stdin,
                 threaded=True,
@@ -163,7 +163,7 @@ def test_pipes():
         bufsize=0
         )
 
-    cat1 = org.wayround.utils.stream.cat(
+    cat1 = wayround_org.utils.stream.cat(
         txt,
         xz1.stdin,
         threaded=True,
@@ -172,7 +172,7 @@ def test_pipes():
         thread_name="File >> xz1"
         )
 
-    cat2 = org.wayround.utils.stream.cat(
+    cat2 = wayround_org.utils.stream.cat(
         xz4.stdout,
         sys.stdout,
         threaded=True,
@@ -238,7 +238,7 @@ def test_pipes():
         bufsize=0
         )
 
-    cat1 = org.wayround.utils.stream.cat(
+    cat1 = wayround_org.utils.stream.cat(
         txt,
         bzip21.stdin,
         threaded=True,
@@ -247,7 +247,7 @@ def test_pipes():
         thread_name="File >> bzip2_1"
         )
 
-    cat2 = org.wayround.utils.stream.cat(
+    cat2 = wayround_org.utils.stream.cat(
         bzip24.stdout,
         sys.stdout,
         threaded=True,
@@ -432,7 +432,7 @@ class ProcessStream:
 
                 # TODO: add error handlers
 
-                self.in_cat = org.wayround.utils.stream.cat(
+                self.in_cat = wayround_org.utils.stream.cat(
                     self.stdin,
                     self.proc.stdin,
                     threaded=True,
@@ -456,7 +456,7 @@ class ProcessStream:
                 else:
                     thread_name = 'Thread'
 
-                self.out_cat = org.wayround.utils.stream.cat(
+                self.out_cat = wayround_org.utils.stream.cat(
                     self.proc.stdout,
                     self.stdout,
                     threaded=True,

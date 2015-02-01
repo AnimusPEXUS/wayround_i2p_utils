@@ -11,9 +11,9 @@ import sys
 import urllib.parse
 import xml.sax.saxutils
 
-import org.wayround.utils.dict
-import org.wayround.utils.error
-import org.wayround.utils.text
+import wayround_org.utils.dict
+import wayround_org.utils.error
+import wayround_org.utils.text
 
 
 def pi(content):
@@ -406,8 +406,8 @@ def render_attributes(indict, path=[], tagname='', xml_indent_size=2):
 
     inaddr_l = len(path)
 
-    indent = org.wayround.utils.text.fill(' ', inaddr_l * xml_indent_size)
-    nameindent = org.wayround.utils.text.fill(' ', len(tagname))
+    indent = wayround_org.utils.text.fill(' ', inaddr_l * xml_indent_size)
+    nameindent = wayround_org.utils.text.fill(' ', len(tagname))
 
     attrs = []
 
@@ -533,7 +533,7 @@ class DictTreeToXMLRenderer:
         # those four attributes are for code formatting
         # purposes
         self.xml_indent_size = xml_indent_size
-        self.xml_indent = org.wayround.utils.text.fill(' ', xml_indent_size)
+        self.xml_indent = wayround_org.utils.text.fill(' ', xml_indent_size)
 
         self.css_and_js_holder = css_and_js_holder
 
@@ -657,7 +657,7 @@ class DictTreeToXMLRenderer:
                         {
                             'path': i,
                             'exc_info':
-                                org.wayround.utils.error.return_exception_info(
+                                wayround_org.utils.error.return_exception_info(
                                     sys.exc_info(),
                                     tb=True
                                     )
@@ -752,7 +752,7 @@ class DictTreeToXMLRenderer:
         check_unit(new_val)
 
         if isinstance(self.css_and_js_holder['content'], dict):
-            org.wayround.utils.dict.append(
+            wayround_org.utils.dict.append(
                 self.css_and_js_holder['content'],
                 new_val
                 )
@@ -977,7 +977,7 @@ class DictTreeToXMLRenderer:
 
         inaddr_l = len(path)
 
-        indent = org.wayround.utils.text.fill(
+        indent = wayround_org.utils.text.fill(
             ' ',
             inaddr_l * self.xml_indent_size
             )

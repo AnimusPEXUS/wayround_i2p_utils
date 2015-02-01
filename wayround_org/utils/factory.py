@@ -3,10 +3,10 @@
 """
 Factory for quick constructing classes with attributes and checks
 
-see also org.wayround.utils.lxml.checker_factory()
+see also wayround_org.utils.lxml.checker_factory()
 """
 
-import org.wayround.utils.types
+import wayround_org.utils.types
 
 
 def class_generate_attributes(class_obj, attributes):
@@ -26,13 +26,13 @@ def class_generate_attributes(class_obj, attributes):
 
     case = None
 
-    if org.wayround.utils.types.struct_check(
+    if wayround_org.utils.types.struct_check(
             attributes,
             {'t': list, '.': {'t': str}}
             ):
         case = 0
 
-    if org.wayround.utils.types.struct_check(
+    if wayround_org.utils.types.struct_check(
             attributes,
             {'t': list, '.': {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}}
             ):
@@ -102,7 +102,7 @@ def class_generate_check(class_obj, attributes):
     instance sanity
     """
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             attributes,
             {'t': list, '.': {'t': str}}
             ):

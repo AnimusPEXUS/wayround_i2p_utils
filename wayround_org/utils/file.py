@@ -7,9 +7,9 @@ import shutil
 import threading
 import time
 
-import org.wayround.utils.path
-import org.wayround.utils.terminal
-import org.wayround.utils.text
+import wayround_org.utils.path
+import wayround_org.utils.terminal
+import wayround_org.utils.text
 
 
 POLL_CONSTS = {}
@@ -89,8 +89,8 @@ def _copytree(
 
     ret = 0
 
-    full_src_dir = org.wayround.utils.path.abspath(src_dir)
-    full_dst_dir = org.wayround.utils.path.abspath(dst_dir)
+    full_src_dir = wayround_org.utils.path.abspath(src_dir)
+    full_dst_dir = wayround_org.utils.path.abspath(dst_dir)
 
     if not os.path.isdir(full_src_dir):
         logging.error("Source dir not exists `{}'".format(src_dir))
@@ -110,9 +110,9 @@ def _copytree(
                     followlinks=False
                     ):
 
-                path_dst = org.wayround.utils.path.join(
+                path_dst = wayround_org.utils.path.join(
                     full_dst_dir,
-                    org.wayround.utils.path.relpath(
+                    wayround_org.utils.path.relpath(
                         path,
                         full_src_dir
                         )
@@ -123,8 +123,8 @@ def _copytree(
 
                 for i in dirs:
 
-                    joined = org.wayround.utils.path.join(path, i)
-                    joined_dst = org.wayround.utils.path.join(path_dst, i)
+                    joined = wayround_org.utils.path.join(path, i)
+                    joined_dst = wayround_org.utils.path.join(path_dst, i)
 
                     if os.path.islink(joined):
 
@@ -148,8 +148,8 @@ def _copytree(
                 # TODO: if ret == 0?
                 for i in files:
 
-                    joined = org.wayround.utils.path.join(path, i)
-                    joined_dst = org.wayround.utils.path.join(path_dst, i)
+                    joined = wayround_org.utils.path.join(path, i)
+                    joined_dst = wayround_org.utils.path.join(path_dst, i)
 
                     if os.path.islink(joined):
 
@@ -195,8 +195,8 @@ def copytree(
 
     # TODO: think of hardlinks too..
 
-    src_dir = org.wayround.utils.path.abspath(src_dir)
-    dst_dir = org.wayround.utils.path.abspath(dst_dir)
+    src_dir = wayround_org.utils.path.abspath(src_dir)
+    dst_dir = wayround_org.utils.path.abspath(dst_dir)
 
     ret = 0
 
@@ -241,7 +241,7 @@ is_dir_empty = isdirempty
 
 def remove_if_exists(file_or_dir):
 
-    file_or_dir = org.wayround.utils.path.abspath(file_or_dir)
+    file_or_dir = wayround_org.utils.path.abspath(file_or_dir)
 
     if os.path.exists(file_or_dir):
         if not os.path.islink(file_or_dir):
@@ -307,7 +307,7 @@ def cleanup_dir(dirname):
     files = os.listdir(dirname)
 
     for i in range(len(files)):
-        files[i] = org.wayround.utils.path.abspath(
+        files[i] = wayround_org.utils.path.abspath(
             dirname + os.path.sep + files[i]
             )
 
@@ -356,7 +356,7 @@ def files_recurcive_list(
         include_dirs=False
         ):
 
-    s_sep = org.wayround.utils.path.select_s_sep(dirname)
+    s_sep = wayround_org.utils.path.select_s_sep(dirname)
 
     if relative_to and not isinstance(relative_to, str):
         raise ValueError("relative_to must be str or None")
@@ -370,10 +370,10 @@ def files_recurcive_list(
             if maxdepth < 0:
                 raise ValueError("maxdepth can't be lesser than zero")
 
-    dirname = org.wayround.utils.path.normpath(dirname)
+    dirname = wayround_org.utils.path.normpath(dirname)
 
     absp = dirname.startswith(s_sep)
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     lst = []
 
@@ -390,10 +390,10 @@ def files_recurcive_list(
             f_path = None
 
             if i.startswith(s_sep):
-                f_path = org.wayround.utils.path.abspath(i)
+                f_path = wayround_org.utils.path.abspath(i)
             else:
-                f_path = org.wayround.utils.path.abspath(
-                    org.wayround.utils.path.join(
+                f_path = wayround_org.utils.path.abspath(
+                    wayround_org.utils.path.join(
                         dirname, i
                         )
                     )
@@ -407,7 +407,7 @@ def files_recurcive_list(
     if not mute:
         logging.info("Walking...")
 
-    dirname_path_length = org.wayround.utils.path.path_length(dirname)
+    dirname_path_length = wayround_org.utils.path.path_length(dirname)
 
     for dire, dirs, files in os.walk(
             dirname,
@@ -416,7 +416,7 @@ def files_recurcive_list(
             ):
 
         current_path_length = (
-            org.wayround.utils.path.path_length(dire) - dirname_path_length
+            wayround_org.utils.path.path_length(dire) - dirname_path_length
             ) + 1
 
         if maxdepth:
@@ -432,8 +432,8 @@ def files_recurcive_list(
 
             for i in dirs[:]:
 
-                f_path = org.wayround.utils.path.abspath(
-                    org.wayround.utils.path.join(
+                f_path = wayround_org.utils.path.abspath(
+                    wayround_org.utils.path.join(
                         dire, i
                         )
                     )
@@ -444,7 +444,7 @@ def files_recurcive_list(
 
         for f in files:
 
-            f_path = org.wayround.utils.path.join(dire, f)
+            f_path = wayround_org.utils.path.join(dire, f)
 
             append = True
 
@@ -472,7 +472,7 @@ def files_recurcive_list(
         if include_dirs:
             for f in dirs:
 
-                f_path = org.wayround.utils.path.join(dire, f)
+                f_path = wayround_org.utils.path.join(dire, f)
 
                 append = True
 
@@ -489,14 +489,14 @@ def files_recurcive_list(
             if not relative_to:
                 pp = dire
             else:
-                pp = org.wayround.utils.path.relpath(dire, relative_to)
+                pp = wayround_org.utils.path.relpath(dire, relative_to)
 
-            org.wayround.utils.terminal.progress_write(
+            wayround_org.utils.terminal.progress_write(
                 "    ({} files): {}".format(len(lst), pp)
                 )
 
     if not mute:
-        org.wayround.utils.terminal.progress_write_finish()
+        wayround_org.utils.terminal.progress_write_finish()
 
     ret = lst
 
@@ -512,7 +512,7 @@ def files_recurcive_list(
     else:
 
         for i in range(len(ret)):
-            ret[i] = org.wayround.utils.path.relpath(ret[i], relative_to)
+            ret[i] = wayround_org.utils.path.relpath(ret[i], relative_to)
 
     return lst
 
@@ -529,7 +529,7 @@ def null_file(filename):
 
 
 def get_dir_size(name):
-    name = org.wayround.utils.path.abspath(name)
+    name = wayround_org.utils.path.abspath(name)
     if not os.path.isdir(name):
         raise OSError("Not a dir `{}'".format(name))
 
@@ -543,7 +543,7 @@ def get_dir_size(name):
     lst.sort()
 
     for i in lst:
-        f_pth = org.wayround.utils.path.abspath(name + os.path.sep + i)
+        f_pth = wayround_org.utils.path.abspath(name + os.path.sep + i)
         if not os.path.islink(f_pth):
             if os.path.isfile(f_pth):
                 s = os.stat(f_pth)
@@ -574,7 +574,7 @@ def dereference_file(filename):
 
     ret = 0
 
-    filename = org.wayround.utils.path.abspath(filename)
+    filename = wayround_org.utils.path.abspath(filename)
 
     if not os.path.exists(filename):
         ret = 1
@@ -587,7 +587,7 @@ def dereference_file(filename):
                 ret = 0
             else:
                 lnk = None
-                dir_name = org.wayround.utils.path.abspath(
+                dir_name = wayround_org.utils.path.abspath(
                     os.path.dirname(filename)
                     )
 
@@ -597,8 +597,8 @@ def dereference_file(filename):
                     ret = 2
                 else:
                     if lnk[0] != '/':
-                        lnk = org.wayround.utils.path.abspath(
-                            org.wayround.utils.path.join(dir_name, lnk)
+                        lnk = wayround_org.utils.path.abspath(
+                            wayround_org.utils.path.join(dir_name, lnk)
                             )
 
                     os.unlink(filename)
@@ -611,19 +611,19 @@ def dereference_files_in_dir(dirname):
 
     ret = 0
 
-    dirname = org.wayround.utils.path.abspath(dirname)
+    dirname = wayround_org.utils.path.abspath(dirname)
 
     try:
         for dirpath, dirnames, filenames in os.walk(dirname):
             filenames.sort()
             dirnames.sort()
-            dirpath = org.wayround.utils.path.abspath(dirpath)
+            dirpath = wayround_org.utils.path.abspath(dirpath)
 
             for i in filenames:
                 if dereference_file(os.path.join(dirpath, i)) != 0:
                     logging.error(
                         "Could not dereference `{}'".format(
-                            org.wayround.utils.path.relpath(
+                            wayround_org.utils.path.relpath(
                                 dirname,
                                 os.getcwd()
                                 )
@@ -640,15 +640,15 @@ def dereference_files_in_dir(dirname):
 
 def files_by_mask_copy_to_dir(in_dir, out_dir, mask='*.h'):
 
-    in_dir = org.wayround.utils.path.abspath(in_dir)
-    out_dir = org.wayround.utils.path.abspath(out_dir)
+    in_dir = wayround_org.utils.path.abspath(in_dir)
+    out_dir = wayround_org.utils.path.abspath(out_dir)
 
     ret = 0
     try:
         for dirpath, dirnames, filenames in os.walk(in_dir):
             filenames.sort()
             dirnames.sort()
-            dirpath = org.wayround.utils.path.abspath(dirpath)
+            dirpath = wayround_org.utils.path.abspath(dirpath)
 
             for i in filenames:
                 if fnmatch.fnmatch(i, mask):
@@ -879,7 +879,7 @@ def which(name):
 
 def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
 
-    reducing_dir_filelist = org.wayround.utils.file.files_recurcive_list(
+    reducing_dir_filelist = wayround_org.utils.file.files_recurcive_list(
         reducing_dir,
         onerror=None,
         followlinks=False,
@@ -893,11 +893,11 @@ def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
         maxdepth=None
         )
 
-    reducing_dir_sums = org.wayround.utils.checksum.checksums_by_list(
+    reducing_dir_sums = wayround_org.utils.checksum.checksums_by_list(
         reducing_dir_filelist, method
         )
 
-    reducable_dir_filelist = org.wayround.utils.file.files_recurcive_list(
+    reducable_dir_filelist = wayround_org.utils.file.files_recurcive_list(
         reducable_dir,
         onerror=None,
         followlinks=False,
@@ -911,7 +911,7 @@ def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
         maxdepth=None
         )
 
-    reducable_dir_sums = org.wayround.utils.checksum.checksums_by_list(
+    reducable_dir_sums = wayround_org.utils.checksum.checksums_by_list(
         reducable_dir_filelist, method
         )
 
@@ -922,7 +922,7 @@ def checksumed_dir_redue(reducing_dir, reducable_dir, method='sha512'):
             if reducing_dir_sums[j] == reducable_dir_sums[i]:
 
                 rel_path = \
-                    org.wayround.utils.path.relpath(j, os.path.dirname(i))
+                    wayround_org.utils.path.relpath(j, os.path.dirname(i))
 
                 if os.path.isfile(i) or os.path.islink(i):
                     os.unlink(i)

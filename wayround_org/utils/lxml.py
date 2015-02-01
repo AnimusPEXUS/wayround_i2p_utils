@@ -2,11 +2,11 @@
 import lxml.etree
 import logging
 
-import org.wayround.utils.types
+import wayround_org.utils.types
 
 
 def check_tagname_class_attrnames(tagname_class_attrnames):
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             tagname_class_attrnames, {
                 't': list, '.': {
                     't': tuple, '<': 3, '>': 6}}
@@ -181,7 +181,7 @@ def elem_props_to_object_props(element, obj, names):
     if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             names,
             {'t': list, '.':
              {'t': tuple, '<': 2, '>': 2, '.': {'t': str}
@@ -206,7 +206,7 @@ def object_props_to_subelems(obj, element, names):
     if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             names,
             {'t': list, '.': {'t': str}}
             ):
@@ -277,7 +277,7 @@ def object_propsm_to_subelemsm(obj, element, names):
     if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             names,
             {'t': list, '.': {'t': str}}
             ):
@@ -302,7 +302,7 @@ def object_props_to_elem_props(obj, element, names):
     if not is_lxml_tag_element(element):
         raise TypeError("`element' must be lxml.etree.Element")
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             names,
             {'t': list, '.':
              {'t': tuple, '<': 2, '>': 2, '.': {'t': str}}
@@ -376,13 +376,13 @@ def parse_tag(inp_str, localname, namespaces=None):
     if isinstance(namespaces, str):
         namespaces = [namespaces]
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             localname,
             {'t': list, '.': {'t': str}}
             ):
         raise TypeError("`localname' must be list of strings")
 
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
             namespaces,
             {'t': list, 'None': True, '.': {'t': str}}
             ):
@@ -477,7 +477,7 @@ def checker_factory(cls, tagname_class_attrnames):
 
         elif lst == True and none == False:
             check = """
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
         value,
         {'t': list, '<': 1, '.': {'t': typ}}
         ):
@@ -489,7 +489,7 @@ def checker_factory(cls, tagname_class_attrnames):
 
         elif lst == True and none == True:
             check = """
-    if not org.wayround.utils.types.struct_check(
+    if not wayround_org.utils.types.struct_check(
         value,
         {'t': list, '.': {'t': typ}}
         ):
@@ -503,7 +503,7 @@ def checker_factory(cls, tagname_class_attrnames):
 
         exec("""
 def check(self, value):
-    import org.wayround.utils.types
+    import wayround_org.utils.types
 
     _name = '{name}'
 
@@ -532,7 +532,7 @@ def simple_exchange_class_factory(
     """
     Factories simple class structure to handle simple lxml elements
 
-    see org.wayround.xmpp.xcard_4 for example usage
+    see wayround_org.xmpp.xcard_4 for example usage
 
     Yes, this is not as beautiful as using class inheritance, but match simpler
     and obvious
@@ -544,7 +544,7 @@ def simple_exchange_class_factory(
     get_{value_name}(value)
     --
     You can use
-    org.wayround.utils.factory.class_generate_attributes_and_check()
+    wayround_org.utils.factory.class_generate_attributes_and_check()
     to generate set_this_element_text_value() and get_this_element_text_value()
     automatically
     """
@@ -562,7 +562,7 @@ def simple_exchange_class_factory(
     exec("""
 import logging
 import lxml.etree
-import org.wayround.utils.lxml
+import wayround_org.utils.lxml
 
 def __init__(self, **kwargs):
 
@@ -579,7 +579,7 @@ def __init__(self, **kwargs):
 
 def new_from_element(cls, element):
 
-    int_tag = org.wayround.utils.lxml.parse_element_tag(
+    int_tag = wayround_org.utils.lxml.parse_element_tag(
         element,
         '{tag}',
         '{namespace}'
@@ -588,12 +588,12 @@ def new_from_element(cls, element):
     if int_tag is None:
         raise ValueError("invalid element tag or namespace")
 
-    cl = cls(**org.wayround.utils.lxml.\
+    cl = cls(**wayround_org.utils.lxml.\
         generate_initial_parameters_for_constructors(cls, element))
 
     {gw1}
 
-    org.wayround.utils.lxml.subelems_to_object_props2(
+    wayround_org.utils.lxml.subelems_to_object_props2(
         element, cl,
         cls._subelements_struct
         )
@@ -601,7 +601,7 @@ def new_from_element(cls, element):
     return cl
 
 def new_empty(cls, *args, **kwargs):
-    cl = cls(**org.wayround.utils.lxml.\
+    cl = cls(**wayround_org.utils.lxml.\
         generate_empty_parameters_for_constructors(
             cls, *args, **kwargs)
             )
@@ -621,7 +621,7 @@ def gen_element(self):
 
     {gw2}
 
-    org.wayround.utils.lxml.object_props_to_subelems2(
+    wayround_org.utils.lxml.object_props_to_subelems2(
         self, el,
         self._subelements_struct
         )

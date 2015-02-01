@@ -4,7 +4,7 @@ import logging
 import os.path
 import re
 
-import org.wayround.utils.path
+import wayround_org.utils.path
 
 
 def v(s):
@@ -175,7 +175,7 @@ class FTPWalk:
         if name == '':
             raise ValueError
 
-        name = org.wayround.utils.path.normpath(name)
+        name = wayround_org.utils.path.normpath(name)
         fdir = os.path.dirname(name)
         name = os.path.basename(name)
         return self.fstat_d_n(fdir, name)

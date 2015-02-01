@@ -7,9 +7,9 @@ import pprint
 import re
 import fnmatch
 
-import org.wayround.utils.list
-import org.wayround.utils.tag
-import org.wayround.utils.text
+import wayround_org.utils.list
+import wayround_org.utils.tag
+import wayround_org.utils.text
 
 
 # Difficult name examples:
@@ -291,7 +291,7 @@ def standard_version_splitter(name_sliced, most_possible_version):
     ret['version_list'] = \
         copy.copy(ret['version_list_dirty'])
 
-    org.wayround.utils.list.remove_all_values(
+    wayround_org.utils.list.remove_all_values(
         ret['version_list'],
         ALL_DELIMITERS
         )
@@ -425,7 +425,7 @@ def parse_tarball_name(
         without_extension = filename[:-len(extension)]
 
         # TODO: copy this parser to this module
-        name_sliced = org.wayround.utils.text.slice_string_to_sections(
+        name_sliced = wayround_org.utils.text.slice_string_to_sections(
             without_extension
             )
 
@@ -479,7 +479,7 @@ def parse_tarball_name(
                     )
 
                 ret['groups']['status_list_dirty'] = (
-                    org.wayround.utils.list.list_strip(
+                    wayround_org.utils.list.list_strip(
                         ret['groups']['status_list_dirty'],
                         STATUS_DELIMITERS
                         )
@@ -489,13 +489,13 @@ def parse_tarball_name(
                     copy.copy(ret['groups']['status_list_dirty'])
                     )
 
-                org.wayround.utils.list.remove_all_values(
+                wayround_org.utils.list.remove_all_values(
                     ret['groups']['status_list'],
                     STATUS_DELIMITERS
                     )
 
                 ret['groups']['status_list'] = (
-                    org.wayround.utils.list.list_strip(
+                    wayround_org.utils.list.list_strip(
                         ret['groups']['status_list'],
                         STATUS_DELIMITERS
                         )
@@ -662,7 +662,7 @@ def filter_tarball_list(input_list, filter_text):
 
                     working_item = None
 
-                    parsed = org.wayround.utils.tarball.\
+                    parsed = wayround_org.utils.tarball.\
                         parse_tarball_name(
                             os.path.basename(item),
                             mute=True
@@ -711,7 +711,7 @@ def filter_tarball_list(input_list, filter_text):
 
                 elif function in ['<', '<=', '==', '>=', '>']:
                     matched = (
-                        org.wayround.aipsetup.version.lb_comparator(
+                        wayround_org.aipsetup.version.lb_comparator(
                             working_item,
                             function + ' ' + data
                             )
