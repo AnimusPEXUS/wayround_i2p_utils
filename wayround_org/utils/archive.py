@@ -36,6 +36,25 @@ def _extract_zip(file_name, output_dir):
     return ret
 
 
+def _extract_7z(file_name, output_dir):
+
+    ret = 0
+
+    try:
+        proc = wayround_org.utils.exec.simple_exec(
+            '7z', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=sys.stderr,
+            options=['x', '-y', '-o{}'.format(output_dir), file_name],
+            )
+    except:
+        logging.exception("unzip start error")
+        ret = 1
+    else:
+        ret = proc.wait()
+
+    return ret
+
+
 def _extract_tar_7z(file_name, output_dir):
 
     ret = 0
@@ -126,6 +145,9 @@ def extract(file_name, output_dir):
 
     elif file_name.endswith('.zip'):
         ret = _extract_zip(file_name, output_dir)
+
+    elif file_name.endswith('.7z'):
+        ret = _extract_7z(file_name, output_dir)
 
     else:
         logging.error("Unsupported extension")
