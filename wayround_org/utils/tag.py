@@ -8,96 +8,101 @@ import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 
 import wayround_org.utils.terminal
+import wayround_org.utils.db
 
 
-class TagEngine:
+class TagEngine(wayround_org.utils.db.BasicDB):
 
-    Base = sqlalchemy.ext.declarative.declarative_base()
+    def __init__(
+            self,
+            config_string=None,
+            bind=None,
+            decl_base=None,
+            metadata=None,
+            init_table_data='tag',
+            commit_every=1000
+            ):
 
-    class Tag(Base):
-
-        __tablename__ = 'tag'
-
-        tid = sqlalchemy.Column(
-            sqlalchemy.Integer,
-            primary_key=True,
-            autoincrement=True
+        super().__init__(
+            config_string=config_string,
+            bind=bind,
+            decl_base=decl_base,
+            metadata=metadata,
+            init_table_data=init_table_data
             )
-
-        obj = sqlalchemy.Column(
-            sqlalchemy.UnicodeText,
-            nullable=False,
-            default='',
-            index=True
-            )
-
-        tag = sqlalchemy.Column(
-            sqlalchemy.UnicodeText,
-            nullable=False,
-            default='',
-            index=True
-            )
-
-    def __init__(self, config_string, commit_every=1000):
-
-        self._db_engine = (
-            sqlalchemy.create_engine(
-                config_string,
-                echo=False
-                )
-            )
-
-        self.Base.metadata.bind = self._db_engine
-
-        self.Base.metadata.create_all()
 
         self.commit_every = commit_every
         self.commit_counter = 0
 
-        try:
-            self.session = sqlalchemy.orm.Session(bind=self._db_engine)
-        except:
-            self.session = None
-            raise
+        # try:
+        #     self.session = sqlalchemy.orm.Session(bind=self._db_engine)
+        # except:
+        #     self.session = None
+        #     raise
+
+        return
+        
+    def init_table_mappings(self, init_table_data):
+
+        class Table(self.decl_base):
+
+            __tablename__ = init_table_data
+
+            tid = sqlalchemy.Column(
+                sqlalchemy.Integer,
+                primary_key=True,
+                autoincrement=True
+                )
+
+            obj = sqlalchemy.Column(
+                sqlalchemy.UnicodeText,
+                nullable=False,
+                default='',
+                index=True
+                )
+
+            tag = sqlalchemy.Column(
+                sqlalchemy.UnicodeText,
+                nullable=False,
+                default='',
+                index=True
+                )
+
+        self.table_cls = Table
 
         return
 
-    def __del__(self):
-        if self:
-            self.close()
+    def get_mapped_tag_table(self):
+        ret = None
+        if self.table_cls.__tablename__ in self.decl_base.metadata.tables:
+            ret = self.decl_base.metadata.tables[self.table_cls.__tablename__]
+        return ret
+
+    def create_tables(self):
+        self.decl_base.metadata.tables[self.get_mapped_tag_table()].create()
         return
 
-    def close(self):
-        if self.session:
-            self.session.commit()
-            self.session.close()
-            self.session = None
-        return
+    def set_tags(self, obj, tags=[]):
 
-    def commit(self):
-        self.session.commit()
-        return
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-    def set_tags(self, obj, tags=[], nocommit=True):
-        self.session.query(self.Tag).filter_by(obj=obj).delete()
-        if not nocommit:
-            self.session.commit()
+        session.query(self.table_cls).filter_by(obj=obj).delete()
 
         for i in tags:
-            a = self.Tag()
+            a = self.table_cls()
             a.obj = obj
             a.tag = i
-            self.session.add(a)
+            session.add(a)
 
         self.commit_counter += 1
 
         if self.commit_counter >= self.commit_every:
             logging.debug("Committing")
-            self.commit()
+            session.commit()
             self.commit_counter = 0
 
-        if not nocommit:
-            self.session.commit()
+        session.commit()
+        session.close()
 
         return
 
@@ -105,32 +110,35 @@ class TagEngine:
 
     def get_tags(self, obj):
 
-        q = self.session.query(self.Tag).filter_by(obj=obj).all()
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
+
+        q = session.query(self.table_cls).filter_by(obj=obj).all()
 
         ret = set()
         for i in q:
             ret.add(i.tag)
 
+        session.close()
+
         return list(ret)
 
     get_object_tags = get_tags
 
-    def get_objects(self, order=None):
+    def get_objects(self):
 
-        if not order in [None, 'tag', 'object']:
-            raise ValueError("Wrong order selected")
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        q = None
-        if order is None:
-            q = self.session.query(self.Tag).all()
-        elif order == 'tag':
-            q = self.session.query(self.Tag).order_by(self.Tag.tag).all()
-        elif order == 'object':
-            q = self.session.query(self.Tag).order_by(self.Tag.obj).all()
+        q = session\
+            .query(sqlalchemy.distinct(self.table_cls.obj))\
+            .order_by(self.table_cls.obj)\
+            .all()
 
         ret = list()
+
         for i in q:
-            ret.append(i.obj)
+            ret.append(i[0])
+
+        session.close()
 
         return ret
 
@@ -138,7 +146,7 @@ class TagEngine:
 
         ret = dict()
 
-        objs = self.get_objects(order='object')
+        objs = self.get_objects()
 
         for i in objs:
             ret[i] = self.get_tags(i)
@@ -148,19 +156,30 @@ class TagEngine:
     get_all_object = get_objects
 
     def get_all_tags(self):
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        q = self.session.query(sqlalchemy.distinct(self.Tag.tag)).all()
+        q = session.query(
+            sqlalchemy.distinct(
+                self.table_cls.tag
+                )
+            ).all()
 
         ret = []
         for i in q:
             ret.append(i[0])
 
+        session.close()
+
         return ret
 
     def get_size(self):
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
         self.commit()
-        ret = self.session.query(self.Tag).count()
+
+        ret = session.query(self.table_cls).count()
+
+        session.close()
 
         return ret
 
@@ -168,13 +187,18 @@ class TagEngine:
         return self.get_objects_by_tags([tag])
 
     def get_objects_by_tags(self, tags):
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
         ret = set()
 
-        q = self.session.query(self.Tag).filter(self.Tag.tag.in_(tags)).all()
+        q = session.query(self.table_cls)\
+            .filter(self.table_cls.tag.in_(tags))\
+            .all()
 
         for i in q:
             ret.add(i.obj)
+
+        session.close()
 
         return list(ret)
 
@@ -182,34 +206,48 @@ class TagEngine:
 
     def del_object_tags(self, obj, synchronize_session='evaluate'):
 
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
+
         if isinstance(obj, list):
 
             if len(obj) > 0:
                 for i in range(int(len(obj) / 100) + 1):
-                    self.session.query(self.Tag).filter(
-                        self.Tag.obj.in_(
-                            obj[i * 100:(i + 1) * 100])
-                        ).delete(
-                        synchronize_session=synchronize_session
-                        )
+                    session.query(self.table_cls)\
+                        .filter(self.table_cls.obj.in_(
+                            obj[i * 100:(i + 1) * 100]
+                            )
+                        )\
+                        .delete(
+                            synchronize_session=synchronize_session
+                            )
 
         else:
-            self.session.query(self.Tag).filter_by(obj=obj).delete(
+            session.query(self.table_cls).filter_by(obj=obj).delete(
                 synchronize_session=synchronize_session
                 )
+
+        session.close()
 
         return
 
     def del_objects_by_tags(self, tags):
 
-        self.session.query(self.Tag).filter(self.Tag.tag.in_(tags)).delete()
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
+
+        session.query(self.table_cls)\
+            .filter(self.table_cls.tag.in_(tags))\
+            .delete()
+
+        session.close()
 
         return
 
     def remove_duplicated_objects(self, mute=True):
 
+        session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
+
         logging.info("Loading...")
-        objs = self.get_objects(order='object')
+        objs = self.get_objects()
         logging.info("Cleaning...")
 
         changed = False
@@ -226,9 +264,13 @@ class TagEngine:
                     objs.remove(i)
 
                 removed += \
-                    self.sesessionss.query(self.Tag).filter_by(obj=i).count()
+                    session.query(self.table_cls)\
+                    .filter_by(obj=i)\
+                    .count()
 
-                self.session.query(self.Tag).filter_by(obj=i).delete()
+                session.query(self.table_cls)\
+                    .filter_by(obj=i)\
+                    .delete()
 
             ii += 1
 
@@ -246,13 +288,12 @@ class TagEngine:
             wayround_org.utils.terminal.progress_write_finish()
 
         if changed:
-            self.session.commit()
+            session.commit()
+
+        session.close()
 
         return
 
     def clear(self):
-
-        self.session.query(self.Tag).delete()
-        self.session.commit()
-
+        self.get_mapped_tag_table().delete()
         return

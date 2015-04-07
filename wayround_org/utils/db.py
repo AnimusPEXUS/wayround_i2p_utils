@@ -1,135 +1,57 @@
 
+"""
+Look for easy usage example in tag.py moule
+"""
+
+import sqlalchemy.ext.declarative
 import sqlalchemy.orm
-
-
-class BasicDBConfigError(Exception):
-    pass
 
 
 class BasicDB:
 
-    """
-    Main package index DB handling class
-    """
-
-    # NOTE: Example Table Class. Do not remove!
-    #
-    #    Base = sqlalchemy.ext.declarative.declarative_base()
-    #
-    #    class Info(Base):
-    #        """
-    #        Class for holding package information
-    #        """
-    #        __tablename__ = 'package_info'
-    #
-    #        name = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            primary_key=True,
-    #            default=''
-    #            )
-    #
-    #        basename = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            default=''
-    #            )
-    #
-    #        version_re = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            default=''
-    #            )
-    #
-    #        home_page = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            default=''
-    #            )
-    #
-    #        description = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            default=''
-    #            )
-    #
-    #        buildscript = sqlalchemy.Column(
-    #            sqlalchemy.UnicodeText,
-    #            nullable=False,
-    #            default=''
-    #            )
-    #
-    #        installation_priority = sqlalchemy.Column(
-    #            sqlalchemy.Integer,
-    #            nullable=False,
-    #            default=5
-    #            )
-    #
-    #        removable = sqlalchemy.Column(
-    #            sqlalchemy.Boolean,
-    #            nullable=False,
-    #            default=True
-    #            )
-    #
-    #        reducible = sqlalchemy.Column(
-    #            sqlalchemy.Boolean,
-    #            nullable=False,
-    #            default=True
-    #            )
-    #
-    #        auto_newest_src = sqlalchemy.Column(
-    #            sqlalchemy.Boolean,
-    #            nullable=False,
-    #            default=True
-    #            )
-    #
-    #        auto_newest_pkg = sqlalchemy.Column(
-    #            sqlalchemy.Boolean,
-    #            nullable=False,
-    #            default=True
-    #            )
-
     def __init__(
-        self, *args, echo=False, create_all=False, **kwargs
-        ):
+            self,
+            config_string=None,
+            bind=None,
+            decl_base=None,
+            metadata=None,
+            init_table_data=None
+            ):
 
-        self._db_engine = (
-                sqlalchemy.create_engine(
-                *args,
-                echo=echo,
-                **kwargs
+        if bind is None and config_string is None:
+            raise ValueError(
+                "if `bind' or `config_string' must be defined"
                 )
-            )
 
-        self.Base.metadata.bind = self._db_engine
+        if bind is not None and config_string is not None:
+            raise ValueError(
+                "if `bind' is defined, then `config_string' must be None"
+                )
 
-        if create_all:
-            self.Base.metadata.create_all()
+        if config_string is not None and bind is None:
+            bind = sqlalchemy.create_engine(config_string)
 
-        self.session = sqlalchemy.orm.Session(bind=self._db_engine)
+        if decl_base is None:
+            self.decl_base = sqlalchemy.ext.declarative.declarative_base(
+                metadata=metadata,
+                bind=bind
+                )
+        else:
+            self.decl_base = decl_base
+
+        self.init_table_mappings(init_table_data)
+
+        # try:
+        #     self.session = sqlalchemy.orm.Session(bind=self._db_engine)
+        # except:
+        #     self.session = None
+        #     raise
 
         return
-
-#    def __del__(self):
-#        if self:
-#            self.close()
-#        return
 
     def create_all(self):
-        self.Base.metadata.create_all()
+        return self.decl_base.metadata.create_all()
 
-    def commit(self):
-        if self.session:
-            self.session.commit()
-
+    def bind(self, engine):
+        self.decl_base.metadata.bind = engine
         return
-
-    def close(self):
-        if self.session:
-            self.session.commit()
-            self.session.close()
-            self.session = None
-
-        return
-
-    destroy = close
