@@ -42,6 +42,13 @@ def list_lower(lst):
     return lst2
 
 
+def list_upper(lst):
+    lst2 = []
+    for i in lst:
+        lst2.append(i.upper())
+    return lst2
+
+
 def list_sort(lst, cmp=None):
 
     lst_l = len(lst)
@@ -117,11 +124,10 @@ def list_strip_remove_empty_remove_duplicated_lines(lst):
     Do not use this function for file lists,
     use filelist_strip_remove_empty_remove_duplicated_lines
     """
-    return list_remove_duplicated_lines(
-        list_remove_empty_lines(
-            list_strip_lines(copy.copy(lst))
-            )
-        )
+    ret = list_strip_lines(lst)
+    ret = list_remove_empty_lines(ret)
+    ret = list_remove_duplicated_lines(ret)
+    return ret
 
 
 def filelist_strip_remove_empty_remove_duplicated_lines(lst):
@@ -131,11 +137,10 @@ def filelist_strip_remove_empty_remove_duplicated_lines(lst):
     Use this function for file lists,
     not list_strip_remove_empty_remove_duplicated_lines
     """
-    return list_remove_duplicated_lines(
-        list_remove_empty_lines(
-            list_strip_filelines(copy.copy(lst))
-            )
-        )
+    ret = list_strip_filelines(lst)
+    ret = list_remove_empty_lines(ret)
+    ret = list_remove_duplicated_lines(ret)
+    return ret
 
 
 def list_filter_list_white_or_black(

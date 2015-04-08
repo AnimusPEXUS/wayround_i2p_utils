@@ -79,10 +79,10 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         return ret
 
     def create_tables(self):
-        self.decl_base.metadata.tables[self.get_mapped_tag_table()].create()
+        self.get_mapped_tag_table().create()
         return
 
-    def set_tags(self, obj, tags=[]):
+    def set_object_tags(self, obj, tags=[]):
 
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
@@ -106,9 +106,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
 
         return
 
-    set_object_tags = set_tags
-
-    def get_tags(self, obj):
+    def get_object_tags(self, obj):
 
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
@@ -121,8 +119,6 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         session.close()
 
         return list(ret)
-
-    get_object_tags = get_tags
 
     def get_objects(self):
 
@@ -152,8 +148,6 @@ class TagEngine(wayround_org.utils.db.BasicDB):
             ret[i] = self.get_tags(i)
 
         return ret
-
-    get_all_object = get_objects
 
     def get_all_tags(self):
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
@@ -201,8 +195,6 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         session.close()
 
         return list(ret)
-
-    objects_by_tags = get_objects_by_tags
 
     def del_object_tags(self, obj, synchronize_session='evaluate'):
 
