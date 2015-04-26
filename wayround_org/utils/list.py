@@ -93,13 +93,13 @@ def list_remove_empty_lines(lst):
 
 
 def list_remove_duplicated_lines(lst):
-    ret = []
+    _s = set()
+    _l = list()
     for i in lst:
-        if not i in ret:
-            ret.append(i)
-    # NOTE and WARNING: set() is faster, but it it does not preserve order.
-    #                   order can be valuable
-    # ret = list(set(lst))
+        if not i in _s:
+            _s.add(i)
+            _l.append(i)
+    ret = _l
     return ret
 
 

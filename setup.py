@@ -6,6 +6,7 @@ import os.path
 from setuptools import setup
 from setuptools import Extension
 
+
 py_compil_args = None
 py_link_args = None
 
@@ -18,6 +19,9 @@ p = subprocess.Popen(
     ['pkg-config', '--libs', 'python3'], stdout=subprocess.PIPE)
 p.wait()
 py_link_args = str(p.communicate()[0], encoding='utf-8').split()
+
+
+
 
 setup(
     name='wayround_org_utils',
@@ -46,7 +50,7 @@ This package contains various useful modules functions and classes.
             extra_compile_args=py_compile_args,
             extra_link_args=py_link_args,
             ),
-        ],
+        ] ,
     package_data={
         'wayround_org.utils': [
             'config.sub',

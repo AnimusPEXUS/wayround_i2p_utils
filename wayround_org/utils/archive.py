@@ -240,7 +240,8 @@ def archive_tar_canonical(
         compressor,
         verbose_tar=False,
         verbose_compressor=False,
-        bufsize=(2 * 1024 ** 2)
+        bufsize=(2 * 1024 ** 2),
+        additional_tar_options=None
         ):
 
     ret = 0
@@ -257,7 +258,8 @@ def archive_tar_canonical(
                 compressor,
                 verbose_tar,
                 verbose_compressor,
-                bufsize=bufsize
+                bufsize=bufsize,
+                additional_tar_options=additional_tar_options
                 )
         except:
             logging.exception("Error")
@@ -274,8 +276,12 @@ def archive_tar_canonical_fobj(
         compressor,
         verbose_tar=False,
         verbose_compressor=False,
-        bufsize=(2 * 1024 ** 2)
+        bufsize=(2 * 1024 ** 2),
+        additional_tar_options=None
         ):
+
+    if additional_tar_options is None:
+        additional_tar_options = []
 
     ret = 0
 
@@ -294,6 +300,8 @@ def archive_tar_canonical_fobj(
             stderr = sys.stderr
 
         options += ['-c', '.']
+
+        options += additional_tar_options
 
         try:
             tarproc = wayround_org.utils.exec.simple_exec(

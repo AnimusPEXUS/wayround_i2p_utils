@@ -18,12 +18,12 @@ def logging_setup(loglevel='INFO'):
 
     # Logging settings
     for i in [
-            (logging.CRITICAL, '-c-'),
-            (logging.ERROR, '-e-'),
-            (logging.WARN, '-w-'),
-            (logging.WARNING, '-w-'),
-            (logging.INFO, '-i-'),
-            (logging.DEBUG, '-d-')
+            (logging.CRITICAL, '[-c-]'),
+            (logging.ERROR, '[-e-]'),
+            (logging.WARN, '[-w-]'),
+            (logging.WARNING, '[-w-]'),
+            (logging.INFO, '[-i-]'),
+            (logging.DEBUG, '[-d-]')
             ]:
         logging.addLevelName(i[0], i[1])
     del i
@@ -100,10 +100,30 @@ def command_processor(
         args_l = len(args)
 
         show_help = '--help' in opts
+        show_list = '--help-list' in opts
 
         if callable(subtree):
 
-            if not show_help:
+            if show_help:
+
+                ret = {
+                    'code': 0,
+                    'message': "showing help",
+                    'main_message': _format_command_help(level_depth, subtree)
+                    }
+
+            elif show_list:
+
+                # TODO: print error
+
+                ret = {
+                    'code': 1,
+                    'message': "error",
+                    'main_message':
+                        "--help-list param not applicable to final command"
+                    }
+
+            else:
 
                 try:
                     res = subtree(
@@ -121,7 +141,7 @@ def command_processor(
                     ret = dict(
                         code=1,
                         message='error',
-                        main_message="Interrupted Using Keyboard"
+                        main_message="Interrupted With Keyboard"
                         )
                 except:
                     e = sys.exc_info()
@@ -169,36 +189,18 @@ def command_processor(
                             code=1,
                             message='error',
                             main_message=(
-                                "Command returned not integer and not "
-                                "dict (resetting to 1)."
-                                " It has returned(type:{}):\n{}".format(
+                                "Command returned not integer and not dict\n"
+                                "(forcing exit code 1 and 'error' message)\n"
+                                "Actually it has returned(type:{}):\n{}".format(
                                     type(res),
                                     res
                                     )
                                 )
                             )
-            else:
-
-                # show help
-
-                ret = {
-                    'code': 0,
-                    'message': "showing help",
-                    'main_message': _format_command_help(level_depth, subtree)
-                    }
 
         elif isinstance(subtree, dict):
 
-            if not show_help:
-                ret = dict(
-                    code=1,
-                    message='error',
-                    main_message=(
-                        "Callable command not supplied. "
-                        "May be try use --help param."
-                        )
-                    )
-            else:
+            if show_help:
 
                 ret = {
                     'code': 0,
@@ -208,6 +210,28 @@ def command_processor(
                         level_depth
                         )
                     }
+
+            elif show_list:
+
+                ret = {
+                    'code': 1,
+                    'message': "showing help cmd list, no print",
+                    'main_message': _format_command_list(
+                        subtree,
+                        level_depth
+                        )
+                    }
+
+            else:
+
+                ret = dict(
+                    code=1,
+                    message='error',
+                    main_message=(
+                        "Callable command not supplied. "
+                        "May be try use --help param."
+                        )
+                    )
 
         else:
             raise ValueError("invalid command tree")
@@ -231,12 +255,13 @@ def program(command_name, commands, additional_data=None):
         additional_data
         )
 
-    if 'main_message' in ret and ret['main_message']:
-        print('{}'.format(ret['main_message']))
-
-    logging.info(
-        "Exit Code: {} ({})".format(ret['code'], ret['message'])
-        )
+    if (ret['code'] != 1
+            or ret['message'] != 'showing help cmd list, no print'):
+        if 'main_message' in ret and ret['main_message'] is not None:
+            logging.info('{}'.format(ret['main_message']))
+        logging.info(
+            "Exit Code: {} ({})".format(ret['code'], ret['message'])
+            )
 
     return ret['code']
 
@@ -261,6 +286,22 @@ Usage: {command_name_text} [options] [parameters]
         )
 
     return ret
+
+
+def _format_command_list(subtree, level_depth):
+    ret = None
+    level = subtree
+
+    if not hasattr(level, 'keys'):
+        level = None
+
+    if level is None:
+        ret = None
+    else:
+        print('\n'.join(level.keys()))
+        ret = ''
+
+    return
 
 
 def _format_command_level_help(subtree, level_depth):
@@ -358,4 +399,12 @@ commands:
     if sub_comm_help_text != '':
         ret += '\n{}'.format(sub_comm_help_text)
 
-    return ret
+    ret += """\
+
+    --help         help for section or command
+    --help-list    list commands in section
+"""
+
+    print(ret)
+
+    return

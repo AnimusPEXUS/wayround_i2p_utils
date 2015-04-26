@@ -44,7 +44,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         
     def init_table_mappings(self, init_table_data):
 
-        class Table(self.decl_base):
+        class Tag(self.decl_base):
 
             __tablename__ = init_table_data
 
@@ -68,28 +68,28 @@ class TagEngine(wayround_org.utils.db.BasicDB):
                 index=True
                 )
 
-        self.table_cls = Table
+        self.Tag = Tag
 
         return
 
     def get_mapped_tag_table(self):
         ret = None
-        if self.table_cls.__tablename__ in self.decl_base.metadata.tables:
-            ret = self.decl_base.metadata.tables[self.table_cls.__tablename__]
+        if self.Tag.__tablename__ in self.decl_base.metadata.tables:
+            ret = self.decl_base.metadata.tables[self.Tag.__tablename__]
         return ret
 
     def create_tables(self):
-        self.get_mapped_tag_table().create()
+        self.get_mapped_tag_table().create(checkfirst=True)
         return
 
     def set_object_tags(self, obj, tags=[]):
 
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        session.query(self.table_cls).filter_by(obj=obj).delete()
+        session.query(self.Tag).filter_by(obj=obj).delete()
 
         for i in tags:
-            a = self.table_cls()
+            a = self.Tag()
             a.obj = obj
             a.tag = i
             session.add(a)
@@ -110,7 +110,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
 
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        q = session.query(self.table_cls).filter_by(obj=obj).all()
+        q = session.query(self.Tag).filter_by(obj=obj).all()
 
         ret = set()
         for i in q:
@@ -125,8 +125,8 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
         q = session\
-            .query(sqlalchemy.distinct(self.table_cls.obj))\
-            .order_by(self.table_cls.obj)\
+            .query(sqlalchemy.distinct(self.Tag.obj))\
+            .order_by(self.Tag.obj)\
             .all()
 
         ret = list()
@@ -152,11 +152,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
     def get_all_tags(self):
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        q = session.query(
-            sqlalchemy.distinct(
-                self.table_cls.tag
-                )
-            ).all()
+        q = session.query(sqlalchemy.distinct(self.Tag.tag)).all()
 
         ret = []
         for i in q:
@@ -169,9 +165,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
     def get_size(self):
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        self.commit()
-
-        ret = session.query(self.table_cls).count()
+        ret = session.query(self.Tag).count()
 
         session.close()
 
@@ -185,8 +179,8 @@ class TagEngine(wayround_org.utils.db.BasicDB):
 
         ret = set()
 
-        q = session.query(self.table_cls)\
-            .filter(self.table_cls.tag.in_(tags))\
+        q = session.query(self.Tag)\
+            .filter(self.Tag.tag.in_(tags))\
             .all()
 
         for i in q:
@@ -204,8 +198,8 @@ class TagEngine(wayround_org.utils.db.BasicDB):
 
             if len(obj) > 0:
                 for i in range(int(len(obj) / 100) + 1):
-                    session.query(self.table_cls)\
-                        .filter(self.table_cls.obj.in_(
+                    session.query(self.Tag)\
+                        .filter(self.Tag.obj.in_(
                             obj[i * 100:(i + 1) * 100]
                             )
                         )\
@@ -214,7 +208,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
                             )
 
         else:
-            session.query(self.table_cls).filter_by(obj=obj).delete(
+            session.query(self.Tag).filter_by(obj=obj).delete(
                 synchronize_session=synchronize_session
                 )
 
@@ -226,8 +220,8 @@ class TagEngine(wayround_org.utils.db.BasicDB):
 
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        session.query(self.table_cls)\
-            .filter(self.table_cls.tag.in_(tags))\
+        session.query(self.Tag)\
+            .filter(self.Tag.tag.in_(tags))\
             .delete()
 
         session.close()
@@ -256,11 +250,11 @@ class TagEngine(wayround_org.utils.db.BasicDB):
                     objs.remove(i)
 
                 removed += \
-                    session.query(self.table_cls)\
+                    session.query(self.Tag)\
                     .filter_by(obj=i)\
                     .count()
 
-                session.query(self.table_cls)\
+                session.query(self.Tag)\
                     .filter_by(obj=i)\
                     .delete()
 

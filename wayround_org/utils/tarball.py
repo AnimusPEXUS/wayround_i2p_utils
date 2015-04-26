@@ -615,7 +615,7 @@ def filter_tarball_list(input_list, filter_text):
             ret = 1
             break
 
-        if subject == 'filename' or subject == 'status':
+        if subject in ['filename', 'status']:
 
             if not function in ['begins', 'contains', 'ends', 'fm', 're']:
                 logging.error(
