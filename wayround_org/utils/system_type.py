@@ -77,48 +77,50 @@ def parse_triplet(string):
 
     ret = None
 
-    wd = os.path.dirname(wayround_org.utils.path.abspath(__file__))
+    if isinstance(string, str):
 
-    jd = os.path.join(wd, 'config.sub')
+        wd = os.path.dirname(wayround_org.utils.path.abspath(__file__))
 
-    if not os.path.isfile(jd):
-        raise Exception("file not found: `{}'".format(jd))
+        jd = os.path.join(wd, 'config.sub')
 
-    p = subprocess.Popen(
-        ['bash',
-         jd,
-         string
-         ],
-        cwd=wd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL
-        )
+        if not os.path.isfile(jd):
+            raise Exception("file not found: `{}'".format(jd))
 
-    res = p.wait()
+        p = subprocess.Popen(
+            ['bash',
+             jd,
+             string
+             ],
+            cwd=wd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+            )
 
-    if res != 0:
-        ret = None
-    else:
-        com_res = p.communicate()
+        res = p.wait()
 
-        out = str(com_res[0].splitlines()[0].strip(), 'utf-8')
+        if res != 0:
+            ret = None
+        else:
+            com_res = p.communicate()
 
-        a = re.match(r'(?P<cpu>.*?)-(?P<company>.*?)-(?P<system>.*)', out)
-        if a:
+            out = str(com_res[0].splitlines()[0].strip(), 'utf-8')
 
-            system = a.group('system')
+            a = re.match(r'(?P<cpu>.*?)-(?P<company>.*?)-(?P<system>.*)', out)
+            if a:
 
-            b = re.match(r'((?P<kernel>.*?)-)?(?P<os>.*)', system)
+                system = a.group('system')
 
-            if b:
+                b = re.match(r'((?P<kernel>.*?)-)?(?P<os>.*)', system)
 
-                ret = (
-                    a.group('cpu'),
-                    a.group('company'),
-                    b.group('kernel'),
-                    b.group('os'),
-                    out
-                    )
+                if b:
+
+                    ret = (
+                        a.group('cpu'),
+                        a.group('company'),
+                        b.group('kernel'),
+                        b.group('os'),
+                        out
+                        )
 
     return ret
 

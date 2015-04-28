@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
-from __future__ import absolute_import
-
 import sys
 
-#if __name__ == '__main__':
-#    del sys.path[0]
+# NOTE: this needed or else subprocess will import time module from current
+#       directory
+if __name__ == '__main__':
+    del sys.path[0]
 
 import subprocess
 import os.path
