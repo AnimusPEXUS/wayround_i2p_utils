@@ -4,6 +4,13 @@ import traceback
 import pprint
 
 
+def return_instant_exception_info(tb=False):
+    return return_exception_info(
+        sys.exc_info(),
+        tb=tb
+        )
+
+
 def return_exception_info(exc_info, tb=False):
     txt = """
 EXCEPTION: {type}

@@ -239,11 +239,23 @@ def isdirempty(dirname):
 is_dir_empty = isdirempty
 
 
-def remove_if_exists(file_or_dir):
+def remove_if_exists(file_or_dir, remove_dead_lymlinks=False):
+
+    ret = 0
 
     file_or_dir = wayround_org.utils.path.abspath(file_or_dir)
 
-    if os.path.exists(file_or_dir):
+    if os.path.islink(file_or_dir):
+        try:
+            os.unlink(file_or_dir)
+        except:
+            logging.exception(
+                "      can't remove link {}".format(file_or_dir)
+                )
+            ret = 1
+
+    if ret == 0 and os.path.exists(file_or_dir):
+
         if not os.path.islink(file_or_dir):
 
             if os.path.isdir(file_or_dir):
@@ -253,7 +265,7 @@ def remove_if_exists(file_or_dir):
                     logging.exception(
                         "Can't remove dir {}".format(file_or_dir)
                         )
-                    return 1
+                    ret = 1
             else:
                 try:
                     os.unlink(file_or_dir)
@@ -261,16 +273,7 @@ def remove_if_exists(file_or_dir):
                     logging.exception(
                         "      can't remove file {}".format(file_or_dir)
                         )
-                    return 1
-
-        else:
-            try:
-                os.unlink(file_or_dir)
-            except:
-                logging.exception(
-                    "      can't remove link {}".format(file_or_dir)
-                    )
-                return 1
+                    ret = 1
 
     return 0
 

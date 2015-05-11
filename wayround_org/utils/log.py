@@ -5,6 +5,7 @@ import os
 import wayround_org.utils.path
 import wayround_org.utils.stream
 import wayround_org.utils.time
+import wayround_org.utils.error
 
 
 def process_output_logger(process, log):
@@ -64,10 +65,10 @@ class Log:
             filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
-                    "{name}-{ts}.txt".format_map(
+                    "{ts} {name}.txt".format_map(
                         {
-                            'ts': timestamp,
-                            'name': logname
+                            'name': logname,
+                            'ts': timestamp
                             }
                         )
                     )
@@ -123,7 +124,7 @@ class Log:
 
     def write(self, text, echo=False, typ='info', timestamp=None):
 
-        if not typ in ['info', 'error', 'warning']:
+        if not typ in ['info', 'error', 'exception', 'warning']:
             raise ValueError("Wrong `typ' parameter")
 
         if self.fileobj is None:
@@ -146,14 +147,21 @@ class Log:
                 logging.error(msg1)
             elif typ == 'warning':
                 logging.warning(msg1)
+            elif typ == 'exception':
+                # NOTE: using .error method to not print traceback again
+                logging.error(msg1)
 
-        icon = '-i-'
+        icon = '[-i-]'
         if typ == 'info':
-            icon = '-i-'
+            icon = '[-i-]'
         elif typ == 'error':
-            icon = '-e-'
+            icon = '[-e-]'
+        elif typ == 'exception':
+            icon = '[-E-]'
         elif typ == 'warning':
-            icon = '-w-'
+            icon = '[-w-]'
+        else:
+            icon = '[-?-]'
 
         msg2 = "[{}] {} {}".format(
             timestamp,
@@ -166,9 +174,25 @@ class Log:
 
     def error(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='error', timestamp=timestamp)
+        return
+
+    def exception(self, text, echo=True, timestamp=None, tb=True):
+        # EXCEPTION TEXT:
+        ei = wayround_org.utils.error.return_instant_exception_info(
+            tb=tb
+            )
+        ttt = """\
+{text}
+{ei}
+""".format(text=text, ei=ei)
+
+        self.write(ttt, echo=echo, typ='exception', timestamp=timestamp)
+        return
 
     def info(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='info', timestamp=timestamp)
+        return
 
     def warning(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='warning', timestamp=timestamp)
+        return

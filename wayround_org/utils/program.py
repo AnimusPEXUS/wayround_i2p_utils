@@ -367,7 +367,6 @@ def _format_command_level_help(subtree, level_depth):
     if this_tree_help != NO_DOCUMENTATION:
         this_tree_help_text = """\
 {this_tree_help}
-
 """.format(this_tree_help=this_tree_help)
 
     sub_sect_help_text = ''
@@ -375,7 +374,6 @@ def _format_command_level_help(subtree, level_depth):
         sub_sect_help_text = """\
 sections:
 {sect_text}
-
 """.format(sect_text=sections_text)
 
     sub_comm_help_text = ''
@@ -383,7 +381,6 @@ sections:
         sub_comm_help_text = """\
 commands:
 {cmds_text}
-
 """.format(cmds_text=commands_text)
 
     ret = "Usage: {command_name_text} [options] [parameters]\n".format(
@@ -400,7 +397,6 @@ commands:
         ret += '\n{}'.format(sub_comm_help_text)
 
     ret += """\
-
     --help         help for section or command
     --help-list    list commands in section
 """

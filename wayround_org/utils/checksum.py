@@ -10,8 +10,11 @@ import wayround_org.utils.terminal
 
 
 def make_dir_checksums(
-        dirname, output_filename,
-        rel_to=None, conv_to_rooted=True
+        dirname,
+        output_filename,
+        rel_to=None,
+        conv_to_rooted=True,
+        exclude=None
         ):
 
     ret = 0
@@ -32,11 +35,15 @@ def make_dir_checksums(
         else:
             try:
                 ret = make_dir_checksums_fo(
-                    dirname, sums_fd,
-                    rel_to, conv_to_rooted
+                    dirname,
+                    sums_fd,
+                    rel_to,
+                    conv_to_rooted,
+                    exclude
                     )
             except:
                 logging.exception("Error")
+                ret = 2
             finally:
                 sums_fd.close()
 
@@ -47,8 +54,12 @@ def make_dir_checksums_fo(
         dirname,
         output_fileobj,
         rel_to=None,
-        conv_to_rooted=True
+        conv_to_rooted=True,
+        exclude=None
         ):
+
+    if exclude is not None and not isinstance(exclude, list):
+        raise ValueError("`exclude' must be list or None")
 
     if not isinstance(rel_to, str):
         rel_to = dirname
@@ -81,6 +92,9 @@ def make_dir_checksums_fo(
                 for f in files:
                     root_f = wayround_org.utils.path.join(root, f)
 
+                    if exclude is not None and root_f in exclude:
+                        continue
+
                     rel_path = wayround_org.utils.path.relpath(
                         root_f, rel_to
                         )
@@ -89,8 +103,8 @@ def make_dir_checksums_fo(
                         "    {}".format(rel_path)
                         )
                     if (os.path.isfile(root_f)
-                            and
-                            not os.path.islink(root_f)
+                                and
+                                not os.path.islink(root_f)
                             ):
                         m = hashlib.sha512()
                         fd = None
