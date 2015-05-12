@@ -32,13 +32,21 @@ def process_output_logger(process, log):
 
 class Log:
 
-    def __init__(self, log_dir, logname, echo=True, timestamp=None):
+    def __init__(
+            self,
+            log_dir,
+            logname,
+            echo=True,
+            timestamp=None,
+            longest_logname=None
+            ):
 
         ret = 0
         self.code = 0
         self.fileobj = None
         self.logname = logname
         self.log_filename = None
+        self.longest_logname = longest_logname
 
         if not os.path.exists(log_dir):
             try:
@@ -83,7 +91,7 @@ class Log:
                 ret = 3
             else:
                 self.info(
-                    "=///////= Starting `{}' log =///////=" .format(
+                    "[{}] log started" .format(
                         self.logname
                         ),
                     echo=echo,
@@ -110,7 +118,7 @@ class Log:
 
         timestamp = wayround_org.utils.time.currenttime_stamp()
         self.info(
-            "=///////= Stopping `{}' log =///////=" .format(
+            "[{}] log ended" .format(
                 self.logname
                 ),
             echo=echo,
@@ -135,9 +143,15 @@ class Log:
         else:
             timestamp = wayround_org.utils.time.currenttime_stamp()
 
+        log_name = self.logname
+        if self.longest_logname is not None:
+            log_name += ' ' * (self.longest_logname - len(self.logname) - 1)
+
         if echo:
-            msg1 = "[{}] {}".format(
+
+            msg1 = "[{}][{}] {}".format(
                 timestamp,
+                log_name,
                 text
                 )
 
@@ -163,9 +177,10 @@ class Log:
         else:
             icon = '[-?-]'
 
-        msg2 = "[{}] {} {}".format(
+        msg2 = "[{}] {}[{}] {}".format(
             timestamp,
             icon,
+            log_name,
             text
             )
 
