@@ -100,7 +100,7 @@ def _extract_tar_7z(file_name, output_dir):
     return ret
 
 
-def _extract_tar_arch(file_name, output_dir, compressor):
+def _extract_tar_arch(file_name, output_dir, compressor, log=None):
 
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
@@ -112,36 +112,37 @@ def _extract_tar_arch(file_name, output_dir, compressor):
         output_dir,
         compressor,
         verbose_tar=True,
-        verbose_compressor=True
+        verbose_compressor=True,
+        log=log
         )
 
     return ret
 
 
-def extract(file_name, output_dir):
+def extract(file_name, output_dir, log=None):
 
     ret = None
 
     if file_name.endswith('.tar.lzma'):
-        ret = _extract_tar_arch(file_name, output_dir, 'lzma')
+        ret = _extract_tar_arch(file_name, output_dir, 'lzma', log=log)
 
     elif file_name.endswith('.tar.bz2'):
-        ret = _extract_tar_arch(file_name, output_dir, 'bzip2')
+        ret = _extract_tar_arch(file_name, output_dir, 'bzip2', log=log)
 
     elif file_name.endswith('.tar.gz'):
-        ret = _extract_tar_arch(file_name, output_dir, 'gzip')
+        ret = _extract_tar_arch(file_name, output_dir, 'gzip', log=log)
 
     elif file_name.endswith('.tar.xz'):
-        ret = _extract_tar_arch(file_name, output_dir, 'xz')
+        ret = _extract_tar_arch(file_name, output_dir, 'xz', log=log)
 
     elif file_name.endswith('.tar.7z'):
         ret = _extract_tar_7z(file_name, output_dir)
 
     elif file_name.endswith('.tbz2'):
-        ret = _extract_tar_arch(file_name, output_dir, 'bzip2')
+        ret = _extract_tar_arch(file_name, output_dir, 'bzip2', log=log)
 
     elif file_name.endswith('.tgz'):
-        ret = _extract_tar_arch(file_name, output_dir, 'gzip')
+        ret = _extract_tar_arch(file_name, output_dir, 'gzip', log=log)
 
     elif file_name.endswith('.zip'):
         ret = _extract_zip(file_name, output_dir)
@@ -354,7 +355,8 @@ def extract_tar_canonical(
         compressor,
         verbose_tar=False,
         verbose_compressor=False,
-        add_tar_options=None
+        add_tar_options=None,
+        log=None
         ):
 
     if not compressor in CANONICAL_COMPRESSORS:
@@ -379,7 +381,8 @@ def extract_tar_canonical(
                 compressor,
                 verbose_tar,
                 verbose_compressor,
-                add_tar_options
+                add_tar_options,
+                log=log
                 )
         finally:
             fobj.close()
@@ -392,7 +395,8 @@ def extract_tar_canonical_fobj(
         compressor,
         verbose_tar=False,
         verbose_compressor=False,
-        add_tar_options=[]
+        add_tar_options=[],
+        log=None
         ):
 
     if not compressor in CANONICAL_COMPRESSORS:
@@ -423,13 +427,18 @@ def extract_tar_canonical_fobj(
 
         tarproc = None
         try:
+            sout = sys.stdout
+
+            if log is not None:
+            #if False:
+                sout = log.stdout
             tarproc = wayround_org.utils.exec.simple_exec(
                 "tar",
                 options=options,
                 stdin=subprocess.PIPE,
-                stdout=sys.stdout,
+                stdout=sout,
                 cwd=dirname,
-                stderr=sys.stdout
+                stderr=sout
                 )
         except:
             logging.exception("tar error detected")
@@ -453,6 +462,10 @@ def extract_tar_canonical_fobj(
                         ) != 0:
 
                     ret = 3
+
+                #if log is not None:
+                #if False:
+                #    log.input_from_Popen_process(tarproc)
 
                 ret = tarproc.wait()
 
@@ -656,7 +669,7 @@ def extract_low(
         log.info("Extracting {}".format(os.path.basename(tarball)))
 
     extr_error = extract(
-        tarball, tmpdir
+        tarball, tmpdir, log
         )
 
     ret = extr_error

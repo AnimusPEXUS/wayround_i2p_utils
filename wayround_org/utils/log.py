@@ -1,6 +1,9 @@
 
+import threading
 import logging
 import os
+import io
+
 
 import wayround_org.utils.path
 import wayround_org.utils.stream
@@ -8,7 +11,57 @@ import wayround_org.utils.time
 import wayround_org.utils.error
 
 
+class LoggingFileLikeObject:
+
+    def __init__(self, log_instance, typ='info'):
+
+        if not type(log_instance) == Log:
+            raise TypeError("only Log instance allowed here")
+
+        if not typ in ['info', 'error']:
+            raise ValueError("invalid typ value")
+
+        self._log = log_instance
+        self._typ = typ
+        self._pipe = os.pipe()
+        self._pipe_read_file = os.fdopen(self._pipe[0])
+
+        self._thread = threading.Thread(
+            target=self._thread_run
+            )
+
+        self._thread.start()
+
+        return
+
+    def fileno(self):
+        return self._pipe[1]
+
+    def close(self):
+        return os.close(self._pipe[1])
+
+    def _thread_run(self):
+        for line in iter(self._pipe_read_file.readline, ''):
+
+            line = line.rstrip(' \n\r\0')
+
+            if self._typ == 'info':
+                self._log.info(line)
+
+            if self._typ == 'error':
+                self._log.error(line)
+
+        self._pipe_read_file.close()
+
+        return
+
+
 def process_output_logger(process, log):
+
+    raise Exception(
+        "this is depricated. use .stdout and/or .stderr objects"
+        )
+
     t = wayround_org.utils.stream.lbl_write(
         process.stdout,
         log,
@@ -19,7 +72,7 @@ def process_output_logger(process, log):
     t2 = wayround_org.utils.stream.lbl_write(
         process.stderr,
         log,
-        True,
+        threaded=True,
         typ='error'
         )
     t2.start()
@@ -47,6 +100,9 @@ class Log:
         self.logname = logname
         self.log_filename = None
         self.longest_logname = longest_logname
+
+        self.stdout = LoggingFileLikeObject(self, 'info')
+        self.stderr = LoggingFileLikeObject(self, 'error')
 
         if not os.path.exists(log_dir):
             try:
@@ -114,7 +170,10 @@ class Log:
 
     def stop(self, echo=True):
         if self.fileobj is None:
-            raise Exception
+            raise Exception("Programming error")
+
+        self.stdout.close()
+        self.stderr.close()
 
         timestamp = wayround_org.utils.time.currenttime_stamp()
         self.info(
