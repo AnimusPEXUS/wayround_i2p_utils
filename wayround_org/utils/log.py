@@ -25,6 +25,7 @@ class LoggingFileLikeObject:
         self._typ = typ
         self._pipe = os.pipe()
         self._pipe_read_file = os.fdopen(self._pipe[0])
+        self._stop_flag = False
 
         self._thread = threading.Thread(
             target=self._thread_run
@@ -38,10 +39,14 @@ class LoggingFileLikeObject:
         return self._pipe[1]
 
     def close(self):
+        self._stop_flag = True
         return os.close(self._pipe[1])
 
     def _thread_run(self):
         for line in iter(self._pipe_read_file.readline, ''):
+
+            if self._stop_flag:
+                break
 
             line = line.rstrip(' \n\r\0')
 
