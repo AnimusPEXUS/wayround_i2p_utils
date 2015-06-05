@@ -18,12 +18,12 @@ def logging_setup(loglevel='INFO'):
 
     # Logging settings
     for i in [
-            (logging.CRITICAL, '[-c-]'),
-            (logging.ERROR, '[-e-]'),
-            (logging.WARN, '[-w-]'),
-            (logging.WARNING, '[-w-]'),
-            (logging.INFO, '[-i-]'),
-            (logging.DEBUG, '[-d-]')
+            (logging.CRITICAL, '[c]'),
+            (logging.ERROR, '[e]'),
+            (logging.WARN, '[w]'),
+            (logging.WARNING, '[w]'),
+            (logging.INFO, '[i]'),
+            (logging.DEBUG, '[d]')
             ]:
         logging.addLevelName(i[0], i[1])
     del i
@@ -37,7 +37,7 @@ def logging_setup(loglevel='INFO'):
         log_level_u = opts['--loglevel'].upper()
 
         if not log_level_u in wayround_org.utils.logging.LEVEL_NAMES:
-            print("-e- Wrong --loglevel parameter")
+            print("[e] Wrong --loglevel parameter")
         else:
             log_level = log_level_u
 

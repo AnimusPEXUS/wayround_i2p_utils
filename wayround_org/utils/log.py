@@ -229,17 +229,17 @@ class Log:
                 # NOTE: using .error method to not print traceback again
                 logging.error(msg1)
 
-        icon = '[-i-]'
+        icon = '[i]'
         if typ == 'info':
-            icon = '[-i-]'
+            icon = '[i]'
         elif typ == 'error':
-            icon = '[-e-]'
+            icon = '[e]'
         elif typ == 'exception':
-            icon = '[-E-]'
+            icon = '[E]'
         elif typ == 'warning':
-            icon = '[-w-]'
+            icon = '[w]'
         else:
-            icon = '[-?-]'
+            icon = '[?]'
 
         msg2 = "[{}] {}[{}] {}".format(
             timestamp,
