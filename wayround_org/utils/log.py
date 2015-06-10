@@ -3,6 +3,7 @@ import threading
 import logging
 import os
 import io
+import sys
 
 
 import wayround_org.utils.path
@@ -27,6 +28,8 @@ class LoggingFileLikeObject:
         self._pipe_read_file = os.fdopen(self._pipe[0])
         self._stop_flag = False
 
+        self._close_lock = threading.Lock()
+
         self._thread = threading.Thread(
             target=self._thread_run
             )
@@ -39,22 +42,26 @@ class LoggingFileLikeObject:
         return self._pipe[1]
 
     def close(self):
-        self._stop_flag = True
-        return os.close(self._pipe[1])
+        with self._close_lock:
+            ret = os.close(self._pipe[1])
+            self._stop_flag = True
+        return ret
 
     def _thread_run(self):
         for line in iter(self._pipe_read_file.readline, ''):
 
-            if self._stop_flag:
-                break
+            with self._close_lock:
 
-            line = line.rstrip(' \n\r\0')
+                if self._stop_flag:
+                    break
 
-            if self._typ == 'info':
-                self._log.info(line)
+                line = line.rstrip(' \n\r\0')
 
-            if self._typ == 'error':
-                self._log.error(line)
+                if self._typ == 'info':
+                    self._log.info(line)
+
+                if self._typ == 'error':
+                    self._log.error(line)
 
         self._pipe_read_file.close()
 
@@ -105,6 +112,7 @@ class Log:
         self.logname = logname
         self.log_filename = None
         self.longest_logname = longest_logname
+        self._write_lock = threading.Lock()
 
         self.stdout = LoggingFileLikeObject(self, 'info')
         self.stderr = LoggingFileLikeObject(self, 'error')
@@ -130,11 +138,11 @@ class Log:
 
         if ret == 0:
             if timestamp is None:
-                timestamp = wayround_org.utils.time.currenttime_stamp()
+                timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
             filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
-                    "{ts} {name}.txt".format_map(
+                    "{ts:26} {name}.txt".format_map(
                         {
                             'name': logname,
                             'ts': timestamp
@@ -177,10 +185,7 @@ class Log:
         if self.fileobj is None:
             raise Exception("Programming error")
 
-        self.stdout.close()
-        self.stderr.close()
-
-        timestamp = wayround_org.utils.time.currenttime_stamp()
+        timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
         self.info(
             "[{}] log ended" .format(
                 self.logname
@@ -188,6 +193,10 @@ class Log:
             echo=echo,
             timestamp=timestamp
             )
+
+        self.stdout.close()
+        self.stderr.close()
+
         self.fileobj.flush()
         self.fileobj.close()
         return
@@ -205,50 +214,36 @@ class Log:
         if timestamp:
             pass
         else:
-            timestamp = wayround_org.utils.time.currenttime_stamp()
+            timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
 
         log_name = self.logname
         if self.longest_logname is not None:
             log_name += ' ' * (self.longest_logname - len(self.logname) - 1)
 
-        if echo:
-
-            msg1 = "[{}][{}] {}".format(
-                timestamp,
-                log_name,
-                text
-                )
-
-            if typ == 'info':
-                logging.info(msg1)
-            elif typ == 'error':
-                logging.error(msg1)
-            elif typ == 'warning':
-                logging.warning(msg1)
-            elif typ == 'exception':
-                # NOTE: using .error method to not print traceback again
-                logging.error(msg1)
-
-        icon = '[i]'
+        icon = 'i'
         if typ == 'info':
-            icon = '[i]'
+            icon = 'i'
         elif typ == 'error':
-            icon = '[e]'
+            icon = 'e'
         elif typ == 'exception':
-            icon = '[E]'
+            icon = 'E'
         elif typ == 'warning':
-            icon = '[w]'
+            icon = 'w'
         else:
-            icon = '[?]'
+            icon = '?'
 
-        msg2 = "[{}] {}[{}] {}".format(
-            timestamp,
+        msg2 = "[{}] [{:26}] [{}] {}".format(
             icon,
+            timestamp,
             log_name,
             text
             )
 
-        self.fileobj.write(msg2 + '\n')
+        with self._write_lock:
+            msg3 = msg2 + '\n'
+            if echo:
+                sys.stderr.write(msg3)
+            self.fileobj.write(msg3)
         return
 
     def error(self, text, echo=True, timestamp=None):

@@ -1,5 +1,6 @@
 
 import datetime
+import wayround_org.utils.datetime_iso8601
 
 TIMESTAMP_STR_FORMAT_PATTERN = \
     '{year:04d}{month:02d}{day:02d}.' \
@@ -32,3 +33,11 @@ def time_stamp(dt):
             'micro': dt.microsecond
             }
         )
+
+def currenttime_stamp_iso8601():
+    d = datetime.datetime.now()
+    return time_stamp_iso8601(d)
+
+def time_stamp_iso8601(dt):
+    return wayround_org.utils.datetime_iso8601.datetime_to_str(dt)
+
