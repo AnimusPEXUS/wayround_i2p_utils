@@ -19,8 +19,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
             bind=None,
             decl_base=None,
             metadata=None,
-            init_table_data='tag',
-            commit_every=1000
+            init_table_data='tag'
             ):
 
         super().__init__(
@@ -31,9 +30,6 @@ class TagEngine(wayround_org.utils.db.BasicDB):
             init_table_data=init_table_data
             )
 
-        self.commit_every = commit_every
-        self.commit_counter = 0
-
         # try:
         #     self.session = sqlalchemy.orm.Session(bind=self._db_engine)
         # except:
@@ -41,7 +37,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         #     raise
 
         return
-        
+
     def init_table_mappings(self, init_table_data):
 
         class Tag(self.decl_base):
@@ -82,29 +78,44 @@ class TagEngine(wayround_org.utils.db.BasicDB):
         self.get_mapped_tag_table().create(checkfirst=True)
         return
 
-    def set_object_tags(self, obj, tags=[]):
-
+    def set_many_objects_tags(
+            self,
+            obj_tags_2tuple_list,
+            commit_every=1000
+            ):
         session = sqlalchemy.orm.Session(self.decl_base.metadata.bind)
 
-        session.query(self.Tag).filter_by(obj=obj).delete()
+        commit_counter = 0
 
-        for i in tags:
-            a = self.Tag()
-            a.obj = obj
-            a.tag = i
-            session.add(a)
+        for obj, tags in obj_tags_2tuple_list:
 
-        self.commit_counter += 1
+            if tags is None:
+                tags = []
 
-        if self.commit_counter >= self.commit_every:
-            logging.debug("Committing")
-            session.commit()
-            self.commit_counter = 0
+            session.query(self.Tag).filter_by(obj=obj).delete()
+
+            for i in tags:
+                a = self.Tag()
+                a.obj = obj
+                a.tag = i
+                session.add(a)
+
+            commit_counter += 1
+
+            if commit_counter >= commit_every:
+                logging.debug("Committing")
+                session.commit()
+                commit_counter = 0
 
         session.commit()
         session.close()
 
         return
+
+    def set_object_tags(self, obj, tags=None):
+        return self.set_many_objects_tags(
+            [(obj, tags)]
+            )
 
     def get_object_tags(self, obj):
 
