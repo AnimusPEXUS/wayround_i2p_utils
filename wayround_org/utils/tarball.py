@@ -580,7 +580,7 @@ def filter_text_parse(filter_text):
 # TODO: adopt lists.filter_list()
 def filter_tarball_list(input_list, filter_text):
     """
-    Filters supplied list with supplied filter
+    Filter's supplied list with supplied filter text
 
     subjects not in check_for_subjects will always be positive (but can be
     filtered out by proper leading rules)
@@ -588,6 +588,7 @@ def filter_tarball_list(input_list, filter_text):
 
     ret = []
 
+    # TODO: do not use set function here as it is not sorted
     inp_list = set(copy.copy(input_list))
     out_list = copy.copy(inp_list)
 
