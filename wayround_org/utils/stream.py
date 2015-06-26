@@ -381,7 +381,8 @@ class Streamer:
                     logging.warning(
                         "{}: hint: check that output is in bytes mode or do"
                         " conversion with convert_to_str option".format(
-                            self._thread_name)
+                            self._thread_name
+                            )
                         )
                 raise
 
@@ -395,12 +396,23 @@ class Streamer:
 
                 raise
 
+            except BrokenPipeError:
+                logging.exception(
+                    "Broken pipe error arised. but I'll not give a damn\n"
+                    " (take surraunding exit codes as a consideration of success)"
+                    )
+                # FIXME: cyrus-sasl-2.1.26.tar.gz 
+                #        (md5: a7f4e5e559a0e37b3ffc438c9456e425)
+                #        gives an unknown broken pipe error. 
+                #        need to figure out this
+                
+                raise
+
             except:
 
                 logging.error(
                     "{}: Can't use object's `{}' `{}' method.\n"
-                    "    (Output process closed it's input. "
-                    "It can be not an error)".format(
+                    "    (possibly it isn't and error)".format(
                         self._thread_name,
                         self._stream_object,
                         self._stream_object_write_meth

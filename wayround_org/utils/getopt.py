@@ -26,7 +26,7 @@ def getopt(args):
 
     """
 
-    # TODO: add '--' delimiter
+    # TODO: add '--' delimiter support
 
     ret_args = []
     ret_opts = []

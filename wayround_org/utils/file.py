@@ -29,28 +29,31 @@ del _i
 del _l
 
 
-def _copy_file(src, dst, overwrite_dst=False):
+def copy_file(src, dst, overwrite_dst=False, verbose=True):
 
     ret = 0
 
     if os.path.isfile(dst) and not overwrite_dst:
-        logging.info("Skipping overwriting file `{}'".format(dst))
+        if verbose:
+            logging.info("Skipping overwriting file `{}'".format(dst))
     else:
 
-        logging.info("copying `{}'".format(os.path.relpath(src)))
+        if verbose:
+            logging.info("copying `{}'".format(os.path.relpath(src)))
 
         try:
             shutil.copy2(src, dst)
         except:
-            logging.error(
-                "Can't overwrite file `{}'".format(dst)
-                )
+            if verbose:
+                logging.error(
+                    "Can't overwrite file `{}'".format(dst)
+                    )
             ret = 1
 
     return ret
 
 
-def _copy_symlink(src, dst, overwrite_dst=False):
+def copy_symlink(src, dst, overwrite_dst=False, verbose=True):
 
     ret = 0
 
@@ -63,26 +66,29 @@ def _copy_symlink(src, dst, overwrite_dst=False):
         os.unlink(dst)
 
     elif os.path.isdir(dst):
-        logging.error(
-            "Can't create link. It's a directory `{}'".format(dst))
+        if verbose:
+            logging.error(
+                "Can't create link. It's a directory `{}'".format(dst))
         ret = 1
 
     try:
         os.symlink(link_value, dst)
     except:
-        logging.error(
-            "Can't create link. File exists `{}'".format(dst)
-            )
+        if verbose:
+            logging.error(
+                "Can't create link. File exists `{}'".format(dst)
+                )
         ret = 2
 
     return ret
 
 
-def _copytree(
+def _copytree_sub(
         src_dir,
         dst_dir,
         overwrite_files=False,
-        stop_on_overwrite_error=True
+        stop_on_overwrite_error=True,
+        verbose=True
         ):
 
     # TODO: make verbose parameter
@@ -93,13 +99,15 @@ def _copytree(
     full_dst_dir = wayround_org.utils.path.abspath(dst_dir)
 
     if not os.path.isdir(full_src_dir):
-        logging.error("Source dir not exists `{}'".format(src_dir))
+        if verbose:
+            logging.error("Source dir not exists `{}'".format(src_dir))
         ret = 1
     else:
         if create_if_not_exists_dir(full_dst_dir) != 0:
-            logging.error(
-                "Error creating destination dir `{}'".format(full_dst_dir)
-                )
+            if verbose:
+                logging.error(
+                    "Error creating destination dir `{}'".format(full_dst_dir)
+                    )
             ret = 2
         else:
 
@@ -128,20 +136,23 @@ def _copytree(
 
                     if os.path.islink(joined):
 
-                        if _copy_symlink(
+                        if copy_symlink(
                                 joined,
                                 joined_dst,
-                                overwrite_files
+                                overwrite_files,
+                                verbose=verbose
                                 ) != 0:
                             ret = 3
                             # TODO: break?
 
                     else:
                         if create_if_not_exists_dir(joined_dst) != 0:
-                            logging.error(
-                                "Can't create directory `{}'".format(
-                                    joined_dst)
-                                )
+                            if verbose:
+                                logging.error(
+                                    "Can't create directory `{}'".format(
+                                        joined_dst
+                                        )
+                                    )
                             ret = 5
                             # TODO: break?
 
@@ -153,20 +164,22 @@ def _copytree(
 
                     if os.path.islink(joined):
 
-                        if _copy_symlink(
+                        if copy_symlink(
                                 joined,
                                 joined_dst,
-                                overwrite_files
+                                overwrite_files,
+                                verbose=verbose
                                 ) != 0:
                             ret = 3
                             break
 
                     elif os.path.isfile(joined):
 
-                        if _copy_file(
+                        if copy_file(
                                 joined,
                                 joined_dst,
-                                overwrite_files
+                                overwrite_files,
+                                verbose=verbose
                                 ) != 0:
                             ret = 4
                             break
@@ -190,7 +203,8 @@ def copytree(
         dst_dir,
         overwrite_files=False,
         clear_before_copy=False,
-        dst_must_be_empty=True
+        dst_must_be_empty=True,
+        verbose=True
         ):
 
     # TODO: think of hardlinks too..
@@ -200,35 +214,93 @@ def copytree(
 
     ret = 0
 
-    logging.info("Copying `{}' to `{}'".format(src_dir, dst_dir))
+    if verbose:
+        logging.info("copying `{}'\n    to\n    `{}'".format(src_dir, dst_dir))
 
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
 
     if dst_must_be_empty:
         if not isdirempty(dst_dir):
-            logging.error("Destination dir `{}' not empty".format(dst_dir))
+            if verbose:
+                logging.error("Destination dir `{}' not empty".format(dst_dir))
             ret = 1
 
     if ret == 0:
 
         if clear_before_copy:
-            logging.info("Cleaning dir `{}'".format(dst_dir))
-            cleanup_dir(dst_dir)
+            if verbose:
+                logging.info("Cleaning dir `{}'".format(dst_dir))
+            cleanup_dir(dst_dir, verbose=verbose)
 
-        if create_if_not_exists_dir(dst_dir) != 0:
-            logging.error("Error creating dir `{}'".format(dst_dir))
+        if create_if_not_exists_dir(dst_dir, verbose=verbose) != 0:
+            if verbose:
+                logging.error("Error creating dir `{}'".format(dst_dir))
             ret = 2
         else:
-            if (_copytree(src_dir, dst_dir, overwrite_files=overwrite_files)
-                    != 0):
-                logging.error(
-                    "Some errors occurred while copying `{}' to `{}'".format(
-                        src_dir,
-                        dst_dir
+            if (_copytree_sub(
+                    src_dir,
+                    dst_dir,
+                    overwrite_files=overwrite_files,
+                    verbose=verbose
                     )
-                )
+                    != 0):
+                if verbose:
+                    logging.error(
+                        "Some errors occurred"
+                        " while copying `{}' to `{}'".format(
+                            src_dir,
+                            dst_dir
+                            )
+                        )
                 ret = 3
+
+    return ret
+
+
+def copy_file_or_directory(
+        src_path,
+        dst_dir,
+        overwrite_files=False,
+        clear_before_copy=False,
+        dst_must_be_empty=True,
+        verbose=True
+        ):
+
+    ret = 0
+
+    if os.path.islink(src_path):
+        ret = copy_symlink(
+            src_path,
+            dst_dir,
+            # wayround_org.utils.path.join(dst_dir, os.path.basename(src_path)),
+            overwrite_dst=overwrite_files,
+            verbose=verbose
+            )
+    elif os.path.isfile(src_path):
+        ret = copy_file(
+            src_path,
+            dst_dir,
+            # wayround_org.utils.path.join(dst_dir, os.path.basename(src_path)),
+            overwrite_dst=overwrite_files,
+            verbose=verbose
+            )
+    else:
+        if os.path.isdir(src_path):
+            ret = copytree(
+                src_path,
+                dst_dir,
+                overwrite_files=overwrite_files,
+                clear_before_copy=clear_before_copy,
+                dst_must_be_empty=dst_must_be_empty,
+                verbose=verbose
+                )
+
+        else:
+            if verbose:
+                logging.error(
+                    "Don't know what to do with: {}".format(src_path))
+            ret = 1
 
     return ret
 
@@ -239,7 +311,7 @@ def isdirempty(dirname):
 is_dir_empty = isdirempty
 
 
-def remove_if_exists(file_or_dir, remove_dead_lymlinks=False):
+def remove_if_exists(file_or_dir, remove_dead_lymlinks=False, verbose=True):
 
     ret = 0
 
@@ -249,9 +321,10 @@ def remove_if_exists(file_or_dir, remove_dead_lymlinks=False):
         try:
             os.unlink(file_or_dir)
         except:
-            logging.exception(
-                "      can't remove link {}".format(file_or_dir)
-                )
+            if verbose:
+                logging.exception(
+                    "      can't remove link {}".format(file_or_dir)
+                    )
             ret = 1
 
     if ret == 0 and os.path.exists(file_or_dir):
@@ -262,48 +335,55 @@ def remove_if_exists(file_or_dir, remove_dead_lymlinks=False):
                 try:
                     shutil.rmtree(file_or_dir)
                 except:
-                    logging.exception(
-                        "Can't remove dir {}".format(file_or_dir)
-                        )
+                    if verbose:
+                        logging.exception(
+                            "Can't remove dir {}".format(file_or_dir)
+                            )
                     ret = 1
             else:
                 try:
                     os.unlink(file_or_dir)
                 except:
-                    logging.exception(
-                        "      can't remove file {}".format(file_or_dir)
-                        )
+                    if verbose:
+                        logging.exception(
+                            "      can't remove file {}".format(file_or_dir)
+                            )
                     ret = 1
 
     return 0
 
 
-def create_if_not_exists_dir(dirname):
+def create_if_not_exists_dir(dirname, verbose=True):
     ret = 0
     if not os.path.exists(dirname):
         try:
             os.makedirs(dirname)
         except:
-            logging.error("Destination dir not exists and cant's be created")
+            if verbose:
+                logging.error(
+                    "Destination dir not exists and cant's be created")
             ret = 1
         else:
             ret = 0
     else:
         if os.path.isfile(dirname):
-            logging.error("Destination exists but is file")
+            if verbose:
+                logging.error("Destination exists but is file")
             ret = 2
         elif os.path.islink(dirname):
-            logging.error("Destination exists but is link")
+            if verbose:
+                logging.error("Destination exists but is link")
             ret = 3
         elif not os.path.isdir(dirname):
-            logging.error("Destination exists but is not dir")
+            if verbose:
+                logging.error("Destination exists but is not dir")
             ret = 4
         else:
             ret = 0
     return ret
 
 
-def cleanup_dir(dirname):
+def cleanup_dir(dirname, verbose=True):
 
     ret = 0
 
@@ -311,17 +391,17 @@ def cleanup_dir(dirname):
 
     for i in range(len(files)):
         files[i] = wayround_org.utils.path.abspath(
-            dirname + os.path.sep + files[i]
+            wayround_org.utils.path.join(dirname, files[i])
             )
 
     for i in files:
-        if remove_if_exists(i) != 0:
+        if remove_if_exists(i, verbose=verbose) != 0:
             ret = 1
 
     return ret
 
 
-def inderictory_copy_file(directory, file1, file2):
+def inderictory_copy_file(directory, file1, file2, verbose=True):
 
     file1 = os.path.basename(file1)
     file2 = os.path.basename(file2)
@@ -331,15 +411,18 @@ def inderictory_copy_file(directory, file1, file2):
 
     if os.path.isfile(f1):
         if os.path.exists(f2):
-            logging.error("destination file or dir already exists")
+            if verbose:
+                logging.error("destination file or dir already exists")
         else:
             logging.info("copying {} to {}".format(f1, f2))
             try:
                 shutil.copy(f1, f2)
             except:
-                logging.exception("Error copying file")
+                if verbose:
+                    logging.exception("Error copying file")
     else:
-        logging.error("source file not exists")
+        if verbose:
+            logging.error("source file not exists")
 
     return
 
