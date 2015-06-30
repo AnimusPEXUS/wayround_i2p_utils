@@ -9,6 +9,7 @@ e = wayround_org.utils.format.elf.ELF('/usr/bin/cp', debug=True)
 #e = wayround_org.utils.format.elf.ELF('v20002d.uc')
 #e = wayround_org.utils.format.elf.ELF('maya2spr.dbg', debug=True)
 #e = wayround_org.utils.format.elf.ELF('mips/cp')
+#e = wayround_org.utils.format.elf.ELF('/usr/sbin/ldconfig', debug=True)
 print(e.return_text())
 
 exit(0)

@@ -4,6 +4,7 @@ Version comparison utilities
 """
 
 import logging
+import os.path
 
 import wayround_org.utils.tarball
 
@@ -18,6 +19,9 @@ def source_version_comparator(
     if isinstance(acceptable_source_name_extensions, str):
         acceptable_source_name_extensions = \
             acceptable_source_name_extensions.split(' ')
+
+    name1 = os.path.basename(name1)
+    name2 = os.path.basename(name2)
 
     d1 = wayround_org.utils.tarball.parse_tarball_name(
         name1,

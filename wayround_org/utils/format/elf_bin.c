@@ -3191,7 +3191,7 @@ read_dynamic_section(PyObject *self, PyObject *args)
 }
 
 PyObject *
-get_dynamic_libs_names(PyObject *self, PyObject *args)
+get_dynamic_strings(PyObject *self, PyObject *args, int type)
 {
     PyObject * ret = NULL;
 
@@ -3290,7 +3290,7 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
                                 PyObjectAddToDelQueue(
                                     &q,
                                     PyUnicode_FromString("d_tag"))))
-                            == DT_NEEDED)
+                            == type)
                         {
                             offset = PyLong_AsLong(
                                 PyDict_GetItem(
@@ -3322,6 +3322,18 @@ get_dynamic_libs_names(PyObject *self, PyObject *args)
     }
 
     return ret;
+}
+
+PyObject *
+get_dynamic_libs_names(PyObject *self, PyObject *args)
+{
+    return get_dynamic_strings(self, args, DT_NEEDED);
+}
+
+PyObject *
+get_dynamic_runpath_values(PyObject *self, PyObject *args)
+{
+    return get_dynamic_strings(self, args, DT_RUNPATH);
 }
 
 static PyMethodDef elf_bin_methods[] =
@@ -3463,6 +3475,12 @@ static PyMethodDef elf_bin_methods[] =
             get_dynamic_libs_names,
             METH_VARARGS,
             "Get dianmic libs names required by elf file" },
+
+        {
+            "get_dynamic_runpath_values",
+            get_dynamic_runpath_values,
+            METH_VARARGS,
+            "Get runpath values" },
 
         {
             "convert_virtual_to_file",
