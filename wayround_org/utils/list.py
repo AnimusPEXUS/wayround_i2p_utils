@@ -238,7 +238,7 @@ def filter_list(input_list, filter_text):
             cs = False
             function = function[:-1]
 
-        if not function in ['begins', 'contains', 'ends','bfm', 'bfm', 're']:
+        if not function in ['begins', 'contains', 'ends','fm', 'bfm', 're']:
             logging.error(
                 "Wrong function : `{}'".format(function)
                 )
