@@ -3,6 +3,7 @@ import copy
 import fnmatch
 import logging
 import re
+import os.path
 
 
 def remove_all_values(lst, lst2):
