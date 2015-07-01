@@ -710,6 +710,18 @@ def filter_tarball_list(input_list, filter_text):
                         )
                     matched = fnmatch.fnmatch(working_item, data)
 
+                elif function == 'bfm':
+                    logging.debug(
+                        "filter_tarball_list: "
+                        "base fm-matching `{}' and `{}'".format(
+                            working_item,
+                            data
+                            )
+                        )
+                    matched = fnmatch.fnmatch(
+                        os.path.basename(working_item), data
+                        )
+
                 elif function in ['<', '<=', '==', '>=', '>']:
                     matched = (
                         wayround_org.aipsetup.version.lb_comparator(

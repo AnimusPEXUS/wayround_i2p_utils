@@ -25,7 +25,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='wayround_org_utils',
-    version='1.8.0',
+    version='1.8.1',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
