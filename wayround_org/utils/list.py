@@ -298,7 +298,7 @@ def filter_list(input_list, filter_text):
                         working_data = working_data.lower()
                     matched = fnmatch.fnmatch(working_item, working_data)
 
-                elif function == 'fm':
+                elif function == 'bfm':
                     working_data = os.path.basename(data)
                     if not cs:
                         working_data = working_data.lower()
