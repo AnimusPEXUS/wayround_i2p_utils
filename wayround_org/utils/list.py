@@ -239,7 +239,7 @@ def filter_list(input_list, filter_text):
             cs = False
             function = function[:-1]
 
-        if not function in ['begins', 'contains', 'ends','fm', 'bfm', 're']:
+        if not function in ['begins', 'contains', 'ends', 'fm', 'bfm', 're']:
             logging.error(
                 "Wrong function : `{}'".format(function)
                 )
@@ -300,10 +300,13 @@ def filter_list(input_list, filter_text):
                     matched = fnmatch.fnmatch(working_item, working_data)
 
                 elif function == 'bfm':
-                    working_data = os.path.basename(data)
+                    working_data = data
                     if not cs:
                         working_data = working_data.lower()
-                    matched = fnmatch.fnmatch(working_item, working_data)
+                    matched = fnmatch.fnmatch(
+                        os.path.basename(working_item),
+                        working_data
+                        )
 
                 else:
                     raise Exception("Programming error")

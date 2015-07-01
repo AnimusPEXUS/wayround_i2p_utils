@@ -618,7 +618,8 @@ def filter_tarball_list(input_list, filter_text):
 
         if subject in ['filename', 'status']:
 
-            if not function in ['begins', 'contains', 'ends', 'fm', 'bfm', 're']:
+            if not function in [
+                    'begins', 'contains', 'ends', 'fm', 'bfm', 're']:
                 logging.error(
                     "Wrong `{}' function : `{}'".format(subject, function)
                     )
@@ -719,7 +720,8 @@ def filter_tarball_list(input_list, filter_text):
                             )
                         )
                     matched = fnmatch.fnmatch(
-                        working_item, os.path.basename(data)
+                        os.path.basename(working_item),
+                        data
                         )
 
                 elif function in ['<', '<=', '==', '>=', '>']:
