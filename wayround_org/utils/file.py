@@ -948,10 +948,23 @@ def print_status_change(sock, stats):
     logging.info("File descriptor {} status changed to {}".format(sock, stats))
 
 
-def which(name):
+def which(name, under=None, exception_if_not_found=False):
+    """
+    define 'under' to exclude not acceptable PATH components
+    """
+
     ret = None
 
     os_path = os.environ['PATH'].split(':')
+
+    if isinstance(under, str):
+
+        if not under.endswith(os.path.sep):
+            under += os.path.sep
+
+        for i in range(len(os_path) - 1, -1, -1):
+            if not os_path[i].startswith(under):
+                del os_path[i]
 
     for i in os_path:
 
@@ -959,6 +972,9 @@ def which(name):
 
         if os.path.isfile(n_f_n):
             ret = n_f_n
+
+    if ret is None and exception_if_not_found:
+        raise FileNotFoundError("`{}' executable not found".format(name))
 
     return ret
 
