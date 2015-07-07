@@ -223,6 +223,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
                 synchronize_session=synchronize_session
                 )
 
+        session.commit()
         session.close()
 
         return
@@ -235,6 +236,7 @@ class TagEngine(wayround_org.utils.db.BasicDB):
             .filter(self.Tag.tag.in_(tags))\
             .delete()
 
+        session.commit()
         session.close()
 
         return
