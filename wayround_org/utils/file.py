@@ -656,6 +656,25 @@ def get_file_size(name):
     return ret
 
 
+def convert_symlink_to_file(path):
+
+    ret = 0
+
+    if os.path.islink(path):
+
+        r_path = os.path.realpath(path)
+
+        if os.path.isfile(r_path):
+            os.unlink(path)
+            shutil.copy2(r_path, path)
+            ret = 0
+
+        else:
+            ret = 1
+
+    return ret
+
+
 def dereference_file(filename):
 
     ret = 0
@@ -972,6 +991,7 @@ def which(name, under=None, exception_if_not_found=False):
 
         if os.path.isfile(n_f_n):
             ret = n_f_n
+            break
 
     if ret is None and exception_if_not_found:
         raise FileNotFoundError("`{}' executable not found".format(name))

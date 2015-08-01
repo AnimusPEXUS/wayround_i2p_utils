@@ -11,11 +11,11 @@ def env_vars_edit(var_list, mode='copy'):
     ret = {}
 
     if mode == 'copy':
-        ret = copy.copy(os.environ)
+        ret = copy.deepcopy(os.environ)
     elif mode == 'clean':
         ret = {}
     else:
-        raise ValueError
+        raise ValueError("Invalid Value")
 
     if mode != 'clean':
         for i in list(var_list.keys()):
