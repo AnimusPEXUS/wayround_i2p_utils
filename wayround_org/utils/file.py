@@ -977,13 +977,18 @@ def which(name, under=None, exception_if_not_found=False):
     os_path = os.environ['PATH'].split(':')
 
     if isinstance(under, str):
+        under = [under]
 
-        if not under.endswith(os.path.sep):
-            under += os.path.sep
+    if isinstance(under, list):
 
-        for i in range(len(os_path) - 1, -1, -1):
-            if not os_path[i].startswith(under):
-                del os_path[i]
+        for i in under:
+
+            if not i.endswith(os.path.sep):
+                i += os.path.sep
+
+            for j in range(len(os_path) - 1, -1, -1):
+                if not os_path[j].startswith(i):
+                    del os_path[j]
 
     for i in os_path:
 
