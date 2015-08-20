@@ -90,9 +90,11 @@ class FileIndexer:
 
         for i in names:
             full_name = wayround_org.utils.path.abspath(
-                basedir +
-                os.path.sep +
-                i.name)
+                wayround_org.utils.path.join(
+                    basedir,
+                    i.name
+                    )
+                )
             if not os.path.exists(full_name):
 
                 logging.debug("`{}' not found -- deleting".format(full_name))

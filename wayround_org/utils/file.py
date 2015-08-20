@@ -967,7 +967,7 @@ def print_status_change(sock, stats):
     logging.info("File descriptor {} status changed to {}".format(sock, stats))
 
 
-def which(name, under=None, exception_if_not_found=False):
+def which(name, under=None, exception_if_not_found=True):
     """
     define 'under' to exclude not acceptable PATH components
     """

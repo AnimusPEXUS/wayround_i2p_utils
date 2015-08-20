@@ -924,7 +924,7 @@ class ELF:
 
             'elf_type',
             'elf_type_name',
-            
+
             'elf_machine',
             'elf_machine_name',
             'elf_machine_descr',
@@ -960,7 +960,7 @@ class ELF:
             if os.stat(filename).st_size == 0:
                 if not mute and verbose:
                     logging.info("File size is 0: {}".format(filename))
-                    error = True
+                error = True
 
         f = None
         m = None
@@ -1037,6 +1037,11 @@ class ELF:
             f.close()
 
         self.error = error
+
+        if error:
+            self.is_elf = False
+            for i in _FILLABLE_ATTRIBUTE_NAMES:
+                setattr(self, i, None)
 
         return
 
@@ -1382,11 +1387,11 @@ Needed libs list:
 
         ret = None
         if (self.section_table
-                and self.dynamic_section_index
-                and self.endianness
-                and 'sh_offset' in self.section_table[
-                    self.dynamic_section_index
-                    ]
+            and self.dynamic_section_index
+            and self.endianness
+            and 'sh_offset' in self.section_table[
+                        self.dynamic_section_index
+                        ]
             ):
 
             ret = int.from_bytes(
