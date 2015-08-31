@@ -37,18 +37,18 @@ class SystemType:
 
         return
 
-    def _sane(self, string):
+    def _sane(self, s):
 
-        if not isinstance(string, str):
+        if not isinstance(s, str):
             raise SystemTypeInvalidFullName(
-                "Not valid fullname type: {}".format(type(string))
+                "Not valid fullname type: `{}'({})".format(s, type(s))
                 )
 
-        res = parse_triplet(string)
+        res = parse_triplet(s)
 
         if not res:
             raise SystemTypeInvalidFullName(
-                "Not valid fullname: {}".format(string)
+                "Not valid fullname: `{}'({})".format(s, type(s))
                 )
         else:
             self.cpu = res[0]
@@ -63,7 +63,7 @@ class SystemType:
         return self.fullname
 
 
-def parse_triplet(string):
+def parse_triplet(str1):
     """
     Parse constitution triplet (``(.*?)-(.*?)-(.*)``), and return 3-tuple
 
@@ -78,7 +78,12 @@ def parse_triplet(string):
 
     ret = None
 
-    if isinstance(string, str):
+    # FIXME: fix this function
+    _debug=False
+
+    if isinstance(str1, str):
+
+        '''
 
         wd = os.path.dirname(wayround_org.utils.path.abspath(__file__))
 
@@ -87,11 +92,16 @@ def parse_triplet(string):
         if not os.path.isfile(jd):
             raise Exception("file not found: `{}'".format(jd))
 
-        p = subprocess.Popen(
-            ['bash',
+        cmd = ['bash',
              jd,
-             string
-             ],
+             str1
+             ]
+        if _debug:
+            print("cmd: {}".format(cmd))
+
+        
+        p = subprocess.Popen(
+            cmd,
             cwd=wd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
@@ -100,14 +110,26 @@ def parse_triplet(string):
         res = p.wait()
 
         if res != 0:
+            if _debug:
+                print("config.sub returned: {}".format(res))
             ret = None
+            
         else:
+        '''
+        if True:
+            '''
             com_res = p.communicate()
 
             out = str(com_res[0].splitlines()[0].strip(), 'utf-8')
 
+            '''
+            out = str1
+
             a = re.match(r'(?P<cpu>.*?)-(?P<company>.*?)-(?P<system>.*)', out)
-            if a:
+            if not a:
+                if _debug:
+                    print("re not match")
+            else:
 
                 system = a.group('system')
 

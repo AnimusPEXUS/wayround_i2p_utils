@@ -113,7 +113,11 @@ def _extract_tar_arch(file_name, output_dir, compressor, log=None):
         compressor,
         verbose_tar=True,
         verbose_compressor=True,
-        log=log
+        log=log,
+        add_tar_options=[
+            '--no-same-owner',
+            '--no-same-permissions'
+            ]
         )
 
     return ret
@@ -213,6 +217,8 @@ def canonical_compressor(
     must support -0 .. -9 , -v and -d options in canonical way
     """.format(repr(list(CANONICAL_COMPRESSORS)))
 
+    # print("canonical_compressor: {}".format())
+
     if options is None:
         options = []
 
@@ -225,6 +231,19 @@ def canonical_compressor(
                 )
             )
 
+    '''
+    c = subprocess.Popen(
+        [compressor] + options,
+        stdin=stdin,
+        stdout=stdout,
+        stderr=stderr
+        )
+
+    ret = c.wait()
+    '''
+    # while True:
+
+    #'''
     ret = wayround_org.utils.exec.process_stream(
         compressor,
         stdin=stdin,
@@ -232,6 +251,7 @@ def canonical_compressor(
         stderr=stderr,
         options=options
         )
+    #'''
 
     return ret
 
@@ -430,7 +450,7 @@ def extract_tar_canonical_fobj(
             sout = sys.stdout
 
             if log is not None:
-            #if False:
+                # if False:
                 sout = log.stdout
             tarproc = wayround_org.utils.exec.simple_exec(
                 "tar",
@@ -463,8 +483,8 @@ def extract_tar_canonical_fobj(
 
                     ret = 3
 
-                #if log is not None:
-                #if False:
+                # if log is not None:
+                # if False:
                 #    log.input_from_Popen_process(tarproc)
 
                 ret = tarproc.wait()

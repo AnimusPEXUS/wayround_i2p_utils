@@ -239,11 +239,26 @@ class Log:
             text
             )
 
+        msg2_scn = "\033[0;1m[{}] [{:26}] [{}]\033[0m {}".format(
+            icon,
+            timestamp,
+            log_name,
+            text
+            )
+
+        if icon != 'i':
+            msg2_scn = "\033[0;1m[\033[0m\033[0;4m\033[0;5m{}\033[0m\033[0;1m] [{:26}] [{}]\033[0m {}".format(
+                icon,
+                timestamp,
+                log_name,
+                text
+                )
+
+
         with self._write_lock:
-            msg3 = msg2 + '\n'
+            self.fileobj.write(msg2+'\n')
             if echo:
-                sys.stderr.write(msg3)
-            self.fileobj.write(msg3)
+                sys.stderr.write(msg2_scn+'\n')
         return
 
     def error(self, text, echo=True, timestamp=None):

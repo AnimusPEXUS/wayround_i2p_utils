@@ -600,7 +600,7 @@ def files_recurcive_list(
         for i in range(len(ret)):
             ret[i] = wayround_org.utils.path.relpath(ret[i], relative_to)
 
-    return lst
+    return ret
 
 
 def null_file(filename):
