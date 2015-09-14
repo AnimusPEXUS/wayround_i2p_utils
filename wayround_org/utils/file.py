@@ -974,25 +974,40 @@ def which(name, under=None, exception_if_not_found=True):
 
     ret = None
 
-    os_path = os.environ['PATH'].split(':')
+    splitted_PATH = os.environ['PATH'].split(':')
 
     if isinstance(under, str):
         under = [under]
 
-    if isinstance(under, list):
+    if under is None:
+        under = copy.copy(splitted_PATH)
 
-        for i in under:
+    for i in range(len(under) - 1, -1, -1):
+        ui = under[i]
 
-            if not i.endswith(os.path.sep):
-                i += os.path.sep
+        if not ui.endswith('/bin') and not ui.endswith('/sbin'):
+            under.append(
+                wayround_org.utils.path.join(
+                    ui,
+                    'bin'
+                    )
+                )
+            under.append(
+                wayround_org.utils.path.join(
+                    ui,
+                    'sbin'
+                    )
+                )
 
-            for j in range(len(os_path) - 1, -1, -1):
-                if not os_path[j].startswith(i):
-                    del os_path[j]
+    for i in range(len(under) - 1, -1, -1):
+        if not os.path.isdir(under[i]):
+            del under[i]
 
-    for i in os_path:
+    for i in under:
 
-        n_f_n = os.path.join(i, name)
+        n_f_n = wayround_org.utils.path.join(i, name)
+
+        print("checking: {}".format(n_f_n))
 
         if os.path.isfile(n_f_n):
             ret = n_f_n
