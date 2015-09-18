@@ -1007,7 +1007,7 @@ def which(name, under=None, exception_if_not_found=True):
 
         n_f_n = wayround_org.utils.path.join(i, name)
 
-        print("checking: {}".format(n_f_n))
+        # print("checking: {}".format(n_f_n))
 
         if os.path.isfile(n_f_n):
             ret = n_f_n

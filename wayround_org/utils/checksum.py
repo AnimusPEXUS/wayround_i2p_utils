@@ -14,7 +14,8 @@ def make_dir_checksums(
         output_filename,
         rel_to=None,
         conv_to_rooted=True,
-        exclude=None
+        exclude=None,
+        verbose=True
         ):
 
     ret = 0
@@ -55,7 +56,8 @@ def make_dir_checksums_fo(
         output_fileobj,
         rel_to=None,
         conv_to_rooted=True,
-        exclude=None
+        exclude=None,
+        verbose=True
         ):
 
     if exclude is not None and not isinstance(exclude, list):
@@ -99,9 +101,10 @@ def make_dir_checksums_fo(
                         root_f, rel_to
                         )
 
-                    wayround_org.utils.terminal.progress_write(
-                        "    {}".format(rel_path)
-                        )
+                    if verbose:
+                        wayround_org.utils.terminal.progress_write(
+                            "    {}".format(rel_path)
+                            )
                     if (os.path.isfile(root_f)
                                 and
                                 not os.path.islink(root_f)
@@ -149,7 +152,8 @@ def make_dir_checksums_fo(
 
                         del(m)
 
-    wayround_org.utils.terminal.progress_write_finish()
+    if verbose:
+        wayround_org.utils.terminal.progress_write_finish()
     return ret
 
 
