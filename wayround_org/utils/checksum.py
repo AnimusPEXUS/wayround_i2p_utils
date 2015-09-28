@@ -40,7 +40,8 @@ def make_dir_checksums(
                     sums_fd,
                     rel_to,
                     conv_to_rooted,
-                    exclude
+                    exclude,
+                    verbose=verbose
                     )
             except:
                 logging.exception("Error")
@@ -88,6 +89,9 @@ def make_dir_checksums_fo(
 
             for wres in os.walk(dirname):
 
+                wres[1].sort()
+                wres[2].sort()
+
                 root = wres[0]
                 files = wres[2]
 
@@ -106,9 +110,9 @@ def make_dir_checksums_fo(
                             "    {}".format(rel_path)
                             )
                     if (os.path.isfile(root_f)
-                                and
-                                not os.path.islink(root_f)
-                            ):
+                        and
+                        not os.path.islink(root_f)
+                        ):
                         m = hashlib.sha512()
                         fd = None
                         try:
@@ -154,6 +158,44 @@ def make_dir_checksums_fo(
 
     if verbose:
         wayround_org.utils.terminal.progress_write_finish()
+    return ret
+
+
+def is_dir_changed(dirname, checksum_file, method='sha512', verbose=False):
+
+    ret = False
+
+    checksum_file_tmp = checksum_file + '.tmp'
+
+    wayround_org.utils.checksum.make_dir_checksums(
+        dirname,
+        checksum_file_tmp,
+        rel_to='/',
+        exclude=[
+            checksum_file,
+            checksum_file_tmp
+            ],
+        verbose=verbose
+        )
+
+    if not os.path.isfile(checksum_file):
+        ret = True
+
+    else:
+
+        summ1 = wayround_org.utils.checksum.make_file_checksum(
+            checksum_file
+            )
+        summ2 = wayround_org.utils.checksum.make_file_checksum(
+            checksum_file_tmp
+            )
+
+        ret = summ1 != summ2
+
+        os.unlink(checksum_file)
+
+    os.rename(checksum_file_tmp, checksum_file)
+
     return ret
 
 
