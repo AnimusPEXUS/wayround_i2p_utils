@@ -21,6 +21,16 @@ def findtool(which=None, where=None):
     return which
 
 
+def pkgconfig_include(names, which=None, where=None):
+    ret = pkgconfig(names, '--cflags', which=which, where=where)
+    s = ret.split()
+    for i in range(len(s) - 1, -1, -1):
+        if not s[i].startswith('-I'):
+            del s[i]
+    ret = ' '.join(s)
+    return ret
+
+
 def pkgconfig(names, options, which=None, where=None):
 
     which = findtool(which, where)
@@ -48,7 +58,7 @@ def pkgconfig(names, options, which=None, where=None):
     if res != 0:
         pass
 
-    else: 
+    else:
         stdout = str(stdout, 'utf-8')
         stdout = stdout.strip()
 

@@ -6,6 +6,7 @@ import select
 import shutil
 import threading
 import time
+import copy
 
 import wayround_org.utils.path
 import wayround_org.utils.terminal
