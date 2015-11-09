@@ -401,11 +401,11 @@ class Streamer:
                     "Broken pipe error arised. but I'll not give a damn\n"
                     " (take surraunding exit codes as a consideration of success)"
                     )
-                # FIXME: cyrus-sasl-2.1.26.tar.gz 
+                # FIXME: cyrus-sasl-2.1.26.tar.gz
                 #        (md5: a7f4e5e559a0e37b3ffc438c9456e425)
-                #        gives an unknown broken pipe error. 
+                #        gives an unknown broken pipe error.
                 #        need to figure out this
-                
+
                 raise
 
             except:
@@ -528,8 +528,8 @@ def cat(
         convert_to_str = None
 
     if (convert_to_str is not None
-            and not isinstance(convert_to_str, str)
-            ):
+        and not isinstance(convert_to_str, str)
+        ):
         raise ValueError(
             "convert_to_str can only be str(encoding name), bool or None"
             )
@@ -759,6 +759,53 @@ Ending `{name}' thread
             ).start()
 
     return
+
+
+def cat_socket_to_socket(
+        one, another, bs=2 * 1024**2
+        ):
+    ret = cat(
+        one,
+        another,
+
+        bs=bs,
+
+        threaded=True,
+
+        read_method_name='recv',
+        write_method_name='send',
+
+        read_type='async',
+        read_selectable=False,
+        read_unselectable_sleep=UNSELECTABLE_SLEEP,
+
+        write_type='async',
+        write_selectable=False,
+        write_unselectable_sleep=UNSELECTABLE_SLEEP,
+
+        exit_on_input_eof=False,
+        flush_after_each_write=False,
+        flush_on_input_eof=False,
+        close_output_on_eof=False,
+
+        descriptor_to_wait_for_input=one.fileno(),
+        descriptor_to_wait_for_output=another.fileno(),
+
+        apply_input_seek=False,
+        apply_output_seek=False,
+
+        standard_write_method_result=True,
+
+        termination_event=None,
+
+        verbose=False,
+        debug=False,
+
+        on_exit_callback=None,
+        on_input_read_error=None,
+        on_output_write_error=None
+        )
+    return ret
 
 
 def lbl_write(

@@ -704,3 +704,57 @@ def process_file(
                 fi.close()
 
     return ret
+
+
+class NBPopen(subprocess.Popen):
+
+    if not subprocess._mswindows:
+        def _get_handles(self, stdin, stdout, stderr):
+            """Construct and return tuple with IO objects:
+            p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
+            """
+            p2cread, p2cwrite = -1, -1
+            c2pread, c2pwrite = -1, -1
+            errread, errwrite = -1, -1
+
+            if stdin is None:
+                pass
+            elif stdin == subprocess.PIPE:
+                p2cread, p2cwrite = os.pipe2(os.O_NONBLOCK)
+            elif stdin == subprocess.DEVNULL:
+                p2cread = self._get_devnull()
+            elif isinstance(stdin, int):
+                p2cread = stdin
+            else:
+                # Assuming file-like object
+                p2cread = stdin.fileno()
+
+            if stdout is None:
+                pass
+            elif stdout == subprocess.PIPE:
+                c2pread, c2pwrite = os.pipe2(os.O_NONBLOCK)
+            elif stdout == subprocess.DEVNULL:
+                c2pwrite = self._get_devnull()
+            elif isinstance(stdout, int):
+                c2pwrite = stdout
+            else:
+                # Assuming file-like object
+                c2pwrite = stdout.fileno()
+
+            if stderr is None:
+                pass
+            elif stderr == subprocess.PIPE:
+                errread, errwrite = os.pipe2(os.O_NONBLOCK)
+            elif stderr == subprocess.STDOUT:
+                errwrite = c2pwrite
+            elif stderr == subprocess.DEVNULL:
+                errwrite = self._get_devnull()
+            elif isinstance(stderr, int):
+                errwrite = stderr
+            else:
+                # Assuming file-like object
+                errwrite = stderr.fileno()
+
+            return (p2cread, p2cwrite,
+                    c2pread, c2pwrite,
+                    errread, errwrite)
