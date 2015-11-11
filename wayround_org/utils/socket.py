@@ -34,7 +34,7 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
 
 def nb_sendall(sock, data, stop_event=None, bs=4096, select_timeout=0.5):
     
-    print('nb_sendall, data: {}'.format(data))
+    # print('nb_sendall, data: {}'.format(data))
 
     if type(data) != bytes:
         raise TypeError("`data' must be bytes")
