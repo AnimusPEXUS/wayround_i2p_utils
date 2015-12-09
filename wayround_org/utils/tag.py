@@ -30,12 +30,6 @@ class TagEngine(wayround_org.utils.db.BasicDB):
             init_table_data=init_table_data
             )
 
-        # try:
-        #     self.session = sqlalchemy.orm.Session(bind=self._db_engine)
-        # except:
-        #     self.session = None
-        #     raise
-
         return
 
     def init_table_mappings(self, init_table_data):

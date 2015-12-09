@@ -34,6 +34,29 @@ def list_dirs_for_so_files():
     LD_LIBRARY_PATH environment variable
     """
 
+    # TODO: todo
+
     ret = []
 
     return ret
+
+
+def convert_gid_uid(gid, uid):
+
+    if gid:
+
+        if isinstance(gid, str):
+            if gid.isnumeric():
+                gid = int(gid)
+            else:
+                gid = grp.getgrnam(gid)[2]
+
+    if uid:
+
+        if isinstance(uid, str):
+            if uid.isnumeric():
+                uid = int(uid)
+            else:
+                uid = pwd.getpwnam(uid)[2]
+
+    return git, uid

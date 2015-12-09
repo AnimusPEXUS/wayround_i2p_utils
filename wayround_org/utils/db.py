@@ -1,6 +1,9 @@
 
 """
 Look for easy usage example in tag.py moule
+
+thanks to python language flexibility, I can create such modules and classes,
+without creating singletones in modules
 """
 
 import sqlalchemy.ext.declarative
@@ -40,12 +43,6 @@ class BasicDB:
             self.decl_base = decl_base
 
         self.init_table_mappings(init_table_data)
-
-        # try:
-        #     self.session = sqlalchemy.orm.Session(bind=self._db_engine)
-        # except:
-        #     self.session = None
-        #     raise
 
         return
 
