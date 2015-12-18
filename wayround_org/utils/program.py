@@ -11,6 +11,8 @@ import wayround_org.utils.logging
 
 NO_DOCUMENTATION = '(No documentation)'
 
+DO_NOT_PRINT_EXIT_MESSAGE = 'showing help cmd list, no print'
+
 
 def logging_setup(loglevel='INFO'):
 
@@ -215,7 +217,7 @@ def command_processor(
 
                 ret = {
                     'code': 1,
-                    'message': "showing help cmd list, no print",
+                    'message': DO_NOT_PRINT_EXIT_MESSAGE,
                     'main_message': _format_command_list(
                         subtree,
                         level_depth
@@ -255,10 +257,13 @@ def program(command_name, commands, additional_data=None):
         additional_data
         )
 
-    if (ret['code'] != 1
-            or ret['message'] != 'showing help cmd list, no print'):
-        if 'main_message' in ret and ret['main_message'] is not None:
-            logging.info('{}'.format(ret['main_message']))
+    if ret['message'] != DO_NOT_PRINT_EXIT_MESSAGE:
+
+        mm = ret.get('main_message')
+
+        if mm is not None:
+            logging.info('{}'.format(mm))
+
         logging.info(
             "Exit Code: {} ({})".format(ret['code'], ret['message'])
             )

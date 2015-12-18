@@ -1,6 +1,8 @@
 
 import os
 import copy
+import grp
+import pwd
 
 
 def env_vars_edit(var_list, mode='copy'):
@@ -59,4 +61,4 @@ def convert_gid_uid(gid, uid):
             else:
                 uid = pwd.getpwnam(uid)[2]
 
-    return git, uid
+    return gid, uid

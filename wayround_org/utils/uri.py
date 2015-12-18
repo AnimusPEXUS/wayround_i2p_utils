@@ -33,16 +33,20 @@ def paths_by_path(path, last_el_type=None, path_is_absolute=None):
     examples:
 
     >>> urltools.paths_by_path('a/b/c/d')
-    {'path_lst': ['a', 'b', 'c', 'd'], 'path_str': '/a/b/c/d', 'last_el_type': 'file'}
+    {'path_lst': ['a', 'b', 'c', 'd'],
+     'path_str': '/a/b/c/d', 'last_el_type': 'file'}
 
     >>> urltools.paths_by_path('a/b/c/d/')
-    {'path_lst': ['a', 'b', 'c', 'd'], 'path_str': '/a/b/c/d/', 'last_el_type': 'dir'}
+    {'path_lst': ['a', 'b', 'c', 'd'],
+     'path_str': '/a/b/c/d/', 'last_el_type': 'dir'}
 
     >>> urltools.paths_by_path(['1','2','3','4'])
-    {'path_lst': ['1', '2', '3', '4'], 'path_str': '/1/2/3/4/', 'last_el_type': 'dir'}
+    {'path_lst': ['1', '2', '3', '4'],
+     'path_str': '/1/2/3/4/', 'last_el_type': 'dir'}
 
     >>> urltools.paths_by_path(['1','2','3','4'], 'file')
-    {'path_lst': ['1', '2', '3', '4'], 'path_str': '/1/2/3/4', 'last_el_type': 'file'}
+    {'path_lst': ['1', '2', '3', '4'],
+     'path_str': '/1/2/3/4', 'last_el_type': 'file'}
 
     '''
     if isinstance(path, list):

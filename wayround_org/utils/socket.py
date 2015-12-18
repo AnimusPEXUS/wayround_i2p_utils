@@ -199,7 +199,7 @@ class LblRecvReaderBuffer:
                         self.line_terminator
                         )
 
-                    if sep_pos = -1:
+                    if sep_pos == -1:
                         break
 
                     cut_pos = sep_pos + self._line_terminator_len
@@ -236,6 +236,26 @@ class LblRecvReaderBuffer:
                 if len(self._lines) != 0:
                     ret = self._lines[0]
                     del self._lines[0]
+
+        return ret
+
+    def nb_get_next_line(self, stop_event, retry_interval=0.2):
+        if not isinstance(stop_event, threading.Event):
+            raise TypeError("`stop_event' must be of threading.Event type")
+
+        ret = None
+
+        while True:
+
+            if stop_event.is_set():
+                break
+
+            ret = self.get_next_line()
+
+            if ret is not None:
+                break
+
+            time.sleep(retry_interval)
 
         return ret
 

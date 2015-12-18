@@ -31,6 +31,7 @@ class LoggingFileLikeObject:
         self._close_lock = threading.Lock()
 
         self._thread = threading.Thread(
+            name="Thread of {}".format(self),
             target=self._thread_run
             )
 
@@ -137,8 +138,10 @@ class Log:
                 ret = 2
 
         if ret == 0:
+
             if timestamp is None:
                 timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
+
             filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
@@ -180,6 +183,7 @@ class Log:
                         self.stop()
                     except:
                         pass
+        return
 
     def stop(self, echo=True):
         if self.fileobj is None:
@@ -211,7 +215,7 @@ class Log:
         if self.fileobj is None:
             raise Exception("Log output file object is None")
 
-        if timestamp:
+        if timestamp is not None:
             pass
         else:
             timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
@@ -254,11 +258,12 @@ class Log:
                 text
                 )
 
-
         with self._write_lock:
-            self.fileobj.write(msg2+'\n')
+            self.fileobj.write(msg2 + '\n')
+            self.fileobj.flush()
             if echo:
-                sys.stderr.write(msg2_scn+'\n')
+                sys.stderr.write(msg2_scn + '\n')
+                sys.stderr.flush()
         return
 
     def error(self, text, echo=True, timestamp=None):
