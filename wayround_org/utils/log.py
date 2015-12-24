@@ -145,11 +145,9 @@ class Log:
             filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
-                    "{ts:26} {name}.txt".format_map(
-                        {
-                            'name': logname,
-                            'ts': timestamp
-                            }
+                    "{ts:26} {name}.txt".format(
+                        name=logname,
+                        ts=timestamp
                         )
                     )
                 )

@@ -3,6 +3,35 @@ import select
 import ssl
 import threading
 import queue
+import time
+
+import wayround_org.mail.miscs
+
+
+def nb_handshake(sock, stop_event=None, select_timeout=0.5):
+
+    while True:
+
+        if stop_event is not None and stop_event.is_set():
+            break
+
+        try:
+            data = sock.do_handshake()
+        except BlockingIOError:
+            select.select([sock], [], [], select_timeout)
+        except ssl.SSLWantReadError:
+            select.select([sock], [], [], select_timeout)
+        except ssl.SSLWantWriteError:
+            select.select([], [sock], [], select_timeout)
+        except OSError as err:
+            if err.errno == 9:
+                break
+            else:
+                raise
+        else:
+            break
+
+    return
 
 
 def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
@@ -35,13 +64,25 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
             select.select([sock], [], [], select_timeout)
         except ssl.SSLWantWriteError:
             select.select([], [sock], [], select_timeout)
+        except OSError as err:
+            if err.errno == 9:
+                ret = b''
+                break
+            else:
+                raise
         else:
             break
+
+    if False:
+        print("recvd: {}".format(data))
 
     return data
 
 
 def nb_sendall(sock, data, bs=4096, stop_event=None, select_timeout=0.5):
+
+    if False:
+        print("sending: {}".format(data))
 
     if stop_event is not None:
         if not isinstance(stop_event, threading.Event):
@@ -60,6 +101,12 @@ def nb_sendall(sock, data, bs=4096, stop_event=None, select_timeout=0.5):
             select.select([sock], [], [], select_timeout)
         except ssl.SSLWantWriteError:
             select.select([], [sock], [], select_timeout)
+        except OSError as err:
+            if err.errno == 9:
+                ret = b''
+                break
+            else:
+                raise
         else:
             break
 
@@ -75,7 +122,7 @@ class LblRecvReaderBuffer:
             self,
             sock,
             recv_size=4096,
-            line_terminator=b'\0\n'
+            line_terminator=wayround_org.mail.miscs.STANDARD_LINE_TERMINATOR
             ):
         """
 
@@ -150,19 +197,24 @@ class LblRecvReaderBuffer:
         think it is important.
         """
 
+        _debug = False
+
         while True:
             if self._stop_flag.is_set():
                 break
 
-            res = nb_recv(stop_event=self._stop_flag)
+            res = nb_recv(self.sock, stop_event=self._stop_flag)
 
             if len(res) == 0:
                 self._socket_is_closed = True
                 break
 
+            if _debug:
+                print("_worker_thread_target_01 res: {}".format(res))
+
             self._recv_buffer_queue.put(res)
 
-        self.stop()
+        threading.Thread(target=self.stop).start()
 
         return
 
@@ -172,6 +224,8 @@ class LblRecvReaderBuffer:
         what - searches and slices it by line separators, adding result to
         dedicated list. warning: line separator is not stripped from lines!
         """
+
+        _debug = False
 
         while True:
 
@@ -185,33 +239,73 @@ class LblRecvReaderBuffer:
                 res_empty = True
 
             if res_empty:
+                if _debug:
+                    print("_worker_thread_target_02 res_empty")
                 continue
+
+            if _debug:
+                print("_worker_thread_target_02 res: {}".format(res))
 
             with self._input_bytes_buff_lock:
 
+                if _debug:
+                    print("_worker_thread_target_02 buff_1: {}".format(
+                        self._input_bytes_buff
+                        ))
+
                 self._input_bytes_buff += res
+
+                if _debug:
+                    print("_worker_thread_target_02 buff_2: {}".format(
+                        self._input_bytes_buff
+                        ))
 
                 while True:
                     if self._stop_flag.is_set():
                         break
 
+                    if _debug:
+                        print("_worker_thread_target_02 line_terminator: {}".format(
+                            self.line_terminator
+                            ))
+
                     sep_pos = self._input_bytes_buff.find(
                         self.line_terminator
                         )
+
+                    if _debug:
+                        print("_worker_thread_target_02 sep_pos: {}".format(
+                            sep_pos
+                            ))
 
                     if sep_pos == -1:
                         break
 
                     cut_pos = sep_pos + self._line_terminator_len
 
+                    if _debug:
+                        print("_worker_thread_target_02 cut_pos: {}".format(
+                            cut_pos
+                            ))
+
                     res_line_bytes = self._input_bytes_buff[:cut_pos]
 
                     self._input_bytes_buff = self._input_bytes_buff[cut_pos:]
 
+                    if _debug:
+                        print("_worker_thread_target_02 buff_3: {}".format(
+                            self._input_bytes_buff
+                            ))
+
                     with self._lines_lock:
+                        if _debug:
+                            print("_worker_thread_target_02 list app: {}".format(
+                                res_line_bytes
+                                ))
+
                         self._lines.append(res_line_bytes)
 
-        self.stop()
+        threading.Thread(target=self.stop).start()
 
         return
 
