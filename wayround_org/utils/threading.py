@@ -111,9 +111,9 @@ class Signal:
         is: if You will use this method in object's lifetime, then You will
         need to track changes in it's signal set, so things will become wired,
         hard and overheaded. For instance, SignalWaiter will not wait for new
-        signals if it was created with _signal_name=True and listened object
-        changes own signal set, as SignalWaiter relies on this class'es
-        connect for simplicity. Don't get things hard!
+        signals if it was created with signal_name=True (the connect() method
+        param) and listened object changes own signal set, as SignalWaiter
+        relies on this class'es connect for simplicity. Don't get things hard!
         """
 
         with self._signal_subj_access_lock:
@@ -146,6 +146,7 @@ class Signal:
             raise ValueError(
                 "{}: `{}' is not supported signal".format(self, name)
                 )
+        return
 
     def emit(self, name, *args, **kwargs):
         """
@@ -292,6 +293,7 @@ class Signal:
                     self.subject.__class__, wr
                     )
                 )
+        return
 
     def disconnect(self, callback, signal_name=None):
         """
@@ -409,6 +411,8 @@ class SignalWaiter:
         self._signal_received = threading.Event()
         self._buffer = []
 
+        return
+
     def start(self):
 
         if self._debug:
@@ -495,22 +499,26 @@ class SignalWaiter:
 
         self._signal_received.set()
         self._signal_received.clear()
+        return
 
 
 class Hub:
 
+    # NOTE: let it stey for history reasons. to not impliment such
+    #       functionality again
+
     def __init__(self):
         raise Exception("Deprecated")
-
         self._clear(init=True)
+        return
 
     def _clear(self, init=False):
-
         self.waiters = {}
+        return
 
     def clear(self):
-
         self._clear()
+        return
 
     def _dispatch(self, *args, **kwargs):
 
@@ -571,6 +579,8 @@ class CallQueue:
         self._queue = []
         self._call_block = threading.Lock()
 
+        return
+
     @classmethod
     def new_for_signal(
             cls,
@@ -588,13 +598,15 @@ class CallQueue:
     def set_signal(self, signal_instance=None, signal_name=None):
         self._signal_instance = signal_instance
         self._signal_name = signal_name
+        return
 
     def set_callable_target(self, target_callable):
         self._target_callable = target_callable
+        return
 
     def copy(self):
         if (not isinstance(self._signal_instance, Signal)
-                or self._signal_name is None
+                    or self._signal_name is None
                 ):
             raise ValueError(
                 "`signal_instance' and `signal_name' must be defined"
@@ -760,3 +772,31 @@ def _add_prefix(signal_names=None, add_prefix=None):
         ret = lst
 
     return ret
+
+
+class ObjectLocker:
+
+    # TODO: develop persistent locking functional
+
+    def __init__(self, weak_object_mode=True):
+        if weak_object_mode:
+            self._storage = weakref.WeakValueDictionary()
+        else:
+            self._storage = {}
+
+        self._storage_lock = threading.Lock()
+
+        return
+
+    def get_lock(self, obj):
+        """
+        auto-create if not exists
+        """
+        with self._storage_lock:
+            if not obj in self._storage:
+                self._storage[obj] = threading.Lock()
+            ret = self._storage[obj]
+        return ret
+
+    def get_is_locked(self, obj):
+        return obj in self._storage

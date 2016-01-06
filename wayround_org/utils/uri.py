@@ -74,7 +74,7 @@ class AuthorityLikeHttp:
         self.port = port
         return
 
-    def __str__(self):
+    def render_str(self):
 
         ret = ''
 
@@ -87,6 +87,9 @@ class AuthorityLikeHttp:
             ret += ':{}'.format(self.port)
 
         return ret
+
+    def __str__(self):
+        return self.render_str()
 
     @property
     def host(self):
@@ -114,15 +117,37 @@ class AuthorityLikeHttp:
         self._port = value
         return
 
+    @property
+    def userinfo(self):
+        return self._userinfo
+
+    @userinfo.setter
+    def userinfo(self, value):
+
+        if value is not None and not isinstance(value, str):
+            raise TypeError("`userinfo' must be str")
+
+        self._userinfo = value
+        return
+
+    def gen_userinfo_like_http(self):
+        return UserInfoLikeHttp(self.userinfo)
+
 
 class QueryLikeHttp:
 
-    def __init__(self, value):
+    def __init__(self, value, encoding=None, errors=None):
         self._value = None
         self.value = value
+
+        if encoding is None:
+            encoding = 'utf-8'
+
+        self._encoding = encoding
+        self._errors = errors
         return
 
-    def to_str(self, encoding=None, errors=None):
+    def render_str(self):
 
         if encoding is None:
             encoding = 'utf-8'
@@ -132,8 +157,16 @@ class QueryLikeHttp:
         for i in self.value:
             ret.append(
                 '{}={}'.format(
-                    urllib.parse.quote(i[0], encoding=encoding, errors=errors),
-                    urllib.parse.quote(i[1], encoding=encoding, errors=errors)
+                    urllib.parse.quote(
+                        i[0],
+                        encoding=self._encoding,
+                        errors=self._errors
+                        ),
+                    urllib.parse.quote(
+                        i[1],
+                        encoding=self._encoding,
+                        errors=self._errors
+                        )
                     )
                 )
 
@@ -142,7 +175,13 @@ class QueryLikeHttp:
         return ret
 
     def __str__(self):
-        return self.to_str()
+        return self.render_str()
+
+    def __getitem__(self, index):
+        return self.value[index]
+
+    def __len__(self):
+        return len(self.value)
 
     @property
     def value(self):
@@ -157,7 +196,20 @@ class QueryLikeHttp:
         if isinstance(value, str):
             res_val = []
             for i in value.split('&'):
-                res_val.append(tuple(i.split('=', 1)))
+                k, v = i.split('=', 1)
+
+                k = urllib.parse.unquote(
+                    k,
+                    encoding=self._encoding,
+                    errors=self._errors
+                    ),
+                v = urllib.parse.unquote(
+                    v,
+                    encoding=self._encoding,
+                    errors=self._errors
+                    )
+
+                res_val.append(tuple())
 
             value = res_val
             del res_val
@@ -263,7 +315,7 @@ class URI:
 
         return
 
-    def __str__(self):
+    def render_str(self):
         ret = ''
         ret += str(self.scheme)
         ret += ':'
@@ -275,6 +327,9 @@ class URI:
             ret += '#'
             ret += str(self.fragment)
         return ret
+
+    def __str__(self):
+        return self.render_str()
 
     def __repr__(self):
         ret = '{} {}'.format(
@@ -306,6 +361,9 @@ class URI:
     @property
     def authority(self):
         return self._authority
+
+    def gen_authority_like_http(self):
+        return AuthorityLikeHttp(self.authority)
 
     @authority.setter
     def authority(self, value):
@@ -360,6 +418,9 @@ class URI:
     @property
     def query(self):
         return self._query
+
+    def gen_query_like_http(self):
+        return QueryLikeHttp(self.query)
 
     @query.setter
     def query(self, value):

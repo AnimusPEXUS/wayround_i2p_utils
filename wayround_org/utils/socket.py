@@ -73,7 +73,7 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
         else:
             break
 
-    if False:
+    if True:
         print("recvd: {}".format(data))
 
     return data
@@ -81,7 +81,7 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
 
 def nb_sendall(sock, data, bs=4096, stop_event=None, select_timeout=0.5):
 
-    if False:
+    if True:
         print("sending: {}".format(data))
 
     if stop_event is not None:
