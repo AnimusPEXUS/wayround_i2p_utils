@@ -1,7 +1,7 @@
 
 import os.path
 
-import yasm
+import yaml
 
 import wayround_org.utils.path
 import wayround_org.utils.threading
@@ -89,10 +89,8 @@ class FlaggedFile:
             )
 
     def set_flag(self, name):
-        self.set_flag_data(
-            name,
-            self.get_flag_data(name)
-            )
+        data = self.get_flag_data(name)
+        self.set_flag_data(name, data)
         return
 
     def set_flag_data(self, name, data):
@@ -113,7 +111,7 @@ class FlaggedFile:
             f_path = self.get_flag_path(name)
             with self.object_locker(f_path):
                 with open(f_path, 'w') as f:
-                    f.write(yasm.dump(data))
+                    f.write(yaml.dump(data))
 
         return
 
@@ -129,7 +127,7 @@ class FlaggedFile:
             if os.path.isfile(f_path):
                 with self.object_locker(f_path):
                     with open(f_path, 'r') as f:
-                        ret = yasm.load(f.read())
+                        ret = yaml.load(f.read())
 
         return ret
 

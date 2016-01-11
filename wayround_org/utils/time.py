@@ -8,8 +8,8 @@ TIMESTAMP_STR_FORMAT_PATTERN = \
     '{micro:07d}'
 
 TIMESTAMP_RE_PATTERN = \
-    r'(?Pyear\d{4})(?Pmonth\d{2})(?Pday\d{2})' \
-    r'\.(?Phour\d{2})(?Pminute\d{2})(?Psecond\d{2})\.(?Pmicro\d{7})'
+    r'(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})' \
+    r'\.(?P<hour>\d{2})(?P<minute>\d{2})(?P<second>\d{2})\.(?P<micro>\d{7})'
 
 
 TIMESTAMP_NO_POINTS_STR_FORMAT_PATTERN = \
@@ -18,16 +18,27 @@ TIMESTAMP_NO_POINTS_STR_FORMAT_PATTERN = \
     '{micro:07d}'
 
 TIMESTAMP_NO_POINTS_RE_PATTERN = \
-    r'(?Pyear\d{4})(?Pmonth\d{2})(?Pday\d{2})' \
-    r'(?Phour\d{2})(?Pminute\d{2})(?Psecond\d{2})(?Pmicro\d{7})'
+    r'(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})' \
+    r'(?P<hour>\d{2})(?P<minute>\d{2})(?P<second>\d{2})(?P<micro>\d{7})'
 
 
 def currenttime_stamp():
     d = datetime.datetime.now()
     return time_stamp(d)
 
+
+def currenttime_stamp2():
+    d = datetime.datetime.now()
+    return time_stamp_no_points(d)
+
+
+def currenttime_stamp_utc():
+    d = datetime.datetime.utcnow()
+    return time_stamp(d)
+
+
 def currenttime_stamp2_utc():
-    d = datetime.datetime.utc_now()
+    d = datetime.datetime.utcnow()
     return time_stamp_no_points(d)
 
 
@@ -46,6 +57,7 @@ def time_stamp(dt):
             'micro': dt.microsecond
             }
         )
+
 
 def time_stamp_no_points(dt):
     return TIMESTAMP_NO_POINTS_STR_FORMAT_PATTERN.format_map(

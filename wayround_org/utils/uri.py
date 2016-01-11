@@ -88,6 +88,9 @@ class AuthorityLikeHttp:
 
         return ret
 
+    # don't do this. code should be more strict
+    # render_string = render_str
+
     def __str__(self):
         return self.render_str()
 

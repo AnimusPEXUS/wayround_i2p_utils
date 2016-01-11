@@ -794,7 +794,8 @@ class ObjectLocker:
         """
         with self._storage_lock:
             if not obj in self._storage:
-                self._storage[obj] = threading.Lock()
+                _t = threading.Lock()
+                self._storage[obj] = _t 
             ret = self._storage[obj]
         return ret
 

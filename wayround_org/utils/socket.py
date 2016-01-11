@@ -7,6 +7,8 @@ import time
 
 import wayround_org.mail.miscs
 
+DEBUG_NB_FUNCS = False
+
 
 def nb_handshake(sock, stop_event=None, select_timeout=0.5):
 
@@ -73,7 +75,7 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
         else:
             break
 
-    if True:
+    if DEBUG_NB_FUNCS:
         print("recvd: {}".format(data))
 
     return data
@@ -81,7 +83,7 @@ def nb_recv(sock, bs=4096, stop_event=None, select_timeout=0.5):
 
 def nb_sendall(sock, data, bs=4096, stop_event=None, select_timeout=0.5):
 
-    if True:
+    if DEBUG_NB_FUNCS:
         print("sending: {}".format(data))
 
     if stop_event is not None:
@@ -122,17 +124,36 @@ class LblRecvReaderBuffer:
             self,
             sock,
             recv_size=4096,
-            line_terminator=wayround_org.mail.miscs.STANDARD_LINE_TERMINATOR
+            line_terminator=wayround_org.mail.miscs.STANDARD_LINE_TERMINATOR,
+            maximum_line_length=wayround_org.mail.miscs.MAX_LINE_LENGTH
             ):
         """
 
-        line_terminator=b'\0\n' (0x10, 0x13) is mail system message terminator
+        line_terminator=b'\r\n' (0x10, 0x13) is mail system message terminator
         style
+
+        if maximum_line_length is None, then control of maximum line length is
+        disabled.
+
+        if maximum_line_length is not None, it must be positive int
+
+        if maximum_line_length is set, then if working thread
+        (_02_worker_thread) detects limitation reach - then this class
+        instance property .max_line_error is set to True and .stop() method is
+        called.
         """
+
+        if maximum_line_length is not None:
+            if not isinstance(maximum_line_length, int):
+                raise TypeError("`maximum_line_length' must be None or int")
+
+            if not maximum_line_length >= 1:
+                raise ValueError("`maximum_line_length' must be >= 1")
 
         self.sock = sock
         self.line_terminator = line_terminator
         self.recv_size = recv_size
+        self.maximum_line_length = maximum_line_length
 
         self._socket_is_closed = False
         self._line_terminator_len = len(self.line_terminator)
@@ -153,6 +174,8 @@ class LblRecvReaderBuffer:
         # and the only way to get items from it is special method
         self._lines = []
         self._lines_lock = threading.Lock()
+
+        self.max_line_error = False
 
         return
 
@@ -256,27 +279,34 @@ class LblRecvReaderBuffer:
                 self._input_bytes_buff += res
 
                 if _debug:
-                    print("_worker_thread_target_02 buff_2: {}".format(
-                        self._input_bytes_buff
-                        ))
+                    print(
+                        "_worker_thread_target_02 buff_2: {}".format(
+                            self._input_bytes_buff
+                            )
+                        )
 
                 while True:
                     if self._stop_flag.is_set():
                         break
 
                     if _debug:
-                        print("_worker_thread_target_02 line_terminator: {}".format(
-                            self.line_terminator
-                            ))
+                        print(
+                            "_worker_thread_target_02"
+                            " line_terminator: {}".format(
+                                self.line_terminator
+                                )
+                            )
 
                     sep_pos = self._input_bytes_buff.find(
                         self.line_terminator
                         )
 
                     if _debug:
-                        print("_worker_thread_target_02 sep_pos: {}".format(
-                            sep_pos
-                            ))
+                        print(
+                            "_worker_thread_target_02 sep_pos: {}".format(
+                                sep_pos
+                                )
+                            )
 
                     if sep_pos == -1:
                         break
@@ -284,29 +314,50 @@ class LblRecvReaderBuffer:
                     cut_pos = sep_pos + self._line_terminator_len
 
                     if _debug:
-                        print("_worker_thread_target_02 cut_pos: {}".format(
-                            cut_pos
-                            ))
+                        print(
+                            "_worker_thread_target_02 cut_pos: {}".format(
+                                cut_pos
+                                )
+                            )
 
                     res_line_bytes = self._input_bytes_buff[:cut_pos]
 
                     self._input_bytes_buff = self._input_bytes_buff[cut_pos:]
 
                     if _debug:
-                        print("_worker_thread_target_02 buff_3: {}".format(
-                            self._input_bytes_buff
-                            ))
+                        print(
+                            "_worker_thread_target_02 buff_3: {}".format(
+                                self._input_bytes_buff
+                                )
+                            )
 
                     with self._lines_lock:
                         if _debug:
-                            print("_worker_thread_target_02 list app: {}".format(
-                                res_line_bytes
-                                ))
+                            print(
+                                "_worker_thread_target_02 list app: {}".format(
+                                    res_line_bytes
+                                    )
+                                )
+
+                        self._check_line_length_rtn(len(res_line_bytes))
+                        if self.max_line_error:
+                            break
 
                         self._lines.append(res_line_bytes)
 
+                self._check_line_length_rtn(len(self._input_bytes_buff))
+
+                if self.max_line_error:
+                    break
+
         threading.Thread(target=self.stop).start()
 
+        return
+
+    def _check_line_length_rtn(self, length):
+        if self.maximum_line_length is not None:
+            if length >= self.maximum_line_length:
+                self.max_line_error = True
         return
 
     def get_next_line(self):
