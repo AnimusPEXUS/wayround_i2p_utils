@@ -99,17 +99,14 @@ class FlaggedFile:
             raise TypeError("`name' must be str")
 
         if data is None:
-            data = {}
-
-        if not isinstance(data, dict):
-            raise TypeError("`data' must be dict")
-
-        if not self.get_is_flag_set(name):
-            self.set_flag(name)
+            data = None
 
         if not self.get_is_flag_set(name):
             f_path = self.get_flag_path(name)
-            with self.object_locker(f_path):
+            f_path_dir = os.path.dirname(f_path)
+            if not os.path.isdir(f_path_dir):
+                os.makedirs(f_path_dir)
+            with self.object_locker[f_path]:
                 with open(f_path, 'w') as f:
                     f.write(yaml.dump(data))
 
@@ -117,7 +114,7 @@ class FlaggedFile:
 
     def get_flag_data(self, name):
 
-        ret = {}
+        ret = None
 
         if not isinstance(name, str):
             raise TypeError("`name' must be str")
@@ -125,7 +122,7 @@ class FlaggedFile:
         if self.get_is_flag_set(name):
             f_path = self.get_flag_path(name)
             if os.path.isfile(f_path):
-                with self.object_locker(f_path):
+                with self.object_locker[f_path]:
                     with open(f_path, 'r') as f:
                         ret = yaml.load(f.read())
 
@@ -137,6 +134,6 @@ class FlaggedFile:
 
         if self.get_is_flag_set(name):
             f_path = self.get_flag_path(name)
-            with self.object_locker(f_path):
+            with self.object_locker[f_path]:
                 os.unlink(f_path)
         return

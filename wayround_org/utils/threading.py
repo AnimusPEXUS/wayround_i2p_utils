@@ -606,8 +606,8 @@ class CallQueue:
 
     def copy(self):
         if (not isinstance(self._signal_instance, Signal)
-                    or self._signal_name is None
-                ):
+            or self._signal_name is None
+            ):
             raise ValueError(
                 "`signal_instance' and `signal_name' must be defined"
                 )
@@ -795,9 +795,17 @@ class ObjectLocker:
         with self._storage_lock:
             if not obj in self._storage:
                 _t = threading.Lock()
-                self._storage[obj] = _t 
+                self._storage[obj] = _t
             ret = self._storage[obj]
         return ret
 
     def get_is_locked(self, obj):
         return obj in self._storage
+
+    def __getitem__(self, obj):
+        ret = self.get_lock(obj)
+        return ret
+
+    def __in__(self, obj):
+        ret = self.get_is_locked(obj)
+        return ret
