@@ -385,6 +385,12 @@ class LblRecvReaderBuffer:
         return ret
 
     def nb_get_next_line(self, stop_event, retry_interval=0.2):
+        """
+
+        Uses get_next_line(): wait's until it returns something.
+        Can be interupted using passed event object.
+        """
+
         if not isinstance(stop_event, threading.Event):
             raise TypeError("`stop_event' must be of threading.Event type")
 

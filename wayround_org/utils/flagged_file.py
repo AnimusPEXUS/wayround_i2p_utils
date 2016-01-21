@@ -1,34 +1,102 @@
 
+"""
+Module for organizing persistent supporting flags for files
+
+This can be used to create any sort of flags
+
+YAML is used for storing data in flags
+
+flags can be also used as simple raw files
+"""
+
 import os.path
 
 import yaml
 
 import wayround_org.utils.path
 import wayround_org.utils.threading
+import wayround_org.utils.types_presets
 
 
 def verify_flag_name(flagged_file, flag_name):
+    """
+    function for checking whatever user supplied flag name supported by
+    FlaggedFile class instance
+    """
     if not isinstance(flagged_file, FlaggedFile):
         raise TypeError("`flagged_object' must be inst of FlaggedFile")
 
     if not isinstance(flag_name, str):
-        raise TypeError("`flag_name' must be str")
+        raise TypeError("flag name must be str")
 
-    if not flag_name in flagged_file.possible_flags:
-        raise ValueError("invalid flag_name")
+    if flag_name not in flagged_file.possible_flags:
+        raise ValueError("invalid flag name")
+    return
+
+
+def check_formatted_access_to_raw_flag(flagged_file, flag_name):
+
+    verify_flag_name(flagged_file, flag_name)
+
+    if flag_name in flagged_file.raw_flags:
+        raise ValueError(
+            "trying to use formatted access to raw flag `{}'".format(
+                flag_name
+                )
+            )
     return
 
 
 class FlaggedFile:
+    """
+    Use this class for creating flags
+    """
 
-    def __init__(self, path, basename, possible_flags, object_locker=None):
+    def __init__(
+            self,
+            path,
+            basename,
+            possible_flags,
+            raw_flags=None,
+            object_locker=None
+            ):
+        """
+        path - directory in which to store flags
+        basename - base name to which flag extensions will be appended
+        possible_flags - list (or set) of flags which supported by  instance of
+            this class
+        raw_flags - list (or set) of flags, internal structure of which should
+            not be considered in YAML markup. so trying to use on them YAML
+            methods of this class will raise exception.
+        object_locker - instance of ObjectLocker to use for sefe access to
+            flag files. use None for automatic ceation of this
+        """
 
         self._path = None
         self._basename = None
 
+        if raw_flags is None:
+            raw_flags = set()
+
+        if not isinstance(possible_flags, (list, set)):
+            raise TypeError("`possible_flags' must be list or set")
+
+        if not isinstance(raw_flags, (list, set)):
+            raise TypeError("`raw_flags' must be list, set or None")
+
         self.path = path
         self.basename = basename
-        self.possible_flags = possible_flags
+        self.possible_flags = set(possible_flags)
+        self.raw_flags = set(raw_flags)
+
+        for i in self.raw_flags:
+            if i not in self.possible_flags:
+                print(
+                    "warning (FlaggedFile):"
+                    " {} not in possible_flags".format(i)
+                    )
+
+        self.possible_flags |= self.raw_flags
 
         if object_locker is None:
             object_locker = wayround_org.utils.threading.ObjectLocker()
@@ -42,10 +110,17 @@ class FlaggedFile:
 
     @property
     def path(self):
+        """
+        returns directory path with which this instance is working now.
+        this is wrapped in property to ensure correct value is passed to it
+        """
         return self._path
 
     @path.setter
     def path(self, value):
+        """
+        change path parameter
+        """
         if not isinstance(value, str):
             raise TypeError("`path' must be str")
         self._path = value
@@ -62,78 +137,131 @@ class FlaggedFile:
         self._basename = value
         return
 
-    def install_methods(self, obj):
-        for i in [
-                'get_flag_path',
-                'get_is_flag_set',
-                'set_flag'
-                ]:
-            setattr(obj, i, getattr(self, i))
-
-        return
-
     def gen_flag_path(self, name):
         verify_flag_name(self, name)
-        return wayround_org.utils.path.join(
+        ret = wayround_org.utils.path.join(
             self.path,
-            self.basename
-            ) + '.' + name
+            '{}.{}'.format(self.basename, name)
+            )
+        return ret
 
     def get_flag_path(self, name):
         verify_flag_name(self, name)
-        return getattr(self, '{}_path'.format(name))
+        ret = getattr(self, '{}_path'.format(name))
+        return ret
+
+    def get_flag_lock(self, name):
+        ret = self.object_locker.get_lock(self.get_flag_path(name))
+        return ret
+
+    def get_is_flag_locked(self, name):
+        ret = self.object_locker.get_is_locked(self.get_flag_path(name))
+        return ret
 
     def get_is_flag_set(self, name):
-        return os.path.isfile(
-            self.get_flag_path(name)
-            )
+        ret = os.path.isfile(self.get_flag_path(name))
+        return ret
+
+    def open_flag(self, name, flags='r'):
+        ret = open(self.get_flag_path(name), flags)
+        return ret
 
     def set_flag(self, name):
-        data = self.get_flag_data(name)
-        self.set_flag_data(name, data)
+        verify_flag_name(self, name)
+        if name in self.raw_flags:
+            f_path = self.get_flag_path(name)
+            if not self.get_is_flag_set(name):
+                with self.get_flag_lock(name):
+                    with self.open_flag(name, 'wb'):
+                        pass
+        else:
+            data = self.get_flag_data(name)
+            self.set_flag_data(name, data)
         return
 
     def set_flag_data(self, name, data):
 
-        if not isinstance(name, str):
-            raise TypeError("`name' must be str")
+        check_formatted_access_to_raw_flag(self, name)
 
-        if data is None:
-            data = None
-
-        if not self.get_is_flag_set(name):
-            f_path = self.get_flag_path(name)
-            f_path_dir = os.path.dirname(f_path)
-            if not os.path.isdir(f_path_dir):
-                os.makedirs(f_path_dir)
-            with self.object_locker[f_path]:
-                with open(f_path, 'w') as f:
-                    f.write(yaml.dump(data))
+        with self.get_flag_lock(name):
+            with self.open_flag(name, 'w') as f:
+                f.write(yaml.dump(data))
 
         return
 
     def get_flag_data(self, name):
 
+        check_formatted_access_to_raw_flag(self, name)
+
         ret = None
 
-        if not isinstance(name, str):
-            raise TypeError("`name' must be str")
-
         if self.get_is_flag_set(name):
-            f_path = self.get_flag_path(name)
-            if os.path.isfile(f_path):
-                with self.object_locker[f_path]:
-                    with open(f_path, 'r') as f:
-                        ret = yaml.load(f.read())
+            with self.get_flag_lock(name):
+                with self.open_flag(name, 'r') as f:
+                    ret = yaml.load(f.read())
 
         return ret
 
     def unset_flag(self, name):
-        if not isinstance(name, str):
-            raise TypeError("`name' must be str")
+        with self.get_flag_lock(name):
+            if self.get_is_flag_set(name):
+                os.unlink(self.get_flag_path(name))
+        return
 
-        if self.get_is_flag_set(name):
-            f_path = self.get_flag_path(name)
-            with self.object_locker[f_path]:
-                os.unlink(f_path)
+    def get_bool(self, name):
+        ret = self.get_flag_data(name) is True
+        return ret
+
+    def set_bool(self, name, value=True):
+        if not isinstance(value, bool):
+            raise TypeError("`{}' value must be bool".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def get_str(self, name):
+        ret = self.get_flag_data(name)
+        if not isinstance(ret, str):
+            ret = None
+        return ret
+
+    def set_str(self, name, value):
+
+        if value is not None and not isinstance(value, str):
+            raise TypeError("`{}' value must be str or None".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def get_str_list(self, name):
+        ret = self.get_flag_data(name)
+        if not wayround_org.utils.types_presets.is_list_of_str(ret):
+            ret = []
+        return ret
+
+    def set_str_list(self, name, value):
+        if not wayround_org.utils.types_presets.is_list_of_str(value):
+            raise TypeError("`{}' value must be list of str".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def add_str_list(self, name, value):
+        self.set_str_list(name, self.get_str_list(name) + [value])
+        return
+
+    def get_str_set(self, name):
+        ret = self.get_flag_data(name)
+        if not wayround_org.utils.types_presets.is_set_of_str(ret):
+            ret = set()
+        return ret
+
+    def set_str_set(self, name, value):
+        if not wayround_org.utils.types_presets.is_set_of_str(value):
+            raise TypeError("`{}' value must be set of str".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def add_str_set(self, name, value):
+        self.set_str_list(
+            name,
+            self.get_str_list(name) + [value]
+            )
         return
