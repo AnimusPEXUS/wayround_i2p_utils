@@ -127,14 +127,14 @@ class AuthorityLikeHttp:
     @userinfo.setter
     def userinfo(self, value):
 
-        if value is not None and not isinstance(value, str):
-            raise TypeError("`userinfo' must be str")
+        if isinstance(value, str):
+            value = UserInfoLikeHttp(value)
+
+        if value is not None and not isinstance(value, UserInfoLikeHttp):
+            raise TypeError("`userinfo' must be None or UserInfoLikeHttp")
 
         self._userinfo = value
         return
-
-    def gen_userinfo_like_http(self):
-        return UserInfoLikeHttp(self.userinfo)
 
 
 class QueryLikeHttp:
@@ -448,6 +448,89 @@ class URI:
         self._fragment = value
 
         return
+
+
+class HttpURI(URI):
+    """
+    This class is specially done for HTTP URIs handling, as it is very
+    common case.
+
+    .query and .authority are stored as objects, not as strings
+    """
+
+    def gen_authority_like_http(self):
+        raise Exception("not in HttpURI")
+
+    def gen_query_like_http(self):
+        raise Exception("not in HttpURI")
+
+    @property
+    def authority(self):
+        return super().authority
+
+    @authority.setter
+    def authority(self, value):
+
+        if isinstance(value, str):
+            value = AuthorityLikeHttp2.new_from_string(value)
+
+        if value is not None and not isinstance(value, AuthorityLikeHttp):
+            raise ValueError(
+                "`query' must be None or AuthorityLikeHttpp6 inst"
+                )
+
+        self._authority = value
+
+        return
+
+    @property
+    def query(self):
+        return super().query
+
+    @query.setter
+    def query(self, value):
+
+        if isinstance(value, str):
+            value = QueryLikeHttp(value)
+
+        if value is not None and not isinstance(value, QueryLikeHttp):
+            raise ValueError("`query' must be None or QueryLikeHttp inst")
+
+        self._query = value
+
+        return
+
+    def is_email(self):
+
+        has_scheme = isinstance(self.scheme, str)
+
+        has_user_info = False
+        has_password = False
+        has_domain = False
+        has_port = False
+
+        if self.authority is not None:
+            a = self.authority
+            has_domain = isinstance(a.host, str)
+            has_port = isinstance(a.port, int)
+            if a.userinfo is not None:
+                a = a.userinfo
+                has_user_info = True
+                has_password = a.password is not None
+
+        has_query = self.query is not None
+        has_fragment = self.fragment is not None
+
+        ret = (
+            not has_scheme
+            and has_user_info
+            and not has_password
+            and has_domain
+            and not has_port
+            and not has_query
+            and not has_fragment
+            )
+        return ret
 
 
 def run_examples():

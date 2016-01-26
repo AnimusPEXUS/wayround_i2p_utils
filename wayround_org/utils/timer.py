@@ -4,7 +4,6 @@ import time
 
 
 class LoopedTimer:
-
     """
     Call for action every interval
     """
@@ -25,26 +24,23 @@ class LoopedTimer:
         self._thread = None
 
         self._stop_event = threading.Event()
-        self._stoped_event = threading.Event()
+        self._stopped_event = threading.Event()
 
         return
 
     def start(self):
         if not self._thread:
             self._stop_event.clear()
-            self._stoped_event.clear()
+            self._stopped_event.clear()
             self._thread = threading.Thread(
                 target=self._thread_target
                 )
             self._thread.start()
-
         return
 
     def stop(self):
-
         self._stop_event.set()
-        self._stoped_event.wait()
-
+        self._stopped_event.wait()
         return
 
     def _thread_target(self):
@@ -62,6 +58,6 @@ class LoopedTimer:
 
         self._thread = None
 
-        self._stoped_event.set()
+        self._stopped_event.set()
 
         return

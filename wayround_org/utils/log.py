@@ -10,6 +10,7 @@ import wayround_org.utils.path
 import wayround_org.utils.stream
 import wayround_org.utils.time
 import wayround_org.utils.error
+import wayround_org.utils.osutils
 
 
 class LoggingFileLikeObject:
@@ -104,7 +105,9 @@ class Log:
             logname,
             echo=True,
             timestamp=None,
-            longest_logname=None
+            longest_logname=None,
+            group=None,
+            user=None
             ):
 
         ret = 0
@@ -115,27 +118,34 @@ class Log:
         self.longest_logname = longest_logname
         self._write_lock = threading.Lock()
 
+        # TODO: group and user parameter's behavior need to be improved
+        self._group, self._user = wayround_org.utils.osutils.convert_gid_uid(
+            group,
+            user
+            )
+
         self.stdout = LoggingFileLikeObject(self, 'info')
         self.stderr = LoggingFileLikeObject(self, 'error')
 
-        if not os.path.exists(log_dir):
-            try:
-                os.makedirs(log_dir)
-            except:
-                logging.exception("Exception while creating building logs dir")
-                ret = 1
-        else:
+        os.makedirs(log_dir, exist_ok=True)
 
-            if (
-                    not os.path.isdir(log_dir)
-                    or os.path.islink(log_dir)
-                    ):
-                logging.error(
-                    "Current file type is not acceptable: {}".format(
-                        log_dir
-                        )
+        if (not os.path.isdir(log_dir)
+                or os.path.islink(log_dir)
+            ):
+            logging.error(
+                "Current file type is not acceptable: {}".format(
+                    log_dir
                     )
-                ret = 2
+                )
+            ret = 2
+
+        if ret == 0:
+            if self._user is not None and self._group is not None:
+                os.chown(
+                    log_dir,
+                    self._user,
+                    self._group
+                    )
 
         if ret == 0:
 
@@ -168,8 +178,16 @@ class Log:
                     timestamp=timestamp
                     )
 
+        if ret == 0:
+            if self._user is not None and self._group is not None:
+                os.chown(
+                    self.log_filename,
+                    self._user,
+                    self._group
+                    )
+
         if ret != 0:
-            raise Exception
+            raise Exception("Exception during Log creation. read above.")
 
         return
 

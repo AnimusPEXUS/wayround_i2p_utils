@@ -774,6 +774,64 @@ def _add_prefix(signal_names=None, add_prefix=None):
     return ret
 
 
+class ObjectLock:
+
+    def __init__(self):
+        self._on_lock = threading.Event()
+        self._on_unlock = threading.Event()
+        self._locked = True
+        self._locked_lock = threading.RLock()
+        self._context_lock = threading.Lock()
+        self.unlock()
+        return
+
+    def __enter__(self):
+        self._context_lock.acquire()
+        self.lock()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.unlock()
+        self._context_lock.release()
+        return
+
+    def set_locked(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("`value' must be bool")
+
+        with self._locked_lock:
+            prev_value = self.get_locked()
+            self._locked = value
+
+            changed = self._locked != prev_value
+            if changed:
+                if prev_value:
+                    self._on_unlock.set()
+                    self._on_unlock.clear()
+                else:
+                    self._on_lock.set()
+                    self._on_lock.clear()
+
+        return changed
+
+    def get_locked(self):
+        with self._locked_lock:
+            ret = self._locked
+        return ret
+
+    def lock(self):
+        return self.set_locked(True)
+
+    def unlock(self):
+        return self.set_locked(False)
+
+    def wait_lock(self, *args, **kwargs):
+        return self._on_lock.wait(*args, **kwargs)
+
+    def wait_unlock(self, *args, **kwargs):
+        return self._on_unlock.wait(*args, **kwargs)
+
+
 class ObjectLocker:
 
     # TODO: develop persistent locking functional
@@ -794,18 +852,23 @@ class ObjectLocker:
         """
         with self._storage_lock:
             if not obj in self._storage:
-                _t = threading.Lock()
+                _t = ObjectLock()
                 self._storage[obj] = _t
             ret = self._storage[obj]
         return ret
 
     def get_is_locked(self, obj):
-        return obj in self._storage
-
-    def __getitem__(self, obj):
-        ret = self.get_lock(obj)
+        ret = False
+        with self._storage_lock:
+            if obj in self._storage:
+                lock = self._storage[obj]
+                ret = lock.get_locked()
         return ret
 
+    def __getitem__(self, obj):
+        return self.get_lock(obj)
+
     def __in__(self, obj):
-        ret = self.get_is_locked(obj)
+        with self._storage_lock:
+            ret = obj in self._storage
         return ret
