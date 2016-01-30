@@ -819,11 +819,20 @@ class ObjectLock:
             ret = self._locked
         return ret
 
+    def get_is_locked(self):
+        return self.get_locked()
+
     def lock(self):
         return self.set_locked(True)
 
     def unlock(self):
         return self.set_locked(False)
+
+    def acquire(self):
+        return self.lock()
+
+    def release(self):
+        return self.unlock()
 
     def wait_lock(self, *args, **kwargs):
         return self._on_lock.wait(*args, **kwargs)

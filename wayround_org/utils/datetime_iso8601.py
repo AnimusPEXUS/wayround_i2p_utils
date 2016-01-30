@@ -55,7 +55,6 @@ TIME_EXPRESSION = \
         r'$'
         )
 
-
 TIME_TRUNCATED_EXPRESSION = \
     re.compile(
         r'^'
@@ -63,6 +62,7 @@ TIME_TRUNCATED_EXPRESSION = \
         r'((?P<number1>\d{2})|-)(?P<sep>:)?(?P<number2>\d{2})?'
         r'$'
         )
+
 
 DATE_ATTRIBUTES = {
     '-', 'year', 'century', 'week', 'ordinal', 'day', 'month', 'truncated_date'
@@ -98,6 +98,9 @@ def _time_attrs_check(arr):
 
 def str_to_date(value):
 
+    if not isinstance(value, str):
+        raise TypeError("`value' must be str")
+
     res, attr = date_truncated_str_to_dict(value)
     if res is not None:
         ret = res, attr
@@ -120,6 +123,9 @@ def str_to_date(value):
 
 
 def str_to_time(value):
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
 
     if value[0] == '-':
         # TODO: separate this
@@ -224,6 +230,10 @@ def str_to_time(value):
 
 
 def str_to_datetime(value):
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
+
     _debug = False
     ret = None
     ret_attributes = set()
@@ -281,6 +291,9 @@ def str_to_datetime(value):
 
 
 def date_to_str(date, attr=None):
+
+    if not isinstance(date, datetime.date):
+        raise TypeError("`date' must be inst of datetime.date")
 
     if attr is None:
         attr = DEFAULT_DATE_ATTRIBUTES
@@ -376,6 +389,9 @@ def date_to_str(date, attr=None):
 
 def time_to_str(time, attr=None):
 
+    if not isinstance(time, datetime.time):
+        raise TypeError("`time' must be inst of datetime.time")
+
     if 'truncated_time' in attr:
         ret = dict_to_truncated_time_str(time, attr)
     else:
@@ -458,6 +474,9 @@ def time_to_str(time, attr=None):
 
 def datetime_to_str(value, attr=None):
 
+    if not isinstance(value, datetime.datetime):
+        raise TypeError("`value' must be inst of datetime.datetime")
+
     if attr is None:
         attr = DEFAULT_DATE_ATTRIBUTES | DEFAULT_TIME_ATTRIBUTES
 
@@ -481,6 +500,9 @@ def datetime_to_str(value, attr=None):
 
 
 def date_truncated_str_to_dict(value):
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst if str")
 
     _debug = False
 
@@ -515,6 +537,9 @@ def date_truncated_str_to_dict(value):
 
 def time_truncated_str_to_dict(value):
 
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
+
     _debug = False
 
     ret = None
@@ -547,6 +572,9 @@ def time_truncated_str_to_dict(value):
 
 
 def date_ordinal_str_to_date(value):
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
 
     _debug = False
 
@@ -594,6 +622,9 @@ def date_ordinal_str_to_date(value):
 
 
 def date_week_str_to_date(value):
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
 
     _debug = False
 
@@ -654,6 +685,9 @@ def date_week_str_to_date(value):
 
 def date_normal_str_to_date(value):
 
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
+
     _debug = False
 
     ret = None
@@ -709,6 +743,9 @@ def date_normal_str_to_date(value):
 
 def dict_to_truncated_date_str(value, attr):
 
+    if not isinstance(value, dict):
+        raise TypeError("`value' must be inst of dict")
+
     day = ''
     if 'day' in attr and value['day'] is not None:
         day = '{:02d}'.format(int(value['day']))
@@ -735,6 +772,9 @@ def dict_to_truncated_date_str(value, attr):
 
 
 def dict_to_truncated_time_str(value, attr):
+
+    if not isinstance(value, dict):
+        raise TypeError("`value' must be inst of dict")
 
     sec = ''
     if 'sec' in attr and value['sec'] is not None:
@@ -774,6 +814,9 @@ def gen_tz(h, m, plus=True):
 
 def format_tz(value, sep=True, minu=True, zed=False):
 
+    if value is not None and not isinstance(value, datetime.timezone):
+        raise TypeError("`value' must be None or inst of datetime.timezone")
+
     ret = None
 
     if value is None:
@@ -782,6 +825,7 @@ def format_tz(value, sep=True, minu=True, zed=False):
         a = value.utcoffset(None)
 
         if (value == datetime.timezone.utc or a.seconds == 0) and zed == True:
+            # TODO: looks like here is needed more checks
             ret = 'Z'
         else:
 
