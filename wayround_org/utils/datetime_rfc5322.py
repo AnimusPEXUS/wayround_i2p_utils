@@ -134,6 +134,9 @@ def datetime_to_str(value, attrs=None):
     if not isinstance(value, datetime.datetime):
         raise TypeError("`value' must be inst of datetime.datetime")
 
+    if not hasattr(value, 'tzinfo') or value.tzinfo is None:
+        raise ValueError("supplied datetime must have time zone info")
+
     if attrs is None:
         attrs = set(['dayofweek', 'second'])
 

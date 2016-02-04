@@ -102,6 +102,25 @@ def _extract_tar_7z(file_name, output_dir):
 
 def _extract_tar_arch(file_name, output_dir, compressor, log=None):
 
+    # TODO: cleanups and reworks required
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    out = None
+    err = None
+    if log is not None:
+        out = log.stdout
+        err = log.stderr
+
+    p = subprocess.Popen(
+        ['tar', '-xf', file_name, '-C', output_dir, '-v'],
+        stderr=err,
+        stdout=out
+        )
+    ret = p.wait()
+    return ret
+
+    '''
     if not compressor in CANONICAL_COMPRESSORS:
         raise ValueError(
             "compressor not in `{}'".format(CANONICAL_COMPRESSORS)
@@ -121,6 +140,7 @@ def _extract_tar_arch(file_name, output_dir, compressor, log=None):
         )
 
     return ret
+    '''
 
 
 def extract(file_name, output_dir, log=None):

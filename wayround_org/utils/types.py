@@ -251,7 +251,9 @@ def struct_check(value, struct):
         typ = typ,
 
     iterable_type = types(value)
-    iterable_type = 'Sequence' in iterable_type
+
+    # 'Iterable' required for checking sets
+    iterable_type = 'Sequence' in iterable_type or 'Iterable' in iterable_type
 
     for i in typ:
         t_type = type(i)

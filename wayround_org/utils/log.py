@@ -219,6 +219,7 @@ class Log:
 
         self.fileobj.flush()
         self.fileobj.close()
+
         return
 
     close = stop

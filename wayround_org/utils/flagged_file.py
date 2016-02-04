@@ -202,6 +202,11 @@ class FlaggedFile:
 
         return ret
 
+    def get_flag_size(self, name):
+        verify_flag_name(self, name)
+        ret = os.stat(self.get_flag_path(name)).st_size
+        return ret
+
     def unset_flag(self, name):
         with self.get_flag_lock(name):
             if self.get_is_flag_set(name):
@@ -225,9 +230,38 @@ class FlaggedFile:
         return ret
 
     def set_str(self, name, value):
+        if not isinstance(value, str):
+            raise TypeError("`{}' value must be str".format(name))
+        self.set_flag_data(name, value)
+        return
 
+    def set_str_n(self, name, value):
+        """
+        Same as set_str, but allows None as value
+        """
         if value is not None and not isinstance(value, str):
             raise TypeError("`{}' value must be str or None".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def get_int(self, name):
+        ret = self.get_flag_data(name)
+        if not isinstance(ret, int):
+            ret = None
+        return ret
+
+    def set_int(self, name, value):
+        if not isinstance(value, int):
+            raise TypeError("`{}' value must be int".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def set_int_n(self, name, value):
+        """
+        Same as set_int, but allows None as value
+        """
+        if value is not None and not isinstance(value, int):
+            raise TypeError("`{}' value must be int or None".format(name))
         self.set_flag_data(name, value)
         return
 
