@@ -299,3 +299,25 @@ class FlaggedFile:
             self.get_str_list(name) + [value]
             )
         return
+
+    def get_int_list(self, name):
+        ret = self.get_flag_data(name)
+        if not wayround_org.utils.types_presets.is_list_of_int(ret):
+            ret = []
+        return ret
+
+    def set_int_list(self, name, value):
+        if not wayround_org.utils.types_presets.is_list_of_int(value):
+            raise TypeError("`{}' value must be list of int".format(name))
+        self.set_flag_data(name, value)
+        return
+
+    def set_int_list_n(self, name, value):
+        if (value is not None
+                and not wayround_org.utils.types_presets.is_list_of_int(value)
+                ):
+            raise TypeError(
+                "`{}' value must be None or list of int".format(name)
+                )
+        self.set_flag_data(name, value)
+        return
