@@ -1,7 +1,11 @@
 
+"""
+This module is for creating variable-like objects for storring size python
+objects
+"""
+
 import os.path
 import yaml
-import weakref
 
 import wayround_org.utils.path
 
@@ -15,38 +19,30 @@ class PermanentMemoryDriverFileSystem(PermanentMemoryDriver):
     def __init__(self, directory):
         self.directory = directory
         self.counter = 0
-
-        self.active_descriptors = []
-
         os.makedirs(directory, exist_ok=True)
-
-        # TODO: complete cleaner
         self.clear_garbage_variables()
         return
 
-    '''
     def clear_garbage_variables(self):
         files = os.listdir(self.directory)
         for i in files:
-            if not i in self.active_descriptors:
-                os.unlink(self.descriptor_filepath())
 
-        for i in:
+            if not i.endswith('.yaml'):
+                continue
 
+            descriptor = int(i[0:i.find('.')])
+            os.unlink(self.gen_descriptor_filepath())
         return
-    '''
 
-    def new_descriptor(self, value):
+    def new(self):
         ret = self.counter
         self.counter += 1
         return ret
 
     def delete(self, descriptor):
         f_path = self.gen_descriptor_filepath(descriptor)
-        try:
+        if os.path.isfile(f_path):
             os.unlink(f_path)
-        except:
-            pass
         return
 
     def get_value(self, descriptor):
@@ -67,51 +63,53 @@ class PermanentMemoryDriverFileSystem(PermanentMemoryDriver):
         return ret
 
     def gen_descriptor_filepath(self, descriptor):
-        return wayround_org.utils.path.join(self.directory, descriptor)
+        if not isinstance(descriptor, int):
+            raise TypeError("`descriptor' must be int")
+        if descriptor < 0:
+            raise ValueError("`descriptor' must be >= 0")
+        ret = wayround_org.utils.path.join(
+            self.directory,
+            '{}.yaml'.format(str(descriptor))
+            )
+        return ret
 
 
 class PermanentMemory:
 
-    def __init__(self, driver_instance):
-
-        if not isinstance(driver_instance, PermanentMemoryDriver):
+    def __init__(self, driver):
+        if not isinstance(driver, PermanentMemoryDriver):
             raise TypeError(
-                "`driver_instance' must be inst of PermanentMemoryDriver"
+                "invalid `driver' instance type"
                 )
-
-        self.driver_instance = driver_instance
-
+        self.driver = driver
+        self.driver.clear_garbage_variables()
         return
 
-    def clear_garbage_variables(self):
-        return self.driver_instance.clear_garbage_variables()
-
-    def new_variable(self, value):
-        return self.driver_instance.new_variable(value)
-
-    def _add(self, permanent_variable):
-        return
-
-    def _delete(self, permanent_variable):
-        self.driver_instance._delete(permanent_variable)
-        return
-
-    def _get_value(self, permanent_variable):
-        return self.driver_instance._get_value(permanent_variable)
+    def new(self, value=None):
+        return PermanentVariable(self.driver, value)
 
 
 class PermanentVariable:
 
-    def __init__(self, permanent_memory, value):
-
-        self.permanent_memory = permanent_memory
-        self.memory_descriptor = None
-
+    def __init__(self, driver, initial):
+        if not isinstance(driver, PermanentMemoryDriver):
+            raise TypeError(
+                "invalid `driver' instance type"
+                )
+        self.driver = driver
+        self.descriptor = self.driver.new()
+        self.set(initial)
         return
 
-    def __get__(self):
-        return self.permanent_memory._get_value(self)
+    def get(self):
+        return self.driver.get_value(self.descriptor)
+
+    def set(self, value):
+        return self.driver.set_value(self.descriptor, value)
 
     def __del__(self):
-        self.permanent_memory._delete(self)
+        self.driver.delete(self.descriptor)
         return
+
+    def open(self, flags='r'):
+        return self.driver.open(self.descriptor, flags)
