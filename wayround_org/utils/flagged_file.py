@@ -9,6 +9,7 @@ YAML is used for storing data in flags
 flags can be also used as simple raw files
 """
 
+import copy
 import os.path
 
 import yaml
@@ -108,6 +109,9 @@ class FlaggedFile:
 
         return
 
+    def get_flags_list(self):
+        return copy.copy(self.possible_flags)
+
     @property
     def path(self):
         """
@@ -135,6 +139,11 @@ class FlaggedFile:
         if not isinstance(value, str):
             raise TypeError("`basename' must be str")
         self._basename = value
+        return
+
+    def unset_all_flags(self):
+        for i in self.possible_flags:
+            self.unset_flag(i)
         return
 
     def gen_flag_path(self, name):

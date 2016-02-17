@@ -360,6 +360,131 @@ class LblRecvReaderBuffer:
                 self.max_line_error = True
         return
 
+    def get_lines_bytes_size(self, stop_event=None):
+        sum_ = 0
+        with self._lines_lock:
+            for i in self._lines:
+
+                if stop_event is not None and stop_event.is_set():
+                    break
+
+                if (self._stop_flag is not None
+                        and self._stop_flag.is_set()):
+                    break
+
+                sum_ += len(i)
+
+        return sum_
+
+    def get_next_bytes(
+            self,
+            size,
+            delete_readen_data=True,
+            stop_event=None
+            ):
+        """
+        if delete_readen_data is True, then in case on successful read,
+            readen lines and readen part of last readen line will be removed.
+        """
+
+        if size < 0:
+            raise ValueError("`size' must be not < 0")
+
+        ret = None
+        if self.get_lines_bytes_size(stop_event) >= size:
+            with self._lines_lock:
+                buff = b''
+                line_i = 0
+                remained_size = size
+                last_remained_size = None
+                last_i = None
+                error_exit = False
+                len_lines = len(self._lines)
+                while True:
+
+                    if stop_event is not None and stop_event.is_set():
+                        error_exit = True
+                        break
+
+                    if (self._stop_flag is not None
+                            and self._stop_flag.is_set()):
+                        error_exit = True
+                        break
+
+                    if remained_size < 0:
+                        error_exit = True
+                        raise Exception("programming error")
+
+                    if remained_size == 0:
+                        break
+
+                    if len_lines == line_i:
+                        break
+
+                    if len(self._lines[line_i]) > remained_size:
+                        buff += self._lines[line_i][:remained_size]
+                        last_remained_size = remained_size
+                        last_i = line_i
+                        remained_size = 0
+                        break
+                    else:
+                        buff += self._lines[line_i]
+                        remained_size -= len(self._lines[line_i])
+
+                    line_i += 1
+
+                if (delete_readen_data
+                        and last_remained_size is not None
+                        and last_i is not None
+                        and not error_exit):
+                    self._lines[last_i] = \
+                        self._lines[last_i][last_remained_size:]
+                    del self._lines[:last_i]
+
+                ret = buff
+
+        return ret
+
+    def nb_get_next_bytes(
+            self,
+            size,
+            delete_readen_data=True,
+            stop_event=None,
+            retry_interval=0.2
+            ):
+        """
+
+        Uses get_next_bytes(): wait's until it returns something.
+        Can be interupted using passed event object.
+        """
+
+        if not isinstance(stop_event, threading.Event):
+            raise TypeError("`stop_event' must be of threading.Event type")
+
+        ret = None
+
+        while True:
+
+            if stop_event is not None and stop_event.is_set():
+                break
+
+            if (self._stop_flag is not None
+                    and self._stop_flag.is_set()):
+                break
+
+            ret = self.get_next_bytes(
+                size,
+                delete_readen_data=delete_readen_data,
+                stop_event=stop_event
+                )
+
+            if ret is not None:
+                break
+
+            time.sleep(retry_interval)
+
+        return ret
+
     def get_next_line(self):
         """
         Returns next line, or None if there is not yet any. If socket is
@@ -398,7 +523,11 @@ class LblRecvReaderBuffer:
 
         while True:
 
-            if stop_event.is_set():
+            if stop_event is not None and stop_event.is_set():
+                break
+
+            if (self._stop_flag is not None
+                    and self._stop_flag.is_set()):
                 break
 
             ret = self.get_next_line()
@@ -419,6 +548,11 @@ class LblRecvReaderBuffer:
         ret = 0
         with self._lines_lock:
             for i in self._lines:
+
+                if (self._stop_flag is not None
+                        and self._stop_flag.is_set()):
+                    break
+            
                 ret += len(i)
         return ret
 
