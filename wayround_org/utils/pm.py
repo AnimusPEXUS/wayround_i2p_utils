@@ -14,7 +14,7 @@ class PersistentMemoryDriver:
     pass
 
 
-class PersistentMemoryDriverFileSystem(PermanentMemoryDriver):
+class PersistentMemoryDriverFileSystem(PersistentMemoryDriver):
 
     def __init__(self, directory):
         self.directory = directory
