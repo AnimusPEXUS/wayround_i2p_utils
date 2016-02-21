@@ -175,6 +175,41 @@ class FlaggedFile:
         ret = open(self.get_flag_path(name), flags)
         return ret
 
+    def write_flag_from_permanent_variable(
+            self,
+            pv,
+            stop_event=None,
+            bs=2 * 1024**2
+            ):
+        """
+        ret: True - success, None - stopped
+        """
+
+        if not isinstance(
+                pv,
+                wayround_org.utils.permanent_memory.PermanentVariable
+                ):
+            raise TypeError(
+                "must be inst of "
+                "wayround_org.utils.permanent_memory.PermanentVariable"
+                )
+
+        ret = None
+
+        with self.get_flag_lock(name):
+            with self.open_flag(name, b'w') as f1:
+                with pv.open(b'r') as f2:
+                    while True:
+                        if stop_event is not None and stop_event.is_set():
+                            ret = None
+                            break
+                        b = f2.read(bs)
+                        if len(b) == 0:
+                            ret = True
+                            break
+                        f1.write(b)
+        return ret
+
     def set_flag(self, name):
         verify_flag_name(self, name)
         if name in self.raw_flags:
@@ -323,8 +358,8 @@ class FlaggedFile:
 
     def set_int_list_n(self, name, value):
         if (value is not None
-                and not wayround_org.utils.types_presets.is_list_of_int(value)
-                ):
+            and not wayround_org.utils.types_presets.is_list_of_int(value)
+            ):
             raise TypeError(
                 "`{}' value must be None or list of int".format(name)
                 )

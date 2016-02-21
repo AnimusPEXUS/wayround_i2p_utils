@@ -73,8 +73,14 @@ class PermanentMemoryDriverFileSystem(PermanentMemoryDriver):
             )
         return ret
 
+    def get_size(self):
+        return os.stat(self.gen_descriptor_filepath(descriptor)).st_size
+
 
 class PermanentMemory:
+
+    def new_fs_memory(cls, path):
+        return cls(PermanentMemoryDriverFileSystem(path))
 
     def __init__(self, driver):
         if not isinstance(driver, PermanentMemoryDriver):
@@ -113,3 +119,6 @@ class PermanentVariable:
 
     def open(self, flags='r'):
         return self.driver.open(self.descriptor, flags)
+
+    def get_size(self):
+        return self.driver.get_size(self.descriptor)
