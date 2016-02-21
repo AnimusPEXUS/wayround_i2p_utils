@@ -187,11 +187,11 @@ class FlaggedFile:
 
         if not isinstance(
                 pv,
-                wayround_org.utils.pm.PermanentVariable
+                wayround_org.utils.pm.PersistentVariable
                 ):
             raise TypeError(
                 "must be inst of "
-                "wayround_org.utils.pm.PermanentVariable"
+                "wayround_org.utils.pm.PersistentVariable"
                 )
 
         ret = None

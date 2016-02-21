@@ -10,20 +10,19 @@ import yaml
 import wayround_org.utils.path
 
 
-class PermanentMemoryDriver:
+class PersistentMemoryDriver:
     pass
 
 
-class PermanentMemoryDriverFileSystem(PermanentMemoryDriver):
+class PersistentMemoryDriverFileSystem(PermanentMemoryDriver):
 
     def __init__(self, directory):
         self.directory = directory
         self.counter = 0
-        os.makedirs(directory, exist_ok=True)
-        self.clear_garbage_variables()
         return
 
-    def clear_garbage_variables(self):
+    def init(self):
+        os.makedirs(self.directory, exist_ok=True)
         files = os.listdir(self.directory)
         for i in files:
 
@@ -77,28 +76,31 @@ class PermanentMemoryDriverFileSystem(PermanentMemoryDriver):
         return os.stat(self.gen_descriptor_filepath(descriptor)).st_size
 
 
-class PermanentMemory:
+class PersistentMemory:
 
+    @classmethod
     def new_fs_memory(cls, path):
-        return cls(PermanentMemoryDriverFileSystem(path))
+        return cls(PersistentMemoryDriverFileSystem(path))
 
     def __init__(self, driver):
-        if not isinstance(driver, PermanentMemoryDriver):
+        if not isinstance(driver, PersistentMemoryDriver):
             raise TypeError(
                 "invalid `driver' instance type"
                 )
         self.driver = driver
-        self.driver.clear_garbage_variables()
         return
 
     def new(self, value=None):
-        return PermanentVariable(self.driver, value)
+        return PersistentVariable(self.driver, value)
+
+    def init(self):
+        return self.driver.init()
 
 
-class PermanentVariable:
+class PersistentVariable:
 
     def __init__(self, driver, initial):
-        if not isinstance(driver, PermanentMemoryDriver):
+        if not isinstance(driver, PersistentMemoryDriver):
             raise TypeError(
                 "invalid `driver' instance type"
                 )
