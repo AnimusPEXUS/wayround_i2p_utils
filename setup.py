@@ -25,7 +25,7 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 setup(
     name='wayround_org_utils',
-    version='1.10.2.1',
+    version='1.10.2.2',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
@@ -36,7 +36,8 @@ This package contains various useful modules functions and classes.
     author_email='animus@wayround.org',
     url='https://github.com/AnimusPEXUS/wayround_org_utils',
     install_requires=[
-        'wayround_org_mail'
+        'wayround_org_mail',
+        'regex'
         ],
     packages=[
         'wayround_org.utils',
