@@ -30,8 +30,19 @@ class PersistentMemoryDriverFileSystem(PersistentMemoryDriver):
                 continue
 
             descriptor = int(i[0:i.find('.')])
-            os.unlink(self.gen_descriptor_filepath())
+            os.unlink(self.gen_descriptor_filepath(descriptor))
         return
+
+    def gen_descriptor_filepath(self, descriptor):
+        if not isinstance(descriptor, int):
+            raise TypeError("`descriptor' must be int")
+        if descriptor < 0:
+            raise ValueError("`descriptor' must be >= 0")
+        ret = wayround_org.utils.path.join(
+            self.directory,
+            '{}.yaml'.format(str(descriptor))
+            )
+        return ret
 
     def new(self):
         ret = self.counter
@@ -45,9 +56,11 @@ class PersistentMemoryDriverFileSystem(PersistentMemoryDriver):
         return
 
     def get_value(self, descriptor):
+        ret = None
         f_path = self.gen_descriptor_filepath(descriptor)
-        with open(f_path) as f:
-            ret = yaml.load(f.read())
+        if os.path.isfile(f_path):
+            with open(f_path) as f:
+                ret = yaml.load(f.read())
         return ret
 
     def set_value(self, descriptor, value):
@@ -61,19 +74,25 @@ class PersistentMemoryDriverFileSystem(PersistentMemoryDriver):
         ret = open(f_path, flags)
         return ret
 
-    def gen_descriptor_filepath(self, descriptor):
-        if not isinstance(descriptor, int):
-            raise TypeError("`descriptor' must be int")
-        if descriptor < 0:
-            raise ValueError("`descriptor' must be >= 0")
-        ret = wayround_org.utils.path.join(
-            self.directory,
-            '{}.yaml'.format(str(descriptor))
-            )
-        return ret
-
     def get_size(self):
         return os.stat(self.gen_descriptor_filepath(descriptor)).st_size
+
+    def get_bytes(self, descriptor, size_limit=1024, bs=500):
+        ret = None
+
+        f_path = self.gen_descriptor_filepath(descriptor)
+
+        if self.get_size(descriptor) <= size_limit:
+            if os.path.isfile(f_path):
+                ret = b''
+                with open(f_path, 'br') as f:
+                    while True:
+                        b = f.read(bs)
+                        if len(b) == 0:
+                            break
+                        ret += b
+
+        return ret
 
 
 class PersistentMemory:
@@ -124,3 +143,11 @@ class PersistentVariable:
 
     def get_size(self):
         return self.driver.get_size(self.descriptor)
+
+    def get_bytes(self, size_limit=1024, bs=500):
+        return self.driver.get_bytes(
+            self,
+            self.descriptor,
+            size_limit=size_limit,
+            bs=bs
+            )

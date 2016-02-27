@@ -220,8 +220,6 @@ class LblRecvReaderBuffer:
         think it is important.
         """
 
-        _debug = False
-
         while True:
             if self._stop_flag.is_set():
                 break
@@ -231,9 +229,6 @@ class LblRecvReaderBuffer:
             if len(res) == 0:
                 self._socket_is_closed = True
                 break
-
-            if _debug:
-                print("_worker_thread_target_01 res: {}".format(res))
 
             self._recv_buffer_queue.put(res)
 
@@ -248,8 +243,6 @@ class LblRecvReaderBuffer:
         dedicated list. warning: line separator is not stripped from lines!
         """
 
-        _debug = False
-
         while True:
 
             if self._stop_flag.is_set():
@@ -262,82 +255,30 @@ class LblRecvReaderBuffer:
                 res_empty = True
 
             if res_empty:
-                if _debug:
-                    print("_worker_thread_target_02 res_empty")
                 continue
-
-            if _debug:
-                print("_worker_thread_target_02 res: {}".format(res))
 
             with self._input_bytes_buff_lock:
 
-                if _debug:
-                    print("_worker_thread_target_02 buff_1: {}".format(
-                        self._input_bytes_buff
-                        ))
-
                 self._input_bytes_buff += res
-
-                if _debug:
-                    print(
-                        "_worker_thread_target_02 buff_2: {}".format(
-                            self._input_bytes_buff
-                            )
-                        )
 
                 while True:
                     if self._stop_flag.is_set():
                         break
 
-                    if _debug:
-                        print(
-                            "_worker_thread_target_02"
-                            " line_terminator: {}".format(
-                                self.line_terminator
-                                )
-                            )
-
                     sep_pos = self._input_bytes_buff.find(
                         self.line_terminator
                         )
-
-                    if _debug:
-                        print(
-                            "_worker_thread_target_02 sep_pos: {}".format(
-                                sep_pos
-                                )
-                            )
 
                     if sep_pos == -1:
                         break
 
                     cut_pos = sep_pos + self._line_terminator_len
 
-                    if _debug:
-                        print(
-                            "_worker_thread_target_02 cut_pos: {}".format(
-                                cut_pos
-                                )
-                            )
-
                     res_line_bytes = self._input_bytes_buff[:cut_pos]
 
                     self._input_bytes_buff = self._input_bytes_buff[cut_pos:]
 
-                    if _debug:
-                        print(
-                            "_worker_thread_target_02 buff_3: {}".format(
-                                self._input_bytes_buff
-                                )
-                            )
-
                     with self._lines_lock:
-                        if _debug:
-                            print(
-                                "_worker_thread_target_02 list app: {}".format(
-                                    res_line_bytes
-                                    )
-                                )
 
                         self._check_line_length_rtn(len(res_line_bytes))
                         if self.max_line_error:
@@ -396,8 +337,6 @@ class LblRecvReaderBuffer:
                 buff = b''
                 line_i = 0
                 remained_size = size
-                last_remained_size = None
-                last_i = None
                 error_exit = False
                 len_lines = len(self._lines)
                 while True:
@@ -423,8 +362,6 @@ class LblRecvReaderBuffer:
 
                     if len(self._lines[line_i]) > remained_size:
                         buff += self._lines[line_i][:remained_size]
-                        last_remained_size = remained_size
-                        last_i = line_i
                         remained_size = 0
                         break
                     else:
@@ -433,15 +370,33 @@ class LblRecvReaderBuffer:
 
                     line_i += 1
 
-                if (delete_readen_data
-                        and last_remained_size is not None
-                        and last_i is not None
-                        and not error_exit):
-                    self._lines[last_i] = \
-                        self._lines[last_i][last_remained_size:]
-                    del self._lines[:last_i]
+                if not error_exit:
+                    ret = buff
 
-                ret = buff
+                    if delete_readen_data:
+
+                        del buff
+                        del line_i
+                        del remained_size
+                        del error_exit
+                        del len_lines
+
+                        left_delete_bytes = size
+
+                        while True:
+
+                            if left_delete_bytes == 0:
+                                break
+
+                            len_lines0 = len(self._lines[0])
+
+                            if len_lines0 > left_delete_bytes:
+                                self._lines[0] = \
+                                    self._lines[0][left_delete_bytes:]
+                                left_delete_bytes = 0
+                            else:
+                                del self._lines[0]
+                                left_delete_bytes -= len_lines0
 
         return ret
 
@@ -552,7 +507,7 @@ class LblRecvReaderBuffer:
                 if (self._stop_flag is not None
                         and self._stop_flag.is_set()):
                     break
-            
+
                 ret += len(i)
         return ret
 

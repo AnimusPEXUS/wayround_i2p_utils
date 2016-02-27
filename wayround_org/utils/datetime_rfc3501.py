@@ -1,6 +1,6 @@
 
 """
-Based on RFC5322
+Based on RFC3501
 """
 
 
@@ -12,21 +12,15 @@ import wayround_org.utils.datetime_iso8601
 
 DATE_EXPRESSION = (
     r'\s*'
-    r'(?P<day>\d+)'
-    r'\s+'
+    r'(?P<day>(\s|\d)?\d)'
+    r'-'
     r'(?P<month>[a-zA-Z]{3})'
-    r'\s+'
+    r'-'
     r'(?P<year>\d+)'
     r'\s*'
     )
 
-TIMEOFDAY_EXPRESSION = (
-    r'\s*'
-    r'(?P<hour>\d+)'
-    r'\:(?P<minute>\d+)'
-    r'(\:(?P<second>\d+))?'
-    r'\s*'
-    )
+DATE_EXPRESSION_C = re.compile(DATE_EXPRESSION)
 
 ZONE_EXPRESSION = (
     r'\s*'
@@ -37,28 +31,26 @@ ZONE_EXPRESSION = (
 
 TIME_EXPRESSION = (
     r'\s*'
-    r'(?P<timeofday>{timeofday})'
-    r'\s+'
-    r'(?P<zone>{zone})'
-    r'\s*'.format(
-        timeofday=TIMEOFDAY_EXPRESSION,
-        zone=ZONE_EXPRESSION
-        )
+    r'(?P<hour>\d+)'
+    r'\:(?P<minute>\d+)'
+    r'\:(?P<second>\d+)'
+    r'\s*'
     )
 
 DATETIME_EXPRESSION = (
     r'\s*'
-    r'((?P<dayofweek>[a-zA-Z]{{3}})\,)?'
-    r'\s+'
     r'(?P<date>{date})'
     r'\s+'
     r'(?P<time>{time})'
+    r'\s+'
+    r'(?P<zone>{zone})'
     r'\s*'
-    r'').format(
-    date=DATE_EXPRESSION,
-    time=TIME_EXPRESSION
-    )
-
+    r''
+    ).format(
+        date=DATE_EXPRESSION,
+        time=TIME_EXPRESSION,
+        zone=ZONE_EXPRESSION
+        )
 
 DATETIME_EXPRESSION_C = re.compile(DATETIME_EXPRESSION)
 
@@ -68,10 +60,61 @@ MONTHES = [
     "Sep", "Oct", "Nov", "Dec"
     ]
 
-DAYSOFWEEK = [
-    "Mon", "Tue", "Wed", "Thu",
-    "Fri", "Sat", "Sun"
-    ]
+
+def str_to_date(value):
+    """
+    Parse string and make datetime.date of it
+    """
+
+    if not isinstance(value, str):
+        raise TypeError("`value' must be inst of str")
+
+    ret = None
+
+    ret_attributes = set()
+    re_res = DATE_EXPRESSION_C.match(value)
+
+    if re_res:
+
+        month = MONTHES.index(re_res.group('month')) + 1
+
+        day = re_res.group('day')
+        if len(day) == 2 and day[0] == ' ':
+            ret_attributes.add('day_fixed')
+
+        result = datetime.date(
+            year=int(re_res.group('year')),
+            month=month,
+            day=int(day)
+            )
+
+        ret = result
+
+    return ret, ret_attributes
+
+
+def date_to_str(value, attrs=None):
+
+    if not isinstance(value, datetime.date):
+        raise TypeError("`value' must be inst of datetime.date")
+
+    if attrs is None:
+        attrs = set()
+
+    month = MONTHES[value.month - 1]
+
+    if value.day < 10 and 'day_fixed' in attrs:
+        day_str = ' {}'.format(value.day)
+    else:
+        day_str = str(value.day)
+
+    ret = '{day}-{month}-{year:04d}'.format(
+        day=day_str,
+        month=month,
+        year=value.year
+        )
+
+    return ret
 
 
 def str_to_datetime(value):
@@ -91,13 +134,6 @@ def str_to_datetime(value):
 
         month = MONTHES.index(re_res.group('month')) + 1
 
-        second = re_res.group('second')
-        if second is None:
-            second = 0
-        else:
-            second = int(second)
-            ret_attributes.add('second')
-
         zonesign = '+'
         if re_res.group('zone_sign') == '-':
             zonesign = '-'
@@ -108,18 +144,19 @@ def str_to_datetime(value):
             plus=zonesign == '+'
             )
 
+        day = re_res.group('day')
+        if len(day) == 2 and day[0] == ' ':
+            ret_attributes.add('day_fixed')
+
         result = datetime.datetime(
             year=int(re_res.group('year')),
             month=month,
-            day=int(re_res.group('day')),
+            day=int(day),
             hour=int(re_res.group('hour')),
             minute=int(re_res.group('minute')),
-            second=second,
+            second=int(re_res.group('second')),
             tzinfo=tzinfo
             )
-
-        if re_res.group('dayofweek') is not None:
-            ret_attributes.add('dayofweek')
 
         ret = result
 
@@ -135,15 +172,7 @@ def datetime_to_str(value, attrs=None):
         raise ValueError("supplied datetime must have time zone info")
 
     if attrs is None:
-        attrs = set(['dayofweek', 'second'])
-
-    dayofweek = ''
-    if 'dayofweek' in attrs:
-        dayofweek = '{}, '.format(DAYSOFWEEK[value.date().weekday()])
-
-    second = ''
-    if 'second' in attrs:
-        second = ':{:02d}'.format(value.second)
+        attrs = set()
 
     month = MONTHES[value.month - 1]
 
@@ -152,18 +181,21 @@ def datetime_to_str(value, attrs=None):
         sep=False
         )
 
+    if value.day < 10 and 'day_fixed' in attrs:
+        day_str = ' {}'.format(value.day)
+    else:
+        day_str = str(value.day)
+
     ret = (
-        '{dayofweek}'
-        '{day:02d} {month} {year:04d} '
-        '{hour:02d}:{minute:02d}{second} {zone}'
+        '{day}-{month}-{year:04d} '
+        '{hour:02d}:{minute:02d}:{second:02d} {zone}'
         ).format(
-            dayofweek=dayofweek,
-            day=value.day,
+            day=day_str,
             month=month,
             year=value.year,
             hour=value.hour,
             minute=value.minute,
-            second=second,
+            second=value.second,
             zone=zone
             )
 
@@ -176,7 +208,8 @@ def str_parse_test():
     """
 
     tests = [
-        'Fri, 29 Jan 2016 13:36:08 +0200'
+        '29-Jan-2016 13:36:08 +0200',
+        '9-Jan-2016 13:36:08 +0200',
         ]
 
     for value in tests:
@@ -188,14 +221,13 @@ def str_parse_test():
         if re_res:
 
             for i in [
-                    'dayofweek',
                     'day', 'month', 'year',
                     'hour', 'minute', 'second',
                     'zone_sign', 'zone_val',
                     'zone_hours', 'zone_minutes']:
                 print("    {:20}: {}".format(i, re_res.group(i)))
 
-            dt, attrs = str_to_datetime(value)
+            dt = str_to_datetime(value)[0]
 
             print(
                 "    {:20}: {}".format(

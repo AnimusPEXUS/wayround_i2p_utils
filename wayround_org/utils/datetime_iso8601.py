@@ -11,57 +11,63 @@ import re
 # FIXME: Year expansions are not supported due to python datetime limitations
 
 
-DATE_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'(?P<year>((\d{4})|(\d{2})))'
-        r'(?P<not_year>(?P<sep1>\-)?(?P<month>\d{2})((?P<sep2>\-)?'
-        r'(?P<day>\d{2}))?)?'
-        r'$'
-        )
+DATE_EXPRESSION = (
+    r'^'
+    r'(?P<year>((\d{4})|(\d{2})))'
+    r'(?P<not_year>(?P<sep1>\-)?(?P<month>\d{2})((?P<sep2>\-)?'
+    r'(?P<day>\d{2}))?)?'
+    r'$'
+    )
 
-DATE_TRUNCATED_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'--'
-        r'((?P<number1>\d{2})|-)(?P<sep>-)?(?P<number2>\d{2})?'
-        r'$'
-        )
+DATE_EXPRESSION_C = re.compile(DATE_EXPRESSION)
 
-DATE_ORDINAL_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'(?P<year>\d{4})(?P<sep>\-)?(?P<day>\d{3})'
-        r'$'
-        )
+DATE_TRUNCATED_EXPRESSION = (
+    r'^'
+    r'--'
+    r'((?P<number1>\d{2})|-)(?P<sep>-)?(?P<number2>\d{2})?'
+    r'$'
+    )
 
-DATE_WEEK_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'(?P<year>\d{4})(?P<sep1>\-)?'
-        r'W(?P<week>\d{2})((?P<sep2>\-)?(?P<day>\d{1}))?'
-        r'$'
-        )
+DATE_TRUNCATED_EXPRESSION_C = re.compile(DATE_TRUNCATED_EXPRESSION)
 
-TIME_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'(?P<T>T)?(?P<hour>\d{2})((?P<sep1>\:)?(?P<min>\d{2})((?P<sep2>\:)?'
-        r'(?P<sec>\d{2}))?)?'
-        r'((?P<fract_sep>[\.\,])(?P<fract>\d+))?'
-        r'(?P<tz>'
-        r'((?P<Z>Z)|(?P<tz_sign>[+-])(?P<tz_hour>\d{2})(?P<sep3>\:)?'
-        r'(?P<tz_min>\d{2})))?'
-        r'$'
-        )
+DATE_ORDINAL_EXPRESSION = (
+    r'^'
+    r'(?P<year>\d{4})(?P<sep>\-)?(?P<day>\d{3})'
+    r'$'
+    )
 
-TIME_TRUNCATED_EXPRESSION = \
-    re.compile(
-        r'^'
-        r'-'
-        r'((?P<number1>\d{2})|-)(?P<sep>:)?(?P<number2>\d{2})?'
-        r'$'
-        )
+DATE_ORDINAL_EXPRESSION_C = re.compile(DATE_ORDINAL_EXPRESSION)
+
+DATE_WEEK_EXPRESSION = (
+    r'^'
+    r'(?P<year>\d{4})(?P<sep1>\-)?'
+    r'W(?P<week>\d{2})((?P<sep2>\-)?(?P<day>\d{1}))?'
+    r'$'
+    )
+
+DATE_WEEK_EXPRESSION_C = re.compile(DATE_WEEK_EXPRESSION)
+
+TIME_EXPRESSION = (
+    r'^'
+    r'(?P<T>T)?(?P<hour>\d{2})((?P<sep1>\:)?(?P<min>\d{2})((?P<sep2>\:)?'
+    r'(?P<sec>\d{2}))?)?'
+    r'((?P<fract_sep>[\.\,])(?P<fract>\d+))?'
+    r'(?P<tz>'
+    r'((?P<Z>Z)|(?P<tz_sign>[+-])(?P<tz_hour>\d{2})(?P<sep3>\:)?'
+    r'(?P<tz_min>\d{2})))?'
+    r'$'
+    )
+
+TIME_EXPRESSION_C = re.compile(TIME_EXPRESSION)
+
+TIME_TRUNCATED_EXPRESSION = (
+    r'^'
+    r'-'
+    r'((?P<number1>\d{2})|-)(?P<sep>:)?(?P<number2>\d{2})?'
+    r'$'
+    )
+
+TIME_TRUNCATED_EXPRESSION_C = re.compile(TIME_TRUNCATED_EXPRESSION)
 
 
 DATE_ATTRIBUTES = {
@@ -137,7 +143,7 @@ def str_to_time(value):
         ret = None
         ret_attributes = set()
 
-        res = TIME_EXPRESSION.match(value)
+        res = TIME_EXPRESSION_C.match(value)
 
         if res is None:
             pass
@@ -509,7 +515,7 @@ def date_truncated_str_to_dict(value):
     ret = None
     ret_attributes = set()
 
-    res = DATE_TRUNCATED_EXPRESSION.match(value)
+    res = DATE_TRUNCATED_EXPRESSION_C.match(value)
 
     if res is None:
         if _debug:
@@ -545,7 +551,7 @@ def time_truncated_str_to_dict(value):
     ret = None
     ret_attributes = set()
 
-    res = TIME_TRUNCATED_EXPRESSION.match(value)
+    res = TIME_TRUNCATED_EXPRESSION_C.match(value)
 
     if res is None:
         if _debug:
@@ -581,7 +587,7 @@ def date_ordinal_str_to_date(value):
     ret = None
     ret_attributes = set()
 
-    res = DATE_ORDINAL_EXPRESSION.match(value)
+    res = DATE_ORDINAL_EXPRESSION_C.match(value)
 
     if res is None:
         if _debug:
@@ -631,7 +637,7 @@ def date_week_str_to_date(value):
     ret = None
     ret_attributes = set()
 
-    res = DATE_WEEK_EXPRESSION.match(value)
+    res = DATE_WEEK_EXPRESSION_C.match(value)
 
     if res is None:
         if _debug:
@@ -693,7 +699,7 @@ def date_normal_str_to_date(value):
     ret = None
     ret_attributes = set()
 
-    res = DATE_EXPRESSION.match(value)
+    res = DATE_EXPRESSION_C.match(value)
 
     if res is None:
         if _debug:

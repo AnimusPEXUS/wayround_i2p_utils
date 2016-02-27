@@ -175,8 +175,9 @@ class FlaggedFile:
         ret = open(self.get_flag_path(name), flags)
         return ret
 
-    def write_flag_from_permanent_variable(
+    def write_flag_from_persistent_variable(
             self,
+            name,
             pv,
             stop_event=None,
             bs=2 * 1024**2
@@ -197,8 +198,8 @@ class FlaggedFile:
         ret = None
 
         with self.get_flag_lock(name):
-            with self.open_flag(name, b'w') as f1:
-                with pv.open(b'r') as f2:
+            with self.open_flag(name, 'bw') as f1:
+                with pv.open('br') as f2:
                     while True:
                         if stop_event is not None and stop_event.is_set():
                             ret = None

@@ -113,6 +113,10 @@ def join(*args, must_be=str):
 
         if len(ret_l) != 0:
 
+            # NOTE: I know what this removes all empty lines from list,
+            #       including the last ones, meaning adding slash to string.
+            #       This is difference to os.path.join() and is intensional.
+
             while '' in ret_l:
                 ret_l.remove('')
 
