@@ -17,7 +17,7 @@ class DataCache:
             refresh_cb_kwargs
             ):
         """
-        storage_directory - directory where cahce is stored
+        storage_directory - directory where cache is stored
         cache_name - name to whcih .cache extension added
         cache_timeout_callback - callable with one parameter, by which
             complete cache file name is passed. this callable should return:
@@ -29,6 +29,19 @@ class DataCache:
             refresh_cb_kwargs. this callable should write fresh data into file
             pointed by first parameter
         """
+
+        if not isinstance(storage_directory, str):
+            raise TypeError("`storage_directory' must be str")
+
+        if not isinstance(cache_name, str):
+            raise TypeError("`cache_name' must be str")
+
+        if not callable(cache_timeout_callback):
+            raise TypeError("`cache_timeout_callback' must be callable")
+
+        if not callable(refresh_callback):
+            raise TypeError("`refresh_callback' must be callable")
+
         self.storage_directory = storage_directory
         self.cache_name = cache_name
         self.cache_timeout_callback = cache_timeout_callback
