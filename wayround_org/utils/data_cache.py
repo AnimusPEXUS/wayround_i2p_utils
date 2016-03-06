@@ -1,4 +1,5 @@
 
+import os.path
 
 import wayround_org.utils.path
 
@@ -9,9 +10,9 @@ class DataCache:
             self,
             storage_directory,
             cache_name,
-            cache_timeout_callback,
-            cache_timeout_cb_args,
-            cache_timeout_cb_kwargs,
+            cache_check_refresh_required_callback,
+            cache_check_refresh_required_cb_args,
+            cache_check_refresh_required_cb_kwargs,
             refresh_callback,
             refresh_cb_args,
             refresh_cb_kwargs
@@ -19,8 +20,9 @@ class DataCache:
         """
         storage_directory - directory where cache is stored
         cache_name - name to whcih .cache extension added
-        cache_timeout_callback - callable with one parameter, by which
-            complete cache file name is passed. this callable should return:
+        cache_check_refresh_required_callback - callable with one parameter,
+            by which complete cache file name is passed. this callable should
+            return:
                 None - on error, True - if refresh is required, False - if
                 refresh is not needed
         refresh_callback - callcble to call whan refresh is needed.
@@ -36,19 +38,34 @@ class DataCache:
         if not isinstance(cache_name, str):
             raise TypeError("`cache_name' must be str")
 
-        if not callable(cache_timeout_callback):
-            raise TypeError("`cache_timeout_callback' must be callable")
+        if not callable(cache_check_refresh_required_callback):
+            raise TypeError(
+                "`cache_check_refresh_required_callback' must be callable"
+                )
 
         if not callable(refresh_callback):
             raise TypeError("`refresh_callback' must be callable")
 
         self.storage_directory = storage_directory
+
+        if not os.path.isdir(storage_directory):
+            os.makedirs(storage_directory, exist_ok=True)
+
         self.cache_name = cache_name
-        self.cache_timeout_callback = cache_timeout_callback
-        self.cache_timeout_cb_args = cache_timeout_cb_args
-        self.cache_timeout_cb_kwargs = cache_timeout_cb_kwargs
+
+        self.cache_check_refresh_required_callback = \
+            cache_check_refresh_required_callback
+
+        self.cache_check_refresh_required_cb_args = \
+            cache_check_refresh_required_cb_args
+
+        self.cache_check_refresh_required_cb_kwargs = \
+            cache_check_refresh_required_cb_kwargs
+
         self.refresh_callback = refresh_callback
+
         self.refresh_cb_args = refresh_cb_args
+
         self.refresh_cb_kwargs = refresh_cb_kwargs
         return
 
@@ -65,10 +82,10 @@ class DataCache:
         """
         ret = None
         complete_filename = self.get_complete_filename()
-        ct_cb_res = self.cache_timeout_callback(
+        ct_cb_res = self.cache_check_refresh_required_callback(
             complete_filename,
-            *self.cache_timeout_cb_args,
-            **self.cache_timeout_cb_kwargs
+            *self.cache_check_refresh_required_cb_args,
+            **self.cache_check_refresh_required_cb_kwargs
             )
         if ct_cb_res is None:
             ret = None
