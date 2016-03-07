@@ -231,7 +231,7 @@ def make_fileobj_checksum(fileobj, method='sha512'):
         raise ValueError("hashlib doesn't have `{}'".format(method))
 
     try:
-        hash_method_name = eval("hashlib.{}()".format(method))
+        hash_method_name = getattr(hashlib, method)()
     except:
         logging.exception(
             "Error calling for hashlib method `{}'".format(method)
