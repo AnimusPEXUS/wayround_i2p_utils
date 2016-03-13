@@ -110,6 +110,8 @@ def check_options(opts, opts_list, mute=False):
     opts_list - list of acceptable options:
           starting with '!' - required option
           ending with '=' - must have parameter
+
+    return: int - error count
     """
 
     ret = 0

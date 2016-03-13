@@ -4,7 +4,7 @@ Tools for filtering lists
 """
 
 # TODO: future planed work
-#       The aim if to create flexiplt and extensible filter function
+#       The aim is to create flexible and extensible filter function
 #       to replace such in list.py and tarball.py
 
 

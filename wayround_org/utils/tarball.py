@@ -46,15 +46,19 @@ Testing tarbal names
 """
 
 ACCEPTABLE_SOURCE_NAME_EXTENSIONS = [
-    '.tar.gz',
-    '.tar.bz2',
     '.tar.xz',
     '.tar.lzma',
-    '.zip',
-    '.7z',
-    '.tgz',
+    '.tar.bz2',
+    '.tar.gz',
+    '.txz',
+    '.tlzma',
     '.tbz2',
-    '.tbz'
+    '.tbz',
+    '.tgz',
+    '.7z',
+    '.zip',
+    '.jar',
+    '.tar'
     ]
 """
 Acceptable source name extensions
@@ -361,7 +365,9 @@ def standard_version_functions_selector(filebn, subject):
 
 
 def parse_tarball_name(
-        filename, mute=False, acceptable_source_name_extensions=None,
+        filename,
+        mute=False,
+        acceptable_source_name_extensions=None,
         version_functions_selector=None
         ):
     """
@@ -589,6 +595,7 @@ def filter_tarball_list(input_list, filter_text):
     ret = []
 
     # TODO: do not use set function here as it is not sorted
+    # NOTE: eventually I've had to use set() as it is faster
     inp_list = set(copy.copy(input_list))
     out_list = copy.copy(inp_list)
 

@@ -5,8 +5,15 @@ Version comparison utilities
 
 import logging
 import os.path
+import functools
+import copy
 
 import wayround_org.utils.tarball
+import wayround_org.utils.directory
+
+
+def source_version_comparator_keyed():
+    return functools.cmp_to_key(source_version_comparator)
 
 
 def source_version_comparator(
@@ -195,3 +202,138 @@ def standard_comparison(
     ret = vers_comp_res
 
     return ret
+
+
+def remove_invalid_bases(bases):
+    bases = copy.copy(bases)
+
+    for i in range(len(bases) - 1, -1, -1):
+        parse_result = wayround_org.utils.tarball.parse_tarball_name(
+            bases[i][0]
+            )
+        if parse_result is None:
+            del bases[i]
+        else:
+            try:
+                version_list = parse_result['groups']['version_list']
+            except KeyError:
+                version_list = None
+
+            if (not isinstance(version_list, list)
+                    or len(version_list) == 0):
+                del bases[i]
+    return bases
+
+
+def same_base_structurize_by_version(bases):
+    """
+    return example:
+    {
+        0: ['b-0.tar', 'b-0.0.tar', 'b-0.0.0.tar'],
+        1: 'b-1.tar',
+        2: {
+            0: 'b-2.0.tar',
+            1: 'b-2.1.tar'
+            2: {
+                0: ['b-2.2.0.tar', 'b-2.2.tar', 'b-2.2.0.tar.xz'],
+                1: 'b-2.2.1.tar',
+                2: 'b-2.2.2.tar'
+                },
+            3: 'b-2.3.tar'
+        }
+    }
+    """
+    bases = remove_invalid_bases(bases)
+
+    ver_tree = wayround_org.utils.directory.Directory()
+
+    for i in bases:
+        ver_tree_add_base(ver_tree, i)
+
+    return
+
+
+def restore_base(directory, value, as_name=0):
+    if not as_name in directory:
+        directory.mkfile(as_name, value)
+    else:
+        if directory[as_name].isfile():
+            fv = directory[as_name].get_value()
+            if isinstance(fv, str):
+                directory[as_name].set_value([fv])
+                fv = directory[as_name].get_value()
+            if isinstance(value, list):
+                for i in value:
+                    fv.append(i)
+            else:
+                fv.append(value)
+            directory[as_name].set_value(list(set(fv)))
+        elif directory[as_name].isdir():
+            directory = directory[as_name]
+            restore_base(
+                directory, value,
+                as_name=0  # new subversions treated as zeros
+                )
+        else:
+            raise Exception("programming error")
+    return
+
+
+def ver_tree_add_base(ver_tree, base):
+    parse_result = wayround_org.utils.tarball.parse_tarball_name(base)
+
+    version_list = parse_result['groups']['version_list']
+    version_list_len = len(version_list)
+
+    path_part = version_list[:-1]
+    for i in range(len(path_part) - 1, -1, -1):
+        path_part[i] = int(path_part[i])
+
+    file_part = int(version_list[-1])
+
+    directory = ver_tree
+
+    if len(path_part) != 0:
+        bases = []
+        for i in range(len(path_part)):
+            ii = path_part[i]
+            if ii in directory:
+                if directory[ii].isfile():
+                    bases.append(directory[ii].get_value())
+                    directory.delete(ii)
+                    directory.mkdir(ii)
+                directory = directory[ii]
+            else:
+                directory = directory.mkdir(ii)
+
+        for i in bases:
+            restore_base(directory, i, as_name=0)
+
+    restore_base(directory, base, file_part)
+
+    return
+
+
+def test_same_base_structurize_by_version():
+
+    test_bases = [
+        'b-0.tar',
+        'b-0.0.tar',
+        'b-0.0.0.tar',
+        'b-1.tar',
+        'b-2.0.tar',
+        'b-2.1.tar',
+        'b-2.2.0.tar',
+        'b-2.2.tar',
+        'b-2.2.0.tar.xz',
+        'b-2.2.1.tar',
+        'b-2.2.2.tar',
+        'b-2.3.tar'
+        ]
+
+    ver_tree = wayround_org.utils.directory.Directory()
+
+    for i in test_bases:
+        ver_tree_add_base(ver_tree, i)
+
+    return ver_tree

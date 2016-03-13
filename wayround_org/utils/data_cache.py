@@ -231,6 +231,8 @@ class ShortCSTimeoutYamlCacheHandler:
         return ret
 
     def _get_data_cache_refresh_cb(self, cache_mgr, path):
+        # print("args: {}".format(self.freshdata_callback_args))
+        # print("kwargs: {}".format(self.freshdata_callback_kwargs))
         data = self.freshdata_callback(
             *self.freshdata_callback_args,
             **self.freshdata_callback_kwargs
