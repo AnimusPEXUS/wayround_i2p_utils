@@ -6,6 +6,8 @@ import io
 import sys
 import weakref
 import select
+import time
+import atexit
 
 
 import wayround_org.utils.path
@@ -24,34 +26,50 @@ class LoggingFileLikeObject:
         if not typ in ['info', 'error']:
             raise ValueError("invalid typ value")
 
-        self._log = log_instance
+        self._log = weakref.proxy(log_instance, self._on_log_finalize)
         self._typ = typ
         self._pipe = os.pipe2(os.O_NONBLOCK)
-        self._pipe_read_file = open(
+        # self._pipe = os.pipe()
+        self._pipe_read_file = os.fdopen(
             self._pipe[0],
             mode='rb',
             buffering=0,
             closefd=False
             )
+
         self._stop_flag = threading.Event()
 
-        self._close_lock = threading.Lock()
-
-        _t = threading.Thread(
-            name="Thread of {}".format(self),
+        _t1 = threading.Thread(
+            name="_t1 thread of {}".format(self),
             target=self._thread_run
             )
+        _t1.start()
 
-        self._thread = _t
+        _t2 = threading.Thread(
+            name="_t2 thread of {}".format(self),
+            target=self._stop_flag_waiter_thread_func
+            )
+        _t2.start()
 
-        self._thread_exited = threading.Event()
-
-        _t.start()
+        self._thread = weakref.proxy(_t1)
+        self._stop_flag_waiter_thread = weakref.proxy(_t2)
 
         return
 
     def __del__(self):
         self.stop()
+        return
+
+    def _on_log_finalize(self, ref):
+        self.stop()
+        return
+
+    def _stop_flag_waiter_thread_func(self):
+        while True:
+            if self._stop_flag.is_set():
+                break
+            time.sleep(1)
+        threading.Thread(target=self.stop).start()
         return
 
     def fileno(self):
@@ -73,22 +91,17 @@ class LoggingFileLikeObject:
 
         while True:
 
+            if self._stop_flag.is_set():
+                break
+
             sel_res = select.select([self._pipe_read_file], [], [], 0.5)[0]
             if len(sel_res) == 0:
-                if self._stop_flag.is_set():
-                    break
                 continue
 
-            line = self._pipe_read_file.readline()
-
-            # print('line == {}'.format(line))
-
-            '''
-            if line is None or len(line) == 0:
-                # print("going to break")
-                self._stop_flag.set()
-                break
-            '''
+            try:
+                line = self._pipe_read_file.readline()
+            except OSError:
+                continue
 
             if self._stop_flag.is_set():
                 break
@@ -98,26 +111,23 @@ class LoggingFileLikeObject:
             line = line.rstrip(' \n\r\0')
 
             if self._typ == 'info':
-                try:
-                    self._log.info(line)
-                except ReferenceError:
-                    pass
+                self._log.info(line)
 
             if self._typ == 'error':
-                try:
-                    self._log.error(line)
-                except ReferenceError:
-                    pass
+                self._log.error(line)
 
         threading.Thread(target=self.stop).start()
 
         self._pipe_read_file.close()
 
-        os.close(self._pipe[1])
-        os.close(self._pipe[0])
-
-        self._thread = None
-        self._thread_exited.set()
+        try:
+            os.close(self._pipe[1])
+        except OSError:
+            pass
+        try:
+            os.close(self._pipe[0])
+        except OSError:
+            pass
 
         return
 
@@ -129,6 +139,10 @@ class Log:
           However, this means what .stdout and .stderr (which may be
           used as parameters for Popen) may be closed before Popen-ed
           application writes all it's stuff into them.
+
+    Note: calling gc.collect() may be required at some points (perhaps at
+          program end) to successfuly destroy threading objects created by Log
+          for exiting Python interpreter normally.
     """
 
     def __init__(
@@ -156,14 +170,17 @@ class Log:
             user
             )
 
-        self.stdout = LoggingFileLikeObject(weakref.proxy(self), 'info')
-        self.stderr = LoggingFileLikeObject(weakref.proxy(self), 'error')
+        self.stdout = LoggingFileLikeObject(self, 'info')
+        self.stderr = LoggingFileLikeObject(self, 'error')
+
+        self.stdout = weakref.proxy(self.stdout)
+        self.stderr = weakref.proxy(self.stderr)
 
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-            or os.path.islink(log_dir)
-            ):
+                or os.path.islink(log_dir)
+                ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -224,13 +241,7 @@ class Log:
         return
 
     def __del__(self):
-        if self:
-            if self.fileobj:
-                if not self.fileobj.closed:
-                    try:
-                        self._stop()
-                    except:
-                        pass
+        self._stop()
         return
 
     def stop(self, echo=True):
@@ -241,8 +252,17 @@ class Log:
             " Log is stopped when it's object is deleted"
             )
         return
+ 
+    def close(self, *args, **kwargs):
+        # TODO: add 'deprecation' warning
+        raise Exception(
+            "close() is deprecated. remove call to it."
+            " Log is stopped when it's object is deleted"
+            )
+        return self.stop(*args, **kwargs)
 
     def _stop(self, echo=True):
+
         if self.fileobj is None:
             raise Exception("Programming error")
 
@@ -267,12 +287,7 @@ class Log:
         return
 
     def close(self, *args, **kwargs):
-        # TODO: add 'deprecation' warning
-        raise Exception(
-            "close() is deprecated. remove call to it."
-            " Log is stopped when it's object is deleted"
-            )
-        return self.stop(*args, **kwargs)
+        raise Exception("close() is deprecated. remove call to it.")
 
     def write(self, text, echo=False, typ='info', timestamp=None):
 

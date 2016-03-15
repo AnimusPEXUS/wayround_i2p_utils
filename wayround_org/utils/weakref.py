@@ -56,6 +56,7 @@ class WeakMethod:
         if self._object:
             ret = getattr(self._object(), self._method_name, None)
             if self._call_calls_method:
-                ret = ret(*args, **kwargs)
+                if ret is not None:
+                    ret = ret(*args, **kwargs)
 
         return ret

@@ -4,6 +4,9 @@ import inspect
 import logging
 import sys
 import threading
+import time
+import gc
+import pprint
 
 import wayround_org.utils.error
 import wayround_org.utils.getopt
@@ -271,11 +274,52 @@ def program(command_name, commands, additional_data=None):
 
         thr = threading.enumerate()
         if len(thr) != 1:
-            logging.info(
-                "Waiting  for Threads: {}".format(thr)
-                )
+            time.sleep(5)
+            thr = threading.enumerate()
+            if len(thr) != 1:
+                logging.warning('----------------------')
+                logging.warning(
+                    "Threading problems detected:\n{}".format(
+                        pprint.pformat(thr)
+                        )
+                    )
+                logging.warning(
+                    "Trying to call garbage collector forcibly"
+                    )
+                logging.warning(
+                    "Collection results. Unreachable objects: {}".format(
+                        gc.collect()
+                        )
+                    )
+                thr = threading.enumerate()
+                if len(thr) != 1:
+                    time.sleep(5)
+                    thr = threading.enumerate()
+                    if len(thr) != 1:
+                        logging.error(
+                            "Continued threading problems:\n{}".format(
+                                pprint.pformat(thr)
+                                )
+                            )
+                    else:
+                        logging.info(
+                            "Garbage collector successfuly "
+                            "removed problem threads"
+                            )
+            else:
+                logging.info('----------------------')
+                logging.info("Threding finished")
 
     return ret['code']
+
+
+def _pthr_table(thr):
+    thr_txt = pprint.pformat(thr)
+    thr_txt = thr_txt.split('\n')
+    for i in range(len(thr_txt)):
+        thr_txt[i] = '       ' + thr_txt[i]
+    thr_txt = '\n'.join(thr_txt)
+    return thr_txt
 
 
 def _format_command_help(level_depth, function):
