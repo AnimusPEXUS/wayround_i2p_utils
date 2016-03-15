@@ -28,14 +28,16 @@ class LoggingFileLikeObject:
 
         self._log = weakref.proxy(log_instance, self._on_log_finalize)
         self._typ = typ
-        self._pipe = os.pipe2(os.O_NONBLOCK)
-        # self._pipe = os.pipe()
-        self._pipe_read_file = os.fdopen(
+        #self._pipe = os.pipe2(os.O_NONBLOCK)
+        self._pipe = os.pipe()
+        self._pipe_read_file = open(
             self._pipe[0],
-            mode='rb',
-            buffering=0,
+            mode='r',
+            # buffering=0,
             closefd=False
             )
+
+        self._sync_out_lock = threading.Lock()
 
         self._stop_flag = threading.Event()
 
@@ -103,18 +105,19 @@ class LoggingFileLikeObject:
             except OSError:
                 continue
 
-            if self._stop_flag.is_set():
-                break
+            with self._sync_out_lock:
 
-            line = str(line, 'utf-8')
+                if self._stop_flag.is_set():
+                    break
 
-            line = line.rstrip(' \n\r\0')
+                #line = str(line, 'utf-8')
+                line = line.rstrip('\n\r\0')
 
-            if self._typ == 'info':
-                self._log.info(line)
+                if self._typ == 'info':
+                    self._log.info(line)
 
-            if self._typ == 'error':
-                self._log.error(line)
+                if self._typ == 'error':
+                    self._log.error(line)
 
         threading.Thread(target=self.stop).start()
 
@@ -180,7 +183,7 @@ class Log:
 
         if (not os.path.isdir(log_dir)
                 or os.path.islink(log_dir)
-                ):
+            ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -252,7 +255,7 @@ class Log:
             " Log is stopped when it's object is deleted"
             )
         return
- 
+
     def close(self, *args, **kwargs):
         # TODO: add 'deprecation' warning
         raise Exception(
