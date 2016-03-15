@@ -9,6 +9,7 @@ import functools
 import copy
 
 import wayround_org.utils.tarball
+import wayround_org.utils.path
 import wayround_org.utils.directory
 
 
@@ -204,27 +205,6 @@ def standard_comparison(
     return ret
 
 
-def remove_invalid_bases(bases):
-    bases = copy.copy(bases)
-
-    for i in range(len(bases) - 1, -1, -1):
-        parse_result = wayround_org.utils.tarball.parse_tarball_name(
-            bases[i][0]
-            )
-        if parse_result is None:
-            del bases[i]
-        else:
-            try:
-                version_list = parse_result['groups']['version_list']
-            except KeyError:
-                version_list = None
-
-            if (not isinstance(version_list, list)
-                    or len(version_list) == 0):
-                del bases[i]
-    return bases
-
-
 def same_base_structurize_by_version(bases):
     """
     return example:
@@ -243,14 +223,13 @@ def same_base_structurize_by_version(bases):
         }
     }
     """
-    bases = remove_invalid_bases(bases)
 
     ver_tree = wayround_org.utils.directory.Directory()
 
     for i in bases:
         ver_tree_add_base(ver_tree, i)
 
-    return
+    return ver_tree
 
 
 def restore_base(directory, value, as_name=0):
@@ -312,6 +291,38 @@ def ver_tree_add_base(ver_tree, base):
     restore_base(directory, base, file_part)
 
     return
+
+
+def truncate_ver_tree(directory, length):
+    lst = directory.listdir()
+    lst.sort(reverse=True)
+
+    to_delete = lst[length:]
+    lst = lst[:length]
+
+    for i in to_delete:
+        directory.delete(i)
+
+    for i in lst:
+        if directory[i].isdir():
+            truncate_ver_tree(directory[i], length)
+
+    return
+
+
+def get_bases_from_ver_tree(directory, preferred_tarball_compressors):
+    bases = []
+    for path, dirs, files in directory.walk():
+        for i in files:
+            val = path[-1][i].get_value()
+            if not isinstance(val, list):
+                val = [val]
+            res = wayround_org.utils.path.select_by_prefered_extension(
+                val,
+                preferred_tarball_compressors
+                )
+            bases.append(res)
+    return bases
 
 
 def test_same_base_structurize_by_version():

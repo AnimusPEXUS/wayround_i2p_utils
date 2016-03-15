@@ -4,6 +4,7 @@ import logging
 import os
 import io
 import sys
+import weakref
 
 
 import wayround_org.utils.path
@@ -31,25 +32,36 @@ class LoggingFileLikeObject:
 
         self._close_lock = threading.Lock()
 
-        self._thread = threading.Thread(
+        _t = threading.Thread(
             name="Thread of {}".format(self),
-            target=self._thread_run
+            target=weakref.WeakMethod(self._thread_run)
             )
 
-        self._thread.start()
+        self._thread = weakref.ref(_t)
 
+        _t.start()
+
+        return
+
+    def __del__(self):
+        # print("{} called".format(self.__del__))
+        # self.close()
         return
 
     def fileno(self):
         return self._pipe[1]
 
+    '''
     def close(self):
         with self._close_lock:
             ret = os.close(self._pipe[1])
             self._stop_flag = True
+            self._log = None
         return ret
+    '''
 
     def _thread_run(self):
+        # print('_thread_run started')
         for line in iter(self._pipe_read_file.readline, ''):
 
             with self._close_lock:
@@ -66,6 +78,7 @@ class LoggingFileLikeObject:
                     self._log.error(line)
 
         self._pipe_read_file.close()
+        self._thread = None
 
         return
 
@@ -130,8 +143,8 @@ class Log:
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-                or os.path.islink(log_dir)
-            ):
+                    or os.path.islink(log_dir)
+                ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -192,16 +205,27 @@ class Log:
         return
 
     def __del__(self):
+        # print(">>>>>> {} called".format(self.__del__))
         if self:
             if self.fileobj:
                 if not self.fileobj.closed:
                     try:
-                        self.stop()
+                        self._stop()
                     except:
                         pass
         return
 
     def stop(self, echo=True):
+        # NOTE: this method is no longer used, but remained for caompatability
+        # TODO: add 'deprecation' warning
+        raise Exception(
+            "stop() is deprecated. remove call to it."
+            " Log is stopped when it's object is deleted"
+            )
+        return
+
+    def _stop(self, echo=True):
+        # print(">>>>>> {} stop called".format(self.stop))
         if self.fileobj is None:
             raise Exception("Programming error")
 
@@ -217,12 +241,21 @@ class Log:
         self.stdout.close()
         self.stderr.close()
 
+        self.stdout = None
+        self.stderr = None
+
         self.fileobj.flush()
         self.fileobj.close()
 
         return
 
-    close = stop
+    def close(self, *args, **kwargs):
+        # TODO: add 'deprecation' warning
+        raise Exception(
+            "close() is deprecated. remove call to it."
+            " Log is stopped when it's object is deleted"
+            )
+        return self.stop(*args, **kwargs)
 
     def write(self, text, echo=False, typ='info', timestamp=None):
 

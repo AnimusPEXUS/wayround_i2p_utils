@@ -782,3 +782,24 @@ def filter_tarball_list(input_list, filter_text):
         ret = list(ret)
 
     return ret
+
+
+def remove_invalid_tarball_names(names):
+    names = copy.copy(names)
+
+    for i in range(len(names) - 1, -1, -1):
+        parse_result = wayround_org.utils.tarball.parse_tarball_name(
+            names[i]
+            )
+        if parse_result is None:
+            del names[i]
+        else:
+            try:
+                version_list = parse_result['groups']['version_list']
+            except KeyError:
+                version_list = None
+
+            if (not isinstance(version_list, list)
+                    or len(version_list) == 0):
+                del names[i]
+    return names

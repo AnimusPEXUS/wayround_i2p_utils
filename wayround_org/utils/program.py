@@ -3,6 +3,7 @@ import copy
 import inspect
 import logging
 import sys
+import threading
 
 import wayround_org.utils.error
 import wayround_org.utils.getopt
@@ -267,6 +268,12 @@ def program(command_name, commands, additional_data=None):
         logging.info(
             "Exit Code: {} ({})".format(ret['code'], ret['message'])
             )
+
+        thr = threading.enumerate()
+        if len(thr) != 1:
+            logging.info(
+                "Waiting  for Threads: {}".format(thr)
+                )
 
     return ret['code']
 

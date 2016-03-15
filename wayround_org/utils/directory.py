@@ -81,6 +81,25 @@ class Directory:
 
         return ret
 
+    def walk(self):
+        folders = self.dirnames()
+        files = self.filenames()
+
+        path = []
+
+        p = self
+
+        while p is not None:
+            path.insert(0, p)
+            p = p.parent
+
+        yield path, folders, files
+
+        for i in folders:
+            for j in self[i].walk():
+                yield j
+        return
+
     def __contains__(self, name):
         return name in self.files
 
