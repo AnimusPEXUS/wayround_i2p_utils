@@ -8,7 +8,7 @@ import wayround_org.utils.types
 
 class WeakMethod:
 
-    def __init__(self, method, callback=None):
+    def __init__(self, method, callback=None, call_calls_method=False):
 
         if not callable(method):
             raise ValueError("callable must be provided")
@@ -30,6 +30,7 @@ class WeakMethod:
 
         self._callback = callback
         self._method_name = method.__name__
+        self._call_calls_method = call_calls_method
 
         return
 
@@ -46,12 +47,15 @@ class WeakMethod:
                 target=self._callback,
                 args=(self,)
                 ).start()
+        return
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
 
         ret = None
 
         if self._object:
             ret = getattr(self._object(), self._method_name, None)
+            if self._call_calls_method:
+                ret = ret(*args, **kwargs)
 
         return ret

@@ -5,6 +5,7 @@ import os
 import io
 import sys
 import weakref
+import select
 
 
 import wayround_org.utils.path
@@ -12,105 +13,123 @@ import wayround_org.utils.stream
 import wayround_org.utils.time
 import wayround_org.utils.error
 import wayround_org.utils.osutils
+import wayround_org.utils.weakref
+import wayround_org.utils.socket
 
 
 class LoggingFileLikeObject:
 
     def __init__(self, log_instance, typ='info'):
 
-        if not type(log_instance) == Log:
-            raise TypeError("only Log instance allowed here")
-
         if not typ in ['info', 'error']:
             raise ValueError("invalid typ value")
 
         self._log = log_instance
         self._typ = typ
-        self._pipe = os.pipe()
-        self._pipe_read_file = os.fdopen(self._pipe[0])
-        self._stop_flag = False
+        self._pipe = os.pipe2(os.O_NONBLOCK)
+        self._pipe_read_file = open(
+            self._pipe[0],
+            mode='rb',
+            buffering=0,
+            closefd=False
+            )
+        self._stop_flag = threading.Event()
 
         self._close_lock = threading.Lock()
 
         _t = threading.Thread(
             name="Thread of {}".format(self),
-            target=weakref.WeakMethod(self._thread_run)
+            target=self._thread_run
             )
 
-        self._thread = weakref.ref(_t)
+        self._thread = _t
+
+        self._thread_exited = threading.Event()
 
         _t.start()
 
         return
 
     def __del__(self):
-        # print("{} called".format(self.__del__))
-        # self.close()
+        self.stop()
         return
 
     def fileno(self):
         return self._pipe[1]
 
-    '''
     def close(self):
-        with self._close_lock:
-            ret = os.close(self._pipe[1])
-            self._stop_flag = True
-            self._log = None
-        return ret
-    '''
+        # NOTE: leaving this empty. this means what this object's thread
+        #       should bot be stopped by file-like .close() method, nor by
+        #       sending empty line into file descriptor.
+        #       the only mean to sto thread here - should be self._stop_flag
+        #       event
+        return
+
+    def stop(self):
+        self._stop_flag.set()
+        return
 
     def _thread_run(self):
-        # print('_thread_run started')
-        for line in iter(self._pipe_read_file.readline, ''):
 
-            with self._close_lock:
+        while True:
 
-                if self._stop_flag:
+            sel_res = select.select([self._pipe_read_file], [], [], 0.5)[0]
+            if len(sel_res) == 0:
+                if self._stop_flag.is_set():
                     break
+                continue
 
-                line = line.rstrip(' \n\r\0')
+            line = self._pipe_read_file.readline()
 
-                if self._typ == 'info':
+            # print('line == {}'.format(line))
+
+            '''
+            if line is None or len(line) == 0:
+                # print("going to break")
+                self._stop_flag.set()
+                break
+            '''
+
+            if self._stop_flag.is_set():
+                break
+
+            line = str(line, 'utf-8')
+
+            line = line.rstrip(' \n\r\0')
+
+            if self._typ == 'info':
+                try:
                     self._log.info(line)
+                except ReferenceError:
+                    pass
 
-                if self._typ == 'error':
+            if self._typ == 'error':
+                try:
                     self._log.error(line)
+                except ReferenceError:
+                    pass
+
+        threading.Thread(target=self.stop).start()
 
         self._pipe_read_file.close()
+
+        os.close(self._pipe[1])
+        os.close(self._pipe[0])
+
         self._thread = None
+        self._thread_exited.set()
 
         return
 
 
-def process_output_logger(process, log):
-
-    raise Exception(
-        "this is depricated. use .stdout and/or .stderr objects"
-        )
-
-    t = wayround_org.utils.stream.lbl_write(
-        process.stdout,
-        log,
-        True
-        )
-    t.start()
-
-    t2 = wayround_org.utils.stream.lbl_write(
-        process.stderr,
-        log,
-        threaded=True,
-        typ='error'
-        )
-    t2.start()
-
-    t.join()
-    t2.join()
-
-    return
-
-
 class Log:
+    """
+    Note: this class does not uses stop() method to stop logging. Logging now
+          stops automatically with object destruction.
+          However, this means what .stdout and .stderr (which may be
+          used as parameters for Popen) may be closed before Popen-ed
+          application writes all it's stuff into them.
+    """
 
     def __init__(
             self,
@@ -137,14 +156,14 @@ class Log:
             user
             )
 
-        self.stdout = LoggingFileLikeObject(self, 'info')
-        self.stderr = LoggingFileLikeObject(self, 'error')
+        self.stdout = LoggingFileLikeObject(weakref.proxy(self), 'info')
+        self.stderr = LoggingFileLikeObject(weakref.proxy(self), 'error')
 
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-                    or os.path.islink(log_dir)
-                ):
+            or os.path.islink(log_dir)
+            ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -205,7 +224,6 @@ class Log:
         return
 
     def __del__(self):
-        # print(">>>>>> {} called".format(self.__del__))
         if self:
             if self.fileobj:
                 if not self.fileobj.closed:
@@ -225,7 +243,6 @@ class Log:
         return
 
     def _stop(self, echo=True):
-        # print(">>>>>> {} stop called".format(self.stop))
         if self.fileobj is None:
             raise Exception("Programming error")
 
@@ -238,11 +255,11 @@ class Log:
             timestamp=timestamp
             )
 
-        self.stdout.close()
-        self.stderr.close()
+        self.stdout.stop()
+        self.stderr.stop()
 
-        self.stdout = None
-        self.stderr = None
+        # self.stdout = None
+        # self.stderr = None
 
         self.fileobj.flush()
         self.fileobj.close()
