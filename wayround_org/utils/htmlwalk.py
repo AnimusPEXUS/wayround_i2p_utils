@@ -1,196 +1,144 @@
 
-"""
-License
-=======
+import urllib.request
 
-Python module for "walking" html
-Copyright (C) 2011  Alexey V Gorshkov
+import lxml.html
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-About
-=====
-This is simple python module to parse html to A href values.
-
-It can also do it recurcively accordingly to maxdepth parameter or as
-deep as it can if maxdepth == -1
-
-An html can be a file or a http server output.
-"""
-
-import xml.dom.minidom
-import urllib
-import re
-import logging
+import wayround_org.utils.directory
+import wayround_org.utils.path
+import wayround_org.utils.uri
 
 
-def html_walk(html_text, maxdepth=10):
-    """
-    TODO
-    """
-    # TODO: todo
-    pass
+class HTMLWalk:
 
+    def __init__(self, domain, scheme='https', port=None):
+        self._scheme = scheme
+        self._port = port
+        self._domain = domain
+        self._tree = wayround_org.utils.directory.Directory()
+        self._searched_paths = dict()
+        return
 
-def list_rm_douplicates(lst=[]):
-    """
-    Routine for removal duplicated items from text list
-    """
-    lst2 = []
+    def get_tree(self):
+        return self._tree
 
-    for i in lst:
-        if not i in lst2:
-            lst2.append(i)
+    def _listdir(self, path, variant=0):
 
-    return lst2
+        if isinstance(path, str):
+            if path.startswith('/'):
+                path = path[1:]
+            path = wayround_org.utils.path.split(path)
 
+        ret = None
 
-def html_link_get_links(url, tag_attr=[
-        ('a', 'href'),
-        # ('img', 'src'),
-        # ('script', 'src')
-        ]):
-    """
-    Tryes to open url, get it's content-type and if content-type is
-    text/html - feed it to L{html_text_get_links}
+        path_res = self._tree.getpath(path)
 
-    TODO
+        ctpp_res = self.check_tree_path_population(path)
+        if ctpp_res is True:
+            directory = self._tree.getpath(path)
+            if directory is not None:
+                if variant == 0:
+                    ret = directory.listdir()
+                elif variant == 1:
+                    ret = directory.listdir2()
 
-    @type url: text
+        return ret
 
-    @param tag_attr: see L{dom_get_links}
+    def listdir(self, path):
+        return self._listdir(path, variant=0)
 
-    @return: link list on success or None on error
+    def listdir2(self, path):
+        return self._listdir(path, variant=1)
 
-    @rtype: list or None
-    """
+    def search_objects(self, path_lst):
 
-    ret = None
+        if not isinstance(path_lst, list):
+            raise TypeError("`path_lst' must be str list")
 
-    url_object = urllib.request.urlopen(url)
-    ct = url_object.info().getheader('content-type').lower().strip()
+        path_lst_j = wayround_org.utils.path.join(path_lst)
 
-    re_res = re.match(r'text/html(; *codepage=(.*))?', ct)
+        if path_lst_j in self._searched_paths:
+            ret = self._searched_paths[path_lst_j]
+        else:
 
-    if re_res is not None and re_res.group(
-            1) is not None and re_res.group(2) is not None:
+            ret = None
 
-        text = url_object.read().decode(re_res.group(2))
-        ret = html_text_get_links(text, tag_attr)
+            port_str = ''
+            if self._port is not None:
+                port_str = ':{}'.format(self._port)
 
-        if ret is None:
-            logging.error(
-                "Can't parse document " +
-                url +
-                " as XML (codepage:" +
-                repr(
-                    re_res.group(2)) +
-                ")")
+            uri = '{scheme}://{domain}{port}/{path}'.format(
+                scheme=self._scheme,
+                domain=self._domain,
+                port=port_str,
+                path=path_lst_j
+                )
 
-    # cleaningup for sure
-    url_object.close()
-    del url_object
-    del re_res
+            page = urllib.request.urlopen(uri)
+            page_text = page.read()
+            page.close()
 
-    return ret
+            page = lxml.html.document_fromstring(page_text)
 
+            hrefs = set()
 
-def html_text_get_links(html_text, base_url, tag_attr=[
-        ('a', 'href'),
-        # ('img', 'src'),
-        # ('script', 'src')
-        ]):
-    """
-    Parses text to xml.dom and feeds it to L{dom_get_links}
+            for i in page.findall('.//a'):
+                hrefs.add(i.get('href', ''))
 
-    Uses L{dom_get_links}, L{list_rm_douplicates} and
-    L{list_rm_douplicates}.
+            hrefs -= set([''])
 
-    Returned list will be sorted alphabeticly.
+            ret = list(hrefs)
+            ret.sort()
 
-    @type html_text: text
+            self._searched_paths[path_lst_j] = ret
 
-    @param base_url: used for expanding relative links
+        return ret
 
-    @type base_url: text
+    def populate_tree_from_search_objects_result(self, path_lst):
 
-    @param tag_attr: see L{dom_get_links}
+        search_objects_res = self.search_objects(path_lst)
 
-    @return: list on success or None on error
+        if not isinstance(path_lst, list):
+            raise TypeError("`path_lst' must be str list")
 
-    @rtype: list or None
+        if not isinstance(search_objects_res, list):
+            raise Exception(
+                "Programming error."
+                " Here `search_objects_res' must always be list of str"
+                )
 
-    """
-    docum = None
-    try:
-        docum = xml.dom.minidom.parseString(html_text)
-    except:
-        # print "-e- Can't parse text as XML"
-        return None
+        directory = self._tree.getpath(path_lst, create_dirs=True)
 
-    root = docum.documentElement
-    lst = sorted(dom_get_links(root))
-    lst = list_rm_douplicates(lst)
-    return lst
+        for i in search_objects_res:
 
-# def expand_links(lst=[], cwd=''):
-#     """
-#     Not completed
-#     """
-#     lst2 = []
+            i_unquoted = urllib.request.unquote(i)
 
-#     for i in lst:
-#         if not i in lst2:
-#             lst2.append(i)
+            if i_unquoted in ['..', '../', '.', './', '/']:
+                continue
 
-#     return lst2
+            if i_unquoted.startswith('?'):
+                continue
 
+            if not wayround_org.utils.uri.isuri(i):
+                if i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
+                    directory.mkdir(i_unquoted[:-1])
 
-def dom_get_links(root, tag_attr=[
-        ('a', 'href'),
-        # ('img', 'src'),
-        # ('script', 'src')
-        ]):
-    """
-    Get all <a href=""> links from domain xml.dom objects recurcively
+                if not i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
+                    directory.mkfile(i_unquoted)
 
-    @param root: xml.dom object
+        return
 
-    @param tag_attr: list of tuples, each of which has two values:
+    def check_tree_path_population(self, path_lst):
+        """
+        return: True - ok, False - error
+        """
+        if not isinstance(path_lst, list):
+            raise TypeError("`path_lst' must be str list")
 
-       0. tagname for which to look
+        path_lst_j = wayround_org.utils.path.join(path_lst)
 
-       1. this tag attribute name which to add to returnable list.
-
-    @return: list with all links in xml.dom object
-
-    @rtype: list
-    """
-    lst = []
-
-    for i in root.childNodes:
-        if i.nodeType == xml.dom.Node.ELEMENT_NODE:
-
-            if len(i.childNodes) > 0:
-                lst += dom_get_links(i)
-
-            for tag, attr in tag_attr:
-
-                if i.tagName == tag:
-                    if i.hasAttribute(attr):
-                        t = i.getAttribute(attr)
-                        lst.append(t)
-                        del t
-
-    return lst
+        if path_lst_j not in self._searched_paths:
+            self.search_objects(path_lst)
+            if path_lst_j in self._searched_paths:
+                self.populate_tree_from_search_objects_result(path_lst)
+        ret = path_lst_j in self._searched_paths
+        return ret

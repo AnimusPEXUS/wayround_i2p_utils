@@ -21,9 +21,11 @@ class FTPWalk:
         self._ftpc = ftp_connection
 
         self._init(verbose)
+        return
 
     def __del__(self):
         self.clean()
+        return
 
     def _init(self, verbose=False):
         self._verbose = verbose
@@ -35,9 +37,11 @@ class FTPWalk:
             )
 
         self.clean()
+        return
 
     def setverbose(self, value):
         self._verbose = value
+        return
 
     def clean(self):
 
@@ -48,6 +52,7 @@ class FTPWalk:
 
         self._fstats_cb_dir = ''
         self._fstats_cb_errors = False
+        return
 
     def _fstats_cb(self, string):
 
@@ -76,30 +81,37 @@ class FTPWalk:
 
         del m
 
+        return
+
     def fstats(self, dirname, force=False):
+
+        ret = None
 
         if self._verbose:
             v("Getting directory stats: {}".format(dirname))
 
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        if not isinstance(dirname, str):
-            raise TypeError
+        if ret is None:
 
-        if dirname == '':
-            raise ValueError
+            if not isinstance(dirname, str):
+                raise TypeError
 
-        if dirname in self._file_lists and not force:
-            return 'ok'
-        else:
+            if dirname == '':
+                raise ValueError
+
+            if dirname in self._file_lists and not force:
+                ret = 'ok'
+
+        if ret is None:
             r = self.is_dir(dirname)
 
             if r == 'not connected':
-                return 'not connected'
+                ret = 'not connected'
 
             elif r == 'errors':
-                return 'errors'
+                ret = 'errors'
 
             elif r == True:
 
@@ -117,115 +129,138 @@ class FTPWalk:
                 if self._fstats_cb_errors:
                     if dirname in self._file_lists:
                         del(self._file_lists[dirname])
-                    return 'errors'
+                    ret = 'errors'
                 else:
-                    return 'ok'
+                    ret = 'ok'
 
             elif r == False:
-                return 'not dir'
+                ret = 'not dir'
 
             else:
-                return 'errors'
+                ret = 'errors'
+
+        return ret
 
     def fstat_d_n(self, dirname, name):
 
+        ret = None
+
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        if not isinstance(dirname, str):
-            raise TypeError
+        if ret is None:
 
-        if dirname == '':
-            raise ValueError
+            if not isinstance(dirname, str):
+                raise TypeError
 
-        if not isinstance(name, str):
-            raise TypeError
+            if dirname == '':
+                raise ValueError
 
-        if name == '':
-            raise ValueError
+            if not isinstance(name, str):
+                raise TypeError
 
-        if dirname in self._file_lists:
-            if name in self._file_lists[dirname]:
-                return self._file_lists[dirname][name]
-            else:
-                return 'file not found'
-        else:
+            if name == '':
+                raise ValueError
+
+            if dirname in self._file_lists:
+                if name in self._file_lists[dirname]:
+                    ret = self._file_lists[dirname][name]
+                else:
+                    ret = 'file not found'
+
+        if ret is None:
             r = self.fstats(dirname)
 
             if r == 'not connected':
-                return 'not connected'
+                ret = 'not connected'
 
             elif r == 'ok':
-                return self.fstat_d_n(dirname, name)
+                ret = self.fstat_d_n(dirname, name)
 
             elif r == 'not dir':
-                return 'not dir'
+                ret = 'not dir'
 
             elif r == 'errors':
-                return 'errors'
+                ret = 'errors'
 
             else:
-                return 'errors'
+                ret = 'errors'
+
+        return ret
 
     def fstat(self, name):
 
+        ret = None
+
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        if not isinstance(name, str):
-            raise TypeError
+        if ret is None:
 
-        if name == '':
-            raise ValueError
+            if not isinstance(name, str):
+                raise TypeError
 
-        name = wayround_org.utils.path.normpath(name)
-        fdir = os.path.dirname(name)
-        name = os.path.basename(name)
-        return self.fstat_d_n(fdir, name)
+            if name == '':
+                raise ValueError
+
+            name = wayround_org.utils.path.normpath(name)
+            fdir = os.path.dirname(name)
+            name = os.path.basename(name)
+
+            ret = self.fstat_d_n(fdir, name)
+
+        return ret
 
     def _is(self, name, c='-', no=False):
+
+        ret = None
+
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        if not isinstance(name, str):
-            raise TypeError
+        if ret is None:
 
-        if name == '':
-            raise ValueError
+            if not isinstance(name, str):
+                raise TypeError
 
-        if name == '/':
-            return True
+            if name == '':
+                raise ValueError
 
-        r = self.fstat_d_n(
-            os.path.dirname(name),
-            os.path.basename(name)
-            )
-
-        if r == 'not connected':
-            return 'not connected'
-
-        elif r == 'file not found':
-            return False
-
-        elif r == 'error getting file stat':
-            return 'errors'
-
-        elif r == 'not dir':
-            return False
-
-        elif r == 'errors':
-            return 'errors'
-
-        if not no:
-            if r['mode'][0] == c:
+            if name == '/':
                 return True
+
+            r = self.fstat_d_n(
+                os.path.dirname(name),
+                os.path.basename(name)
+                )
+
+            if r == 'not connected':
+                ret = 'not connected'
+
+            elif r == 'file not found':
+                ret = False
+
+            elif r == 'error getting file stat':
+                ret = 'errors'
+
+            elif r == 'not dir':
+                ret = False
+
+            elif r == 'errors':
+                ret = 'errors'
+
+            if not no:
+                if r['mode'][0] == c:
+                    ret = True
+                else:
+                    ret = False
             else:
-                return False
-        else:
-            if r['mode'][0] != c:
-                return True
-            else:
-                return False
+                if r['mode'][0] != c:
+                    ret = True
+                else:
+                    ret = False
+
+        return ret
 
     def is_dir(self, name):
         return self._is(name, c='d')
@@ -242,60 +277,75 @@ class FTPWalk:
     def exists(self, name):
 
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        if not isinstance(name, str):
-            raise TypeError
+        if ret is None:
 
-        if name == '':
-            raise ValueError
+            if not isinstance(name, str):
+                raise TypeError
 
-        if name == '/':
-            return True
+            if name == '':
+                raise ValueError
 
-        r = self.fstat_d_n(
-            os.path.dirname(name),
-            os.path.basename(name)
-            )
+            if name == '/':
+                ret = True
 
-        if r == 'not connected':
-            return 'not connected'
+        if ret is None:
 
-        elif r == 'file not found':
-            return False
+            r = self.fstat_d_n(
+                os.path.dirname(name),
+                os.path.basename(name)
+                )
 
-        elif r == 'error getting file stat':
-            return 'errors'
+            if r == 'not connected':
+                ret = 'not connected'
 
-        elif r == 'not dir':
-            return False
+            elif r == 'file not found':
+                ret = False
 
-        elif r == 'errors':
-            return 'errors'
+            elif r == 'error getting file stat':
+                ret = 'errors'
 
-        else:
-            return True
+            elif r == 'not dir':
+                ret = False
+
+            elif r == 'errors':
+                ret = 'errors'
+
+            else:
+                ret = True
+
+        return ret
 
     def get_all_files(self, dirname):
 
+        ret = None
+
         if self._ftpc is None:
-            return 'not connected'
+            ret = 'not connected'
 
-        r = self.fstats(dirname)
+        if ret is None:
 
-        if r == 'ok':
-            return self._file_lists[dirname]
+            r = self.fstats(dirname)
 
-        else:
-            return r
+            if r == 'ok':
+                ret = self._file_lists[dirname]
+
+            else:
+                ret = r
+
+        return ret
 
     def get(self, dirname, c='d', no=False):
+
+        ret = None
+
         l = []
 
         r = self.get_all_files(dirname)
 
         if not isinstance(r, dict):
-            return r
+            ret = r
 
         else:
             for i in r.keys():
@@ -305,7 +355,9 @@ class FTPWalk:
                 else:
                     if r[i]['mode'][0] == c:
                         l.append(i)
-            return l
+            ret = l
+
+        return ret
 
     def get_normal_files(self, dirname):
         return self.get(dirname, '-')
@@ -325,43 +377,48 @@ class FTPWalkSole(FTPWalk):
     def __init__(self, server, verbose=False):
 
         if not isinstance(server, str):
-            raise TypeError
+            raise TypeError("`server' must be str")
 
         if server == '':
-            raise ValueError
+            raise ValueError("invalid `server' value")
 
         self._server = server
 
         self._init()
 
+        return
+
     def connect(self):
-        isok = True
+        ret = True
 
         if self._verbose:
             v("Connecting to {}".format(self._server))
 
         if self._ftpc is not None:
-            return True
+            ret = True
 
-        try:
-            self._ftpc = ftplib.FTP(self._server)
-        except:
-            isok = False
+        else:
 
-        if isok:
+            try:
+                self._ftpc = ftplib.FTP(self._server)
+            except:
+                ret = False
+
+        if ret:
             try:
                 self._ftpc.login()
             except:
-                isok = False
+                # TODO: invalid exception handling
+                ret = False
 
-        if not isok:
+        if not ret:
             self.disconnect()
 
         if self._verbose:
-            if not isok:
+            if not ret:
                 v("Connection failed")
 
-        return isok
+        return ret
 
     def disconnect(self):
         try:
@@ -376,6 +433,8 @@ class FTPWalkSole(FTPWalk):
 
         self._ftpc = None
 
+        return
+
     def reconnect(self):
         self.disconnect()
         return self.connect()
@@ -385,5 +444,6 @@ class FTPWalkSole(FTPWalk):
         FTPWalk.clean(self)
 
         self.disconnect()
+        return
 
     # __del__ not required as it is present in parent Class

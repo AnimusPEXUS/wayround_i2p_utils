@@ -166,6 +166,7 @@ class Log:
         self.log_filename = None
         self.longest_logname = longest_logname
         self._write_lock = threading.Lock()
+        self._stop_lock = threading.Lock()
 
         # TODO: group and user parameter's behavior need to be improved
         self._group, self._user = wayround_org.utils.osutils.convert_gid_uid(
@@ -183,7 +184,7 @@ class Log:
 
         if (not os.path.isdir(log_dir)
                 or os.path.islink(log_dir)
-            ):
+                ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -248,49 +249,37 @@ class Log:
         return
 
     def stop(self, echo=True):
-        # NOTE: this method is no longer used, but remained for caompatability
-        # TODO: add 'deprecation' warning
-        raise Exception(
-            "stop() is deprecated. remove call to it."
-            " Log is stopped when it's object is deleted"
-            )
+        self._stop(echo=echo)
         return
 
     def close(self, *args, **kwargs):
-        # TODO: add 'deprecation' warning
-        raise Exception(
-            "close() is deprecated. remove call to it."
-            " Log is stopped when it's object is deleted"
-            )
         return self.stop(*args, **kwargs)
 
     def _stop(self, echo=True):
 
-        if self.fileobj is None:
-            raise Exception("Programming error")
+        with self._stop_lock:
 
-        timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
-        self.info(
-            "[{}] log ended" .format(
-                self.logname
-                ),
-            echo=echo,
-            timestamp=timestamp
-            )
+            if self.fileobj is not None:
+                timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
+                self.info(
+                    "[{}] log ended" .format(
+                        self.logname
+                        ),
+                    echo=echo,
+                    timestamp=timestamp
+                    )
 
-        self.stdout.stop()
-        self.stderr.stop()
+                self.stdout.stop()
+                self.stderr.stop()
 
-        # self.stdout = None
-        # self.stderr = None
+                self.stdout = None
+                self.stderr = None
 
-        self.fileobj.flush()
-        self.fileobj.close()
+                self.fileobj.flush()
+                self.fileobj.close()
+                self.fileobj = None
 
         return
-
-    def close(self, *args, **kwargs):
-        raise Exception("close() is deprecated. remove call to it.")
 
     def write(self, text, echo=False, typ='info', timestamp=None):
 

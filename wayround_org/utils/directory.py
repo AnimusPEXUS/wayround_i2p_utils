@@ -26,6 +26,9 @@ class Directory:
     def listdir(self):
         return list(self.files.keys())
 
+    def listdir2(self):
+        return self.dirnames(), self.filenames()
+
     def dirnames(self):
         ret = []
         for i in self.listdir():

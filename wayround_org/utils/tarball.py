@@ -64,6 +64,14 @@ ACCEPTABLE_SOURCE_NAME_EXTENSIONS = [
 Acceptable source name extensions
 """
 
+KNOWN_SIGNING_EXTENSIONS = [
+    '.sign'
+]
+"""
+Trying to list here all extensions by which tarballs can be signed.
+This is needed by GetTheSource 
+"""
+
 ALL_DELIMITERS = ['.', '_', '-', '~']
 STATUS_DELIMITERS = ALL_DELIMITERS + ['+']
 

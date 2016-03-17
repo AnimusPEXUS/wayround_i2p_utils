@@ -277,12 +277,20 @@ class QueryLikeHttp:
         return
 
 
+def parse_uri(value):
+    return URI_RE_C.match(value)
+
+
+def isuri(value):
+    return parse_uri(value) is not None
+
+
 class URI:
 
     @classmethod
     def new_from_string(cls, value):
 
-        res = URI_RE_C.match(value)
+        res = parse_uri(value)
 
         if res is None:
             raise ValueError("can't parse value as URI string")
