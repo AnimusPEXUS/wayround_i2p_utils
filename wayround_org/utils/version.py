@@ -317,11 +317,26 @@ def get_bases_from_ver_tree(directory, preferred_tarball_compressors):
             val = path[-1][i].get_value()
             if not isinstance(val, list):
                 val = [val]
-            res = wayround_org.utils.path.select_by_prefered_extension(
-                val,
-                preferred_tarball_compressors
+
+            res = wayround_org.utils.tarball.\
+                tarball_names_list_subdivide_by_status(
+                    val
                 )
-            bases.append(res)
+
+            for key in res.keys():
+                res2 = wayround_org.utils.path.select_by_prefered_extension(
+                    res[key],
+                    preferred_tarball_compressors
+                    )
+                bases.append(res2)
+
+            # res = wayround_org.utils.path.select_by_prefered_extension(
+            #     val,
+            #     preferred_tarball_compressors
+            #     )
+            # bases.append(res)
+            # for j in val:
+            #    bases.append(j)
     return bases
 
 

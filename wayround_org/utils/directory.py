@@ -73,9 +73,9 @@ class Directory:
                 else:
                     ret = None
         else:
-            ret = None
+            ret = self
 
-        if ret is not None:
+        if ret is not None and len(path_lst) != 0:
             rem_path = path_lst[1:]
             if len(rem_path) == 0:
                 pass

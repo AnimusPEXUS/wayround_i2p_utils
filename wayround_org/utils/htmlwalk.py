@@ -24,13 +24,14 @@ class HTMLWalk:
     def _listdir(self, path, variant=0):
 
         if isinstance(path, str):
-            if path.startswith('/'):
-                path = path[1:]
-            path = wayround_org.utils.path.split(path)
+            path = wayround_org.utils.path.split(path.strip('/'))
 
-        ret = None
-
-        path_res = self._tree.getpath(path)
+        if variant == 0:
+            ret = None
+        elif variant == 1:
+            ret = None, None
+        else:
+            raise Exception("programming error")
 
         ctpp_res = self.check_tree_path_population(path)
         if ctpp_res is True:
@@ -40,6 +41,8 @@ class HTMLWalk:
                     ret = directory.listdir()
                 elif variant == 1:
                     ret = directory.listdir2()
+                else:
+                    raise Exception("programming error")
 
         return ret
 
@@ -73,21 +76,25 @@ class HTMLWalk:
                 path=path_lst_j
                 )
 
-            page = urllib.request.urlopen(uri)
-            page_text = page.read()
-            page.close()
+            try:
+                page = urllib.request.urlopen(uri)
+                page_text = page.read()
+                page.close()
+            except urllib.error.HTTPError:
+                page_text = None
 
-            page = lxml.html.document_fromstring(page_text)
+            if page_text is not None:
+                page = lxml.html.document_fromstring(page_text)
 
-            hrefs = set()
+                hrefs = set()
 
-            for i in page.findall('.//a'):
-                hrefs.add(i.get('href', ''))
+                for i in page.findall('.//a'):
+                    hrefs.add(i.get('href', ''))
 
-            hrefs -= set([''])
+                hrefs -= set([''])
 
-            ret = list(hrefs)
-            ret.sort()
+                ret = list(hrefs)
+                ret.sort()
 
             self._searched_paths[path_lst_j] = ret
 
@@ -100,30 +107,37 @@ class HTMLWalk:
         if not isinstance(path_lst, list):
             raise TypeError("`path_lst' must be str list")
 
-        if not isinstance(search_objects_res, list):
+        if (search_objects_res is not None
+                and not isinstance(search_objects_res, list)):
             raise Exception(
                 "Programming error."
-                " Here `search_objects_res' must always be list of str"
+                " Here `search_objects_res' must always"
+                " be None or list of str"
                 )
 
-        directory = self._tree.getpath(path_lst, create_dirs=True)
+        if len(path_lst) != 0:
+            directory = self._tree.getpath(path_lst, create_dirs=True)
+        else:
+            directory = self._tree.getpath([])
 
-        for i in search_objects_res:
+        if search_objects_res is not None:
+            for i in search_objects_res:
 
-            i_unquoted = urllib.request.unquote(i)
+                i_unquoted = urllib.request.unquote(i)
 
-            if i_unquoted in ['..', '../', '.', './', '/']:
-                continue
+                if i_unquoted in ['..', '../', '.', './', '/']:
+                    continue
 
-            if i_unquoted.startswith('?'):
-                continue
+                if i_unquoted.startswith('?'):
+                    continue
 
-            if not wayround_org.utils.uri.isuri(i):
-                if i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
-                    directory.mkdir(i_unquoted[:-1])
+                if not wayround_org.utils.uri.isuri(i):
+                    if i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
+                        directory.mkdir(i_unquoted[:-1])
 
-                if not i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
-                    directory.mkfile(i_unquoted)
+                    if (not i_unquoted.endswith('/')
+                            and '/' not in i_unquoted[:-1]):
+                        directory.mkfile(i_unquoted)
 
         return
 
@@ -138,7 +152,7 @@ class HTMLWalk:
 
         if path_lst_j not in self._searched_paths:
             self.search_objects(path_lst)
-            if path_lst_j in self._searched_paths:
+            if (path_lst_j in self._searched_paths):
                 self.populate_tree_from_search_objects_result(path_lst)
-        ret = path_lst_j in self._searched_paths
+        ret = (path_lst_j in self._searched_paths)
         return ret

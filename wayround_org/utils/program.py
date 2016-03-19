@@ -277,9 +277,9 @@ def program(command_name, commands, additional_data=None):
             time.sleep(5)
             thr = threading.enumerate()
             if len(thr) != 1:
-                logging.warning('----------------------')
+                logging.warning('-------------------------')
                 logging.warning(
-                    "Threading problems detected:\n{}".format(
+                    "Threading delay detected:\n{}".format(
                         pprint.pformat(thr)
                         )
                     )
@@ -297,17 +297,14 @@ def program(command_name, commands, additional_data=None):
                     thr = threading.enumerate()
                     if len(thr) != 1:
                         logging.error(
-                            "Continued threading problems:\n{}".format(
+                            "Continued threading delay:\n{}".format(
                                 pprint.pformat(thr)
                                 )
                             )
                     else:
-                        logging.info(
-                            "Garbage collector successfuly "
-                            "removed problem threads"
-                            )
+                        logging.info("Threading Cleanup Successful")
             else:
-                logging.info('----------------------')
+                logging.info('-------------------------')
                 logging.info("Threding finished")
 
     return ret['code']

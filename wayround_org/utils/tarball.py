@@ -64,12 +64,18 @@ ACCEPTABLE_SOURCE_NAME_EXTENSIONS = [
 Acceptable source name extensions
 """
 
+ACCEPTABLE_SOURCE_NAME_EXTENSIONS_REV_SORTED_BY_LENGTH = sorted(
+    ACCEPTABLE_SOURCE_NAME_EXTENSIONS,
+    key=lambda x: len(x),
+    reverse=True
+    )
+
 KNOWN_SIGNING_EXTENSIONS = [
     '.sign'
 ]
 """
 Trying to list here all extensions by which tarballs can be signed.
-This is needed by GetTheSource 
+This is needed by GetTheSource
 """
 
 ALL_DELIMITERS = ['.', '_', '-', '~']
@@ -796,7 +802,7 @@ def remove_invalid_tarball_names(names):
     names = copy.copy(names)
 
     for i in range(len(names) - 1, -1, -1):
-        parse_result = wayround_org.utils.tarball.parse_tarball_name(
+        parse_result = parse_tarball_name(
             names[i]
             )
         if parse_result is None:
@@ -811,3 +817,44 @@ def remove_invalid_tarball_names(names):
                     or len(version_list) == 0):
                 del names[i]
     return names
+
+
+def tarball_names_list_subdivide_by_status(tarball_names_list):
+    """
+    this function usage assumes all supplied tarball names are same
+    (versions too).
+
+    result is dict, where keys  are statuses and values are lists of
+    tarball names
+    """
+
+    # ACCEPTABLE_SOURCE_NAME_EXTENSIONS
+    # ACCEPTABLE_SOURCE_NAME_EXTENSIONS_REV_SORTED_BY_LENGTH
+
+    tarball_names_list = copy.copy(tarball_names_list)
+    tarball_names_list_c2 = copy.copy(tarball_names_list)
+
+    d = {}
+
+    for i in tarball_names_list:
+        parse_result = parse_tarball_name(
+            i
+            )
+        if parse_result is not None:
+
+            s = None
+
+            if (parse_result['groups']['status'] is None
+                    or parse_result['groups']['status'] == ''):
+                s = None
+            else:
+                s = parse_result['groups']['status']
+
+            if s not in d:
+                d[s] = []
+
+            d[s].append(i)
+
+    ret = d
+
+    return ret
