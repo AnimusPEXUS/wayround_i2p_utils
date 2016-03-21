@@ -10,6 +10,17 @@ class Directory:
     def parent(self):
         return self._parent
 
+    def get_this_dir_path(self):
+        path = []
+
+        p = self
+
+        while p is not None:
+            path.insert(0, p)
+            p = p.parent
+
+        return path
+
     def mkdir(self, name):
         self.files[name] = Directory(self)
         return self.files[name]
@@ -88,13 +99,7 @@ class Directory:
         folders = self.dirnames()
         files = self.filenames()
 
-        path = []
-
-        p = self
-
-        while p is not None:
-            path.insert(0, p)
-            p = p.parent
+        path = self.get_this_dir_path()
 
         yield path, folders, files
 

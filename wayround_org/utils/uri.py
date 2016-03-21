@@ -480,11 +480,11 @@ class HttpURI(URI):
     def authority(self, value):
 
         if isinstance(value, str):
-            value = AuthorityLikeHttp2.new_from_string(value)
+            value = AuthorityLikeHttp.new_from_string(value)
 
         if value is not None and not isinstance(value, AuthorityLikeHttp):
             raise ValueError(
-                "`query' must be None or AuthorityLikeHttpp6 inst"
+                "`query' must be None or AuthorityLikeHttp inst"
                 )
 
         self._authority = value

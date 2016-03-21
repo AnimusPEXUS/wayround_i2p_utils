@@ -7,6 +7,7 @@ import logging
 import os.path
 import functools
 import copy
+import re
 
 import wayround_org.utils.tarball
 import wayround_org.utils.path
@@ -299,6 +300,12 @@ def truncate_ver_tree(directory, length):
 
     to_delete = lst[length:]
     lst = lst[:length]
+
+    if len(directory.get_this_dir_path()) > 2:
+        for i in range(len(to_delete) - 1, -1, -1):
+            if re.match(r'9\d+', str(i)):
+                lst.append(to_delete[i])
+                del to_delete[i]
 
     for i in to_delete:
         directory.delete(i)
