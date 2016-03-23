@@ -1,4 +1,5 @@
 
+import copy
 import urllib.parse
 
 import regex
@@ -76,7 +77,7 @@ class AuthorityLikeHttp:
 
     def render_str(self):
 
-        ret = ''
+        ret = '//'
 
         if self.userinfo is not None:
             ret += '{}@'.format(self.userinfo)
@@ -333,7 +334,10 @@ class URI:
         if self.authority is not None:
             ret += str(self.authority)
         if self.path is not None:
-            ret += str(self.path)
+            if len(self.path) == 0:
+                ret += '/'
+            else:
+                ret += '/{}'.format('/'.join(self.path))
         if self.fragment is not None:
             ret += '#'
             ret += str(self.fragment)
@@ -355,6 +359,19 @@ class URI:
                 )
             )
         return ret
+
+    def __copy__(self):
+        ret = URI(
+            copy.copy(self.scheme),
+            copy.copy(self.authority),
+            copy.copy(self.path),
+            copy.copy(self.query),
+            copy.copy(self.fragment)
+            )
+        return ret
+
+    def copy(self):
+        return copy.copy(self)
 
     @property
     def scheme(self):
@@ -465,6 +482,16 @@ class HttpURI(URI):
 
     .query and .authority are stored as objects, not as strings
     """
+
+    def __copy__(self):
+        ret = HttpURI(
+            copy.copy(self.scheme),
+            copy.copy(self.authority),
+            copy.copy(self.path),
+            copy.copy(self.query),
+            copy.copy(self.fragment)
+            )
+        return ret
 
     def gen_authority_like_http(self):
         raise Exception("not in HttpURI")
