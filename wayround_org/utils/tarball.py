@@ -71,7 +71,7 @@ ACCEPTABLE_SOURCE_NAME_EXTENSIONS_REV_SORTED_BY_LENGTH = sorted(
     )
 
 KNOWN_SIGNING_EXTENSIONS = [
-    '.sign'
+    '.sign', '.asc'
 ]
 """
 Trying to list here all extensions by which tarballs can be signed.

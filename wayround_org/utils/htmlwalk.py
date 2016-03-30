@@ -71,10 +71,12 @@ class HTMLWalk:
 
             uri = '{scheme}://{domain}{port}/{path}'.format(
                 scheme=self._scheme,
-                domain=self._domain,
+                domain=self._domain, #.encode('idna').decode('utf-8'),
                 port=port_str,
-                path=path_lst_j
+                path=urllib.request.quote(path_lst_j, '/')
                 )
+
+            # print("uri: {}".format(uri))
 
             try:
                 page = urllib.request.urlopen(uri)
@@ -89,7 +91,7 @@ class HTMLWalk:
                 hrefs = set()
 
                 for i in page.findall('.//a'):
-                    hrefs.add(i.get('href', ''))
+                    hrefs.add(urllib.request.unquote(i.get('href', '')))
 
                 hrefs -= set([''])
 
