@@ -35,6 +35,7 @@ DIFFICULT_NAMES = [
     'xc-1.tar.gz',
     'xf86-input-acecad-1.5.0.tar.bz2',
     'xf86-input-elo2300-1.1.2.tar.bz2',
+    'ziplock-1.7.3-source-release.zip',
 
     # delimiters missing between version numbers :-
     'unzip60.tar.gz',
@@ -359,7 +360,7 @@ def standard_version_functions_selector(filebn, subject):
     if not subject in ['finder', 'splitter']:
         raise ValueError("invalid `subject' value")
 
-    if filebn.startswith('zip') or filebn.startswith('unzip'):
+    if re.match(r'(un)?zip\d+', filebn):
 
         if subject == 'finder':
             ret = infozip_version_finder
@@ -539,26 +540,6 @@ def parse_tarball_name(
         ret = None
 
     return ret
-
-
-def parse_test():
-    """
-    Run parser on all difficult names (:data:`DIFFICULT_NAMES`) in test
-    purposes
-    """
-
-    for i in DIFFICULT_NAMES:
-        logging.info("====== Testing parser on `{}' ======".format(i))
-        res = parse_tarball_name(i)
-        if not isinstance(res, dict):
-            logging.error(
-                "Error parsing file name `{}' - parser not matched".format(i)
-                )
-        else:
-            pprint.pprint(res)
-            print()
-
-    return
 
 
 # TODO: adopt lists.filter_text_parse()
@@ -858,3 +839,23 @@ def tarball_names_list_subdivide_by_status(tarball_names_list):
     ret = d
 
     return ret
+
+
+def parse_test():
+    """
+    Run parser on all difficult names (:data:`DIFFICULT_NAMES`) in test
+    purposes
+    """
+
+    for i in DIFFICULT_NAMES:
+        logging.info("====== Testing parser on `{}' ======".format(i))
+        res = parse_tarball_name(i)
+        if not isinstance(res, dict):
+            logging.error(
+                "Error parsing file name `{}' - parser not matched".format(i)
+                )
+        else:
+            pprint.pprint(res)
+            print()
+
+    return
