@@ -56,8 +56,10 @@ def _remove_trailing_slash(str_in):
 
     ret = str_in
 
-    while ret.endswith(s_sep):
-        ret = ret[:-1]
+    ret = ret.rstrip(s_sep)
+
+    # while ret.endswith(s_sep):
+    #    ret = ret[:-1]
 
     # TODO: what is it? commented out 2014-08-30
     # if len(ret) == 0:
@@ -66,7 +68,15 @@ def _remove_trailing_slash(str_in):
     return ret
 
 
-def join(*args, must_be=str):
+def join(
+        *args,
+        must_be=str,
+        keep_end_empty=False
+        ):
+    """
+    keep_end_empty - if True and *args ends on '' or b'', then result will
+    end with trailing slash
+    """
 
     if not must_be in [str, bytes]:
         raise ValueError("`must_be' must be in [str, bytes]")
@@ -103,7 +113,11 @@ def join(*args, must_be=str):
 
             if isinstance(i, list):
 
-                joined = join(*i, must_be=must_be)
+                joined = join(
+                    *i,
+                    must_be=must_be,
+                    keep_end_empty=keep_end_empty
+                    )
 
                 ret_l += joined.split(s_sep)
 
@@ -113,15 +127,28 @@ def join(*args, must_be=str):
 
         if len(ret_l) != 0:
 
+            for i in range(len(ret_l) - 2, -1, -1):
+
+                if ret_l[i] in ['', b'']:
+                    del ret_l[i]
+
+        if len(ret_l) != 0:
+            if not keep_end_empty:
+                if ret_l[-1] in ['', b'']:
+                    del ret_l[-1]
+
+        # if len(ret_l) != 0:
+
             # NOTE: I know what this removes all empty lines from list,
             #       including the last ones, meaning adding slash to string.
             #       This is difference to os.path.join() and is intensional.
+            # NOTE: This behavior changes at 2 apr of 2016. see parameters.
 
-            while '' in ret_l:
-                ret_l.remove('')
+            # while '' in ret_l:
+            #     ret_l.remove('')
 
-            while b'' in ret_l:
-                ret_l.remove(b'')
+            # while b'' in ret_l:
+            #     ret_l.remove(b'')
 
         ret = s_sep.join(ret_l)
 
@@ -131,7 +158,25 @@ def join(*args, must_be=str):
     return ret
 
 
-def split(path):
+def split(path, end_slash='eat'):
+    """
+    end_slash - 'eat' - removes trailing slash and any it's meaning
+                'append' - if path ends on slash - append slash as separate
+                        item into result
+                'append_to_last_item' - like 'append', but adds slash to list
+                        item in result list
+                'append_to_last_item_force' - like 'append_to_last_item', but
+                        if result list is empty - adds new item into it
+
+    """
+
+    if end_slash not in [
+            'eat',
+            'append',
+            'append_to_last_item',
+            'append_to_last_item_force'
+            ]:
+        raise ValueError("invalid value for `on_ending_slash'")
 
     if not isinstance(path, (str, bytes)):
         raise ValueError("path must be str or bytes")
@@ -139,6 +184,7 @@ def split(path):
     s_sep = select_s_sep(path)
 
     absp = path.startswith(s_sep)
+    htsp = path.endswith(s_sep)
 
     path = _remove_double_sep(path)
     path = _remove_trailing_slash(path)
@@ -153,6 +199,25 @@ def split(path):
 
     if absp:
         ret.insert(0, s_sep)
+
+    if htsp:
+        if end_slash == 'eat':
+            # do nothing
+            pass
+        elif end_slash == 'append':
+            ret.append(s_sep)
+        elif end_slash in ['append_to_last_item', 'append_to_last_item_force']:
+            if len(ret) == 0 and end_slash == 'append_to_last_item_force':
+                if isinstance(path, str):
+                    ret.append('')
+                elif isinstance(path, bytes):
+                    ret.append(b'')
+                else:
+                    raise Exception("programming error")
+            if len(ret) != 0 and not ret[-1].startswith(s_sep):
+                ret[-1] = ret[-1] + s_sep
+        else:
+            raise Exception("programming error")
 
     return ret
 
@@ -317,8 +382,8 @@ def exclude_files_not_in_dirs(files, dirs):
     return ret
 
 
-def path_length(string):
-    return len(split(string))
+def path_length(string, end_slash='eat'):
+    return len(split(string, end_slash=end_slash))
 
 
 def _is_subpath_range_error(p1, p2):
@@ -341,7 +406,7 @@ def _is_subpath_range_error(p1, p2):
     return error
 
 
-def get_subpath(basepath, fullpath):
+def get_subpath(basepath, fullpath, end_slash='eat'):
 
     if not isinstance(basepath, str):
         raise ValueError("path must be str")
@@ -349,8 +414,8 @@ def get_subpath(basepath, fullpath):
     if not isinstance(fullpath, str):
         raise ValueError("path_to_check must be str")
 
-    p1 = split(abspath(basepath))
-    p2 = split(abspath(fullpath))
+    p1 = split(abspath(basepath), end_slash=end_slash)
+    p2 = split(abspath(fullpath), end_slash=end_slash)
 
     ret = None
 
@@ -373,7 +438,7 @@ def is_subpath(path_to_check, path):
     p1 = split(abspath(path))
     p2 = split(abspath(path_to_check))
 
-    error = _is_subpath_range_error(p1, p2, i)
+    error = _is_subpath_range_error(p1, p2)
 
     ret = not error
 

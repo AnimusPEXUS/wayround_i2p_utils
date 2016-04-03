@@ -21,6 +21,16 @@ class Directory:
 
         return path
 
+    def get_root(self):
+        ret = None
+        p = self
+        while True:
+            if p.parent is None:
+                ret = p
+                break
+            p = p.parent
+        return ret
+
     def mkdir(self, name):
         self.files[name] = Directory(self)
         return self.files[name]
@@ -76,7 +86,9 @@ class Directory:
 
         if len(path_lst) != 0:
             name = path_lst[0]
-            if name in self:
+            if name == '/':
+                ret = self.get_root()
+            elif name in self:
                 ret = self[name]
             else:
                 if create_dirs:

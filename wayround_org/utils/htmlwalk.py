@@ -1,5 +1,7 @@
 
 import urllib.request
+import logging
+import os.path
 
 import lxml.html
 
@@ -24,7 +26,10 @@ class HTMLWalk:
     def _listdir(self, path, variant=0):
 
         if isinstance(path, str):
-            path = wayround_org.utils.path.split(path.strip('/'))
+            path = wayround_org.utils.path.split(
+                path,
+                end_slash='eat'
+                )
 
         if variant == 0:
             ret = None
@@ -69,11 +74,11 @@ class HTMLWalk:
             if self._port is not None:
                 port_str = ':{}'.format(self._port)
 
-            uri = '{scheme}://{domain}{port}/{path}'.format(
+            uri = '{scheme}://{domain}{port}{path}'.format(
                 scheme=self._scheme,
-                domain=self._domain, #.encode('idna').decode('utf-8'),
+                domain=self._domain,  # .encode('idna').decode('utf-8'),
                 port=port_str,
-                path=urllib.request.quote(path_lst_j, '/')
+                path='/{}/'.format(urllib.request.quote(path_lst_j, '/'))
                 )
 
             # print("uri: {}".format(uri))
@@ -83,6 +88,7 @@ class HTMLWalk:
                 page_text = page.read()
                 page.close()
             except urllib.error.HTTPError:
+                logging.exception("error. uri: {}".format(uri))
                 page_text = None
 
             if page_text is not None:
@@ -104,7 +110,24 @@ class HTMLWalk:
 
     def populate_tree_from_search_objects_result(self, path_lst):
 
+        # NOTE: path_lst slashes are stripped in _listdir method
+        '''
+        print(
+            "populate_tree_from_search_objects_result path_lst {}".format(
+                path_lst
+                )
+            )
+
+        '''
         search_objects_res = self.search_objects(path_lst)
+
+        '''
+        print(
+            "populate_tree_from_search_objects_result search_objects_res {}".format(
+                search_objects_res
+                )
+            )
+        '''
 
         if not isinstance(path_lst, list):
             raise TypeError("`path_lst' must be str list")
@@ -117,13 +140,15 @@ class HTMLWalk:
                 " be None or list of str"
                 )
 
-        if len(path_lst) != 0:
-            directory = self._tree.getpath(path_lst, create_dirs=True)
-        else:
-            directory = self._tree.getpath([])
+        # if len(path_lst) != 0:
+        #    directory = self._tree.getpath(path_lst, create_dirs=True)
+        # else:
+        #    directory = self._tree.getpath([])
 
         if search_objects_res is not None:
             for i in search_objects_res:
+
+                # print("i: {}".format(i))
 
                 i_unquoted = urllib.request.unquote(i)
 
@@ -133,13 +158,42 @@ class HTMLWalk:
                 if i_unquoted.startswith('?'):
                     continue
 
-                if not wayround_org.utils.uri.isuri(i):
-                    if i_unquoted.endswith('/') and '/' not in i_unquoted[:-1]:
-                        directory.mkdir(i_unquoted[:-1])
+                if not wayround_org.utils.uri.isuri(i_unquoted):
 
-                    if (not i_unquoted.endswith('/')
-                            and '/' not in i_unquoted[:-1]):
-                        directory.mkfile(i_unquoted)
+                    is_dir = i_unquoted.endswith('/')
+
+                    i_unquoted_norm = wayround_org.utils.path.normpath(
+                        i_unquoted
+                        )
+
+                    i_unquoted_norm_dirname = os.path.dirname(i_unquoted_norm)
+
+                    i_unquoted_norm_basename = os.path.basename(
+                        i_unquoted_norm)
+
+                    if i_unquoted_norm_dirname == '':
+                        i_unquoted_norm = wayround_org.utils.path.join(
+                            path_lst,
+                            i_unquoted_norm_basename
+                            )
+                        i_unquoted_norm_dirname = os.path.dirname(
+                            i_unquoted_norm
+                            )
+
+                    i_unquoted_norm_dirname_splitted = \
+                        wayround_org.utils.path.split(
+                            i_unquoted_norm_dirname
+                        )
+
+                    tree_dir_to_work_on = self._tree.getpath(
+                        i_unquoted_norm_dirname_splitted,
+                        create_dirs=True
+                        )
+
+                    if is_dir:
+                        tree_dir_to_work_on.mkdir(i_unquoted_norm_basename)
+                    else:
+                        tree_dir_to_work_on.mkfile(i_unquoted_norm_basename)
 
         return
 

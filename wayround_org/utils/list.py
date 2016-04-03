@@ -6,6 +6,20 @@ import re
 import os.path
 
 
+def is_lists_of_strings_equal(lst, lst2):
+    ret = False
+
+    l = len(lst)
+    if l == len(lst2):
+        ret = True
+        for i in range(l):
+            if lst[i] != lst2[i]:
+                ret = False
+                break
+
+    return ret
+
+
 def remove_all_values(lst, lst2):
     """
     Removes all values of list lst2 from list lst
