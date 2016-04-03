@@ -117,8 +117,8 @@ class HTMLWalk:
                 path_lst
                 )
             )
-
         '''
+
         search_objects_res = self.search_objects(path_lst)
 
         '''
@@ -185,15 +185,42 @@ class HTMLWalk:
                             i_unquoted_norm_dirname
                         )
 
+                    if (wayround_org.utils.path.join(path_lst)
+                            != wayround_org.utils.path.join(
+                            i_unquoted_norm_dirname_splitted
+                            )
+                            ):
+                        continue
+
+                    '''
+                    print(
+                        "i_unquoted_norm_dirname_splitted: {}".format(
+                            i_unquoted_norm_dirname_splitted
+                            )
+                        )
+                    '''
                     tree_dir_to_work_on = self._tree.getpath(
                         i_unquoted_norm_dirname_splitted,
                         create_dirs=True
                         )
 
-                    if is_dir:
-                        tree_dir_to_work_on.mkdir(i_unquoted_norm_basename)
-                    else:
-                        tree_dir_to_work_on.mkfile(i_unquoted_norm_basename)
+                    '''
+                    print(
+                        "i_unquoted_norm_basename: {}".format(
+                            i_unquoted_norm_basename
+                            )
+                        )
+
+                    print("is_dir: {}".format(is_dir))
+                    '''
+
+                    if tree_dir_to_work_on.isdir():
+                        if is_dir:
+                            tree_dir_to_work_on.mkdir(i_unquoted_norm_basename)
+                        else:
+                            tree_dir_to_work_on.mkfile(
+                                i_unquoted_norm_basename
+                                )
 
         return
 

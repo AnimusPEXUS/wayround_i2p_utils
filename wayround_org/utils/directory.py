@@ -2,7 +2,7 @@
 class Directory:
 
     def __init__(self, parent=None):
-        self.files = {}
+        self._files = {}
         self._parent = parent
         return
 
@@ -22,30 +22,28 @@ class Directory:
         return path
 
     def get_root(self):
-        ret = None
-        p = self
+        ret = self
         while True:
-            if p.parent is None:
-                ret = p
+            if ret.parent is None:
                 break
-            p = p.parent
+            ret = ret.parent
         return ret
 
     def mkdir(self, name):
-        self.files[name] = Directory(self)
-        return self.files[name]
+        self._files[name] = Directory(self)
+        return self._files[name]
 
     def mkfile(self, name, value=None):
-        self.files[name] = File(init_value=value, parent=self)
-        return self.files[name]
+        self._files[name] = File(init_value=value, parent=self)
+        return self._files[name]
 
     def delete(self, name):
-        if name in self.files:
-            del self.files[name]
+        if name in self._files:
+            del self._files[name]
         return
 
     def listdir(self):
-        return list(self.files.keys())
+        return list(self._files.keys())
 
     def listdir2(self):
         return self.dirnames(), self.filenames()
@@ -53,21 +51,22 @@ class Directory:
     def dirnames(self):
         ret = []
         for i in self.listdir():
-            if type(self.files[i]) == Directory:
+            if type(self._files[i]) == Directory:
                 ret.append(i)
         return ret
 
     def filenames(self):
         ret = []
         for i in self.listdir():
-            if type(self.files[i]) == File:
+            if type(self._files[i]) == File:
                 ret.append(i)
         return ret
 
     def dirs(self):
+        ret = []
         for i in self.listdir():
-            if type(self.files[i]) == Directory:
-                ret.append(self.files[i])
+            if type(self._files[i]) == Directory:
+                ret.append(self._files[i])
         return ret
 
     def isdir(self):
@@ -121,10 +120,10 @@ class Directory:
         return
 
     def __contains__(self, name):
-        return name in self.files
+        return name in self._files
 
     def __getitem__(self, name):
-        return self.files[name]
+        return self._files[name]
 
 
 class File:
