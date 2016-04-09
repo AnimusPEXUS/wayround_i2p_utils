@@ -90,6 +90,9 @@ class HTMLWalk:
             except urllib.error.HTTPError:
                 logging.exception("error. uri: {}".format(uri))
                 page_text = None
+            except urllib.error.URLError:
+                logging.exception("error. uri: {}".format(uri))
+                page_text = None
 
             if page_text is not None:
                 page = lxml.html.document_fromstring(page_text)
@@ -189,7 +192,7 @@ class HTMLWalk:
                             != wayround_org.utils.path.join(
                             i_unquoted_norm_dirname_splitted
                             )
-                            ):
+                        ):
                         continue
 
                     '''
