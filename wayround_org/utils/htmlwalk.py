@@ -78,13 +78,25 @@ class HTMLWalk:
                 scheme=self._scheme,
                 domain=self._domain,  # .encode('idna').decode('utf-8'),
                 port=port_str,
-                path='/{}/'.format(urllib.request.quote(path_lst_j, '/'))
+                path='/{}/'.format(
+                    urllib.request.quote(path_lst_j, '/').strip('/')
+                    )
                 )
 
             # print("uri: {}".format(uri))
 
             try:
-                page = urllib.request.urlopen(uri)
+                uri_req = urllib.request.Request(
+                    uri,
+                    # tell thanks to https://www.burghardt.pl/files/ admin
+                    # for making Me doing this. 15 Apr 2016 MSK
+                    headers={
+                        'User-Agent':
+                        'Mozilla/5.0 (X11; Linux x86_64; rv:45.0)'
+                        ' Gecko/20100101 Firefox/45.0'
+                        }
+                    )
+                page = urllib.request.urlopen(uri_req)
                 page_text = page.read()
                 page.close()
             except urllib.error.HTTPError:
@@ -189,10 +201,10 @@ class HTMLWalk:
                         )
 
                     if (wayround_org.utils.path.join(path_lst)
-                            != wayround_org.utils.path.join(
-                            i_unquoted_norm_dirname_splitted
-                            )
-                        ):
+                                != wayround_org.utils.path.join(
+                                i_unquoted_norm_dirname_splitted
+                                )
+                            ):
                         continue
 
                     '''

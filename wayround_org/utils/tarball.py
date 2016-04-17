@@ -21,6 +21,7 @@ DIFFICULT_NAMES = [
     'dahdi-linux-complete-2.1.0.3+2.1.0.2.tar.gz',
     'dhcp-4.1.2rc1.tar.gz',
     'dvd+rw-tools-5.5.4.3.4.tar.gz',
+    'fontforge_full-20120731-b.tar.bz2',
     'gtk+-3.12.0.tar.xz',
     'lynx2.8.7rel.1.tar.bz2',
     'name.tar.gz',
