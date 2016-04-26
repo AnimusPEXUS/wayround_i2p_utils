@@ -253,7 +253,10 @@ def filter_list(input_list, filter_text):
             cs = False
             function = function[:-1]
 
-        if not function in ['begins', 'contains', 'ends', 'fm', 'bfm', 're']:
+        if not function in [
+                'begins', 'contains', 'ends',
+                'fm', 'bfm', 're', 'bre'
+                ]:
             logging.error(
                 "Wrong function : `{}'".format(function)
                 )
@@ -306,6 +309,17 @@ def filter_list(input_list, filter_text):
                         flags |= re.IGNORECASE
                     matched = \
                         re.match(working_data, working_item, flags) is not None
+
+                elif function == 'bre':
+                    working_data = data
+                    flags = 0
+                    if not cs:
+                        flags |= re.IGNORECASE
+                    matched = \
+                        re.match(
+                            working_data,
+                            os.path.basename(working_item),
+                            flags) is not None
 
                 elif function == 'fm':
                     working_data = data
