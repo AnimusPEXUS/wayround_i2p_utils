@@ -400,7 +400,10 @@ else:
             self.destroy_windows()
             self.clear()
 
-    def text_view(text, title=''):
+    def text_view(text, title='', size=None):
+
+        if size is None:
+            size = (700, 400)
 
         tw = TextView()
 
@@ -409,6 +412,7 @@ else:
 
         tw.ui['textview1'].set_buffer(tb)
 
+        tw.ui['window1'].set_default_size(*size)
         tw.ui['window1'].set_title(str(title))
 
         tw.ui['window1'].show_all()
