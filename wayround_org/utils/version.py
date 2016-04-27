@@ -295,20 +295,25 @@ def ver_tree_add_base(ver_tree, base):
 
 
 def truncate_ver_tree(directory, length):
+
     lst = directory.listdir()
-    lst.sort(reverse=True)
+    lst.sort()
 
-    if len(directory.get_this_dir_path()) > 2:
-        for i in range(len(lst) - 1, -1, -1):
-            if re.match(r'9\d+', str(i)):
-                # lst.append(to_delete[i])
-                del lst[i]
+    back_count = length
 
-    to_delete = lst[length:]
-    lst = lst[:length]
+    for i in range(len(lst) - 1, -1, -1):
 
-    for i in to_delete:
-        directory.delete(i)
+        if back_count > 0:
+            if (len(directory.get_this_dir_path()) > 1
+                    and re.match(r'^9\d+$', str(lst[i]))):
+                pass
+            else:
+                back_count -= 1
+        else:
+            directory.delete(lst[i])
+            del lst[i]
+
+    del lst
 
     for i in directory.listdir():
         if directory[i].isdir():
