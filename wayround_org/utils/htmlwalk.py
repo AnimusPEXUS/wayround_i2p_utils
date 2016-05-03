@@ -201,9 +201,9 @@ class HTMLWalk:
                         )
 
                     if (wayround_org.utils.path.join(path_lst)
-                                != wayround_org.utils.path.join(
-                                i_unquoted_norm_dirname_splitted
-                                )
+                            != wayround_org.utils.path.join(
+                            i_unquoted_norm_dirname_splitted
+                            )
                             ):
                         continue
 
@@ -250,7 +250,8 @@ class HTMLWalk:
 
         if path_lst_j not in self._searched_paths:
             self.search_objects(path_lst)
-            if (path_lst_j in self._searched_paths):
+            if (path_lst_j in self._searched_paths
+                    and self._searched_paths[path_lst_j] is not None):
                 self.populate_tree_from_search_objects_result(path_lst)
         ret = (path_lst_j in self._searched_paths)
         return ret
