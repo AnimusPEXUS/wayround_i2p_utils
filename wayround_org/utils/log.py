@@ -161,7 +161,7 @@ class Log:
 
         ret = 0
         self.code = 0
-        self.fileobj = None
+        # self.fileobj = None
         self.logname = logname
         self.log_filename = None
         self.longest_logname = longest_logname
@@ -205,7 +205,7 @@ class Log:
             if timestamp is None:
                 timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
 
-            filename = wayround_org.utils.path.abspath(
+            self.filename = wayround_org.utils.path.abspath(
                 os.path.join(
                     log_dir,
                     "{ts:26} {name}.txt".format(
@@ -215,21 +215,15 @@ class Log:
                     )
                 )
 
-            self.log_filename = filename
+            self.log_filename = self.filename
 
-            try:
-                self.fileobj = open(filename, 'w')
-            except:
-                logging.exception("Error opening log file")
-                ret = 3
-            else:
-                self.info(
-                    "[{}] log started" .format(
-                        self.logname
-                        ),
-                    echo=echo,
-                    timestamp=timestamp
-                    )
+            self.info(
+                "[{}] log started" .format(
+                    self.logname
+                    ),
+                echo=echo,
+                timestamp=timestamp
+                )
 
         if ret == 0:
             if self._user is not None and self._group is not None:
@@ -259,25 +253,27 @@ class Log:
 
         with self._stop_lock:
 
-            if self.fileobj is not None:
-                timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
-                self.info(
-                    "[{}] log ended" .format(
-                        self.logname
-                        ),
-                    echo=echo,
-                    timestamp=timestamp
-                    )
+            # if self.fileobj is not None:
+            timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
+            self.info(
+                "[{}] log ended" .format(
+                    self.logname
+                    ),
+                echo=echo,
+                timestamp=timestamp
+                )
 
+            if self.stdout is not None:
                 self.stdout.stop()
+            if self.stderr is not None:
                 self.stderr.stop()
 
-                self.stdout = None
-                self.stderr = None
+            self.stdout = None
+            self.stderr = None
 
-                self.fileobj.flush()
-                self.fileobj.close()
-                self.fileobj = None
+            # self.fileobj.flush()
+            # self.fileobj.close()
+            #self.fileobj = None
 
         return
 
@@ -286,8 +282,8 @@ class Log:
         if not typ in ['info', 'error', 'exception', 'warning']:
             raise ValueError("Wrong `typ' parameter")
 
-        if self.fileobj is None:
-            raise Exception("Log output file object is None")
+        # if self.fileobj is None:
+        #    raise Exception("Log output file object is None")
 
         if timestamp is not None:
             pass
@@ -333,8 +329,10 @@ class Log:
                 )
 
         with self._write_lock:
-            self.fileobj.write(msg2 + '\n')
-            self.fileobj.flush()
+            with open(self.filename, 'a') as fileobj:
+                fileobj.write(msg2 + '\n')
+                fileobj.flush()
+                fileobj.close()
             if echo:
                 sys.stderr.write(msg2_scn + '\n')
                 sys.stderr.flush()
