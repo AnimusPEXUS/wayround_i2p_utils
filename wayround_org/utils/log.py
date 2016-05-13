@@ -2,12 +2,10 @@
 import threading
 import logging
 import os
-import io
 import sys
 import weakref
 import select
 import time
-import atexit
 
 
 import wayround_org.utils.path
@@ -19,22 +17,26 @@ import wayround_org.utils.weakref
 import wayround_org.utils.socket
 
 
-class LoggingFileLikeObject:
+class _LoggingFileLikeObject:
+    """
+    this class shoultd not be used by outsiders
+    """
 
     def __init__(self, log_instance, typ='info'):
 
         if not typ in ['info', 'error']:
             raise ValueError("invalid typ value")
 
-        self._log = weakref.proxy(log_instance, self._on_log_finalize)
+        self._log = log_instance
         self._typ = typ
-        #self._pipe = os.pipe2(os.O_NONBLOCK)
-        self._pipe = os.pipe()
+        self._pipe = os.pipe2(os.O_NONBLOCK)
+        # self._pipe = os.pipe()
         self._pipe_read_file = open(
             self._pipe[0],
             mode='r',
             # buffering=0,
-            closefd=False
+            # closefd=False
+            closefd=True
             )
 
         self._sync_out_lock = threading.Lock()
@@ -42,48 +44,17 @@ class LoggingFileLikeObject:
         self._stop_flag = threading.Event()
 
         _t1 = threading.Thread(
-            name="_t1 thread of {}".format(self),
+            name="_thread_run thread of {}".format(self),
             target=self._thread_run
             )
         _t1.start()
 
-        _t2 = threading.Thread(
-            name="_t2 thread of {}".format(self),
-            target=self._stop_flag_waiter_thread_func
-            )
-        _t2.start()
+        self._thread = _t1
 
-        self._thread = weakref.proxy(_t1)
-        self._stop_flag_waiter_thread = weakref.proxy(_t2)
-
-        return
-
-    def __del__(self):
-        self.stop()
-        return
-
-    def _on_log_finalize(self, ref):
-        self.stop()
-        return
-
-    def _stop_flag_waiter_thread_func(self):
-        while True:
-            if self._stop_flag.is_set():
-                break
-            time.sleep(1)
-        threading.Thread(target=self.stop).start()
         return
 
     def fileno(self):
         return self._pipe[1]
-
-    def close(self):
-        # NOTE: leaving this empty. this means what this object's thread
-        #       should bot be stopped by file-like .close() method, nor by
-        #       sending empty line into file descriptor.
-        #       the only mean to sto thread here - should be self._stop_flag
-        #       event
-        return
 
     def stop(self):
         self._stop_flag.set()
@@ -97,12 +68,17 @@ class LoggingFileLikeObject:
                 break
 
             sel_res = select.select([self._pipe_read_file], [], [], 0.5)[0]
+
+            if self._stop_flag.is_set():
+                break
+
             if len(sel_res) == 0:
                 continue
 
             try:
                 line = self._pipe_read_file.readline()
             except OSError:
+                logging.exception("error")
                 continue
 
             with self._sync_out_lock:
@@ -127,6 +103,7 @@ class LoggingFileLikeObject:
             os.close(self._pipe[1])
         except OSError:
             pass
+
         try:
             os.close(self._pipe[0])
         except OSError:
@@ -135,17 +112,11 @@ class LoggingFileLikeObject:
         return
 
 
-class Log:
-    """
-    Note: this class does not uses stop() method to stop logging. Logging now
-          stops automatically with object destruction.
-          However, this means what .stdout and .stderr (which may be
-          used as parameters for Popen) may be closed before Popen-ed
-          application writes all it's stuff into them.
+class LogStrong:
 
-    Note: calling gc.collect() may be required at some points (perhaps at
-          program end) to successfuly destroy threading objects created by Log
-          for exiting Python interpreter normally.
+    """
+    This class requires .close() calling for log to be stopped.
+    Use Log for log which allows close using garbage collector.
     """
 
     def __init__(
@@ -168,23 +139,24 @@ class Log:
         self._write_lock = threading.Lock()
         self._stop_lock = threading.Lock()
 
+        # TODO: attributes cleanups may be required
+
+        self._stop_called_once = False
+
         # TODO: group and user parameter's behavior need to be improved
         self._group, self._user = wayround_org.utils.osutils.convert_gid_uid(
             group,
             user
             )
 
-        self.stdout = LoggingFileLikeObject(self, 'info')
-        self.stderr = LoggingFileLikeObject(self, 'error')
-
-        self.stdout = weakref.proxy(self.stdout)
-        self.stderr = weakref.proxy(self.stderr)
+        self.stdout = _LoggingFileLikeObject(self, 'info')
+        self.stderr = _LoggingFileLikeObject(self, 'error')
 
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-                or os.path.islink(log_dir)
-                ):
+            or os.path.islink(log_dir)
+            ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -238,48 +210,46 @@ class Log:
 
         return
 
-    def __del__(self):
-        self._stop()
-        return
-
     def stop(self, echo=True):
-        self._stop(echo=echo)
-        return
-
-    def close(self, *args, **kwargs):
-        return self.stop(*args, **kwargs)
-
-    def _stop(self, echo=True):
 
         with self._stop_lock:
 
-            # if self.fileobj is not None:
-            timestamp = wayround_org.utils.time.currenttime_stamp_iso8601()
-            self.info(
-                "[{}] log ended" .format(
-                    self.logname
-                    ),
-                echo=echo,
-                timestamp=timestamp
-                )
+            if not self._stop_called_once:
 
-            if self.stdout is not None:
-                self.stdout.stop()
-            if self.stderr is not None:
-                self.stderr.stop()
+                self._stop_called_once = True
 
-            self.stdout = None
-            self.stderr = None
+                # if self.fileobj is not None:
+                timestamp = \
+                    wayround_org.utils.time.currenttime_stamp_iso8601()
 
-            # self.fileobj.flush()
-            # self.fileobj.close()
-            #self.fileobj = None
+                self.info(
+                    "[{}] log ended" .format(
+                        self.logname
+                        ),
+                    echo=echo,
+                    timestamp=timestamp
+                    )
+
+                if self.stdout is not None:
+                    self.stdout.stop()
+
+                if self.stderr is not None:
+                    self.stderr.stop()
+
+                self.stdout = None
+                self.stderr = None
+
+                # self.fileobj.flush()
+                # self.fileobj.close()
+                #self.fileobj = None
 
         return
 
+    close = stop
+
     def write(self, text, echo=False, typ='info', timestamp=None):
 
-        if not typ in ['info', 'error', 'exception', 'warning']:
+        if typ not in ['info', 'error', 'exception', 'warning']:
             raise ValueError("Wrong `typ' parameter")
 
         # if self.fileobj is None:
@@ -321,11 +291,14 @@ class Log:
             )
 
         if icon != 'i':
-            msg2_scn = "\033[0;1m[\033[0m\033[0;4m\033[0;5m{}\033[0m\033[0;1m] [{:26}] [{}]\033[0m {}".format(
-                icon,
-                timestamp,
-                log_name,
-                text
+            msg2_scn = (
+                "\033[0;1m[\033[0m\033[0;4m\033"
+                "[0;5m{}\033[0m\033[0;1m] [{:26}] [{}]\033[0m {}".format(
+                    icon,
+                    timestamp,
+                    log_name,
+                    text
+                )
                 )
 
         with self._write_lock:
@@ -343,7 +316,6 @@ class Log:
         return
 
     def exception(self, text, echo=True, timestamp=None, tb=True):
-        # EXCEPTION TEXT:
         ei = wayround_org.utils.error.return_instant_exception_info(
             tb=tb
             )
@@ -362,3 +334,55 @@ class Log:
     def warning(self, text, echo=True, timestamp=None):
         self.write(text, echo=echo, typ='warning', timestamp=timestamp)
         return
+
+
+global_log_storage = {}
+
+
+class Log:
+
+    def __init__(self, *args, **kwargs):
+        self._own_hash = hash(self)
+        global_log_storage[self._own_hash] = LogStrong(*args, **kwargs)
+        return
+
+    def __del__(self):
+        global_log_storage[self._own_hash].stop()
+        del global_log_storage[self._own_hash]
+        return
+
+    def _proxy_call(self, function, *args, **kwargs):
+        attr = getattr(global_log_storage[self._own_hash], function, None)
+        if attr is not None:
+            ret = attr(*args, **kwargs)
+        else:
+            raise KeyError(
+                "object {} has no attr {}".format(self._log, function)
+                )
+        return ret
+
+    @property
+    def stdout(self):
+        return getattr(global_log_storage[self._own_hash], 'stdout', None)
+
+    @property
+    def stderr(self):
+        return getattr(global_log_storage[self._own_hash], 'stderr', None)
+
+    def stop(self, *args, **kwargs):
+        return self._proxy_call('stop', *args, **kwargs)
+
+    def write(self, *args, **kwargs):
+        return self._proxy_call('write', *args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        return self._proxy_call('error', *args, **kwargs)
+
+    def exception(self, *args, **kwargs):
+        return self._proxy_call('exception', *args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        return self._proxy_call('info', *args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        return self._proxy_call('warning', *args, **kwargs)
