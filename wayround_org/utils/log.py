@@ -29,8 +29,8 @@ class _LoggingFileLikeObject:
 
         self._log = log_instance
         self._typ = typ
-        self._pipe = os.pipe2(os.O_NONBLOCK)
-        # self._pipe = os.pipe()
+        # self._pipe = os.pipe2(os.O_NONBLOCK)
+        self._pipe = os.pipe()
         self._pipe_read_file = open(
             self._pipe[0],
             mode='r',

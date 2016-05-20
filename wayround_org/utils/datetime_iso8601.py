@@ -955,3 +955,6 @@ def test_datetime():
     _test(variants, str_to_datetime, datetime_to_str)
 
     return
+
+to_str = datetime_to_str
+from_str = str_to_datetime
