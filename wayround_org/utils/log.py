@@ -24,7 +24,7 @@ class _LoggingFileLikeObject:
 
     def __init__(self, log_instance, typ='info'):
 
-        if not typ in ['info', 'error']:
+        if typ not in ['info', 'error']:
             raise ValueError("invalid typ value")
 
         self._log = log_instance
@@ -342,32 +342,32 @@ global_log_storage = {}
 class Log:
 
     def __init__(self, *args, **kwargs):
-        self._own_hash = hash(self)
-        global_log_storage[self._own_hash] = LogStrong(*args, **kwargs)
+        self._own_id = id(self)
+        global_log_storage[self._own_id] = LogStrong(*args, **kwargs)
         return
 
     def __del__(self):
-        global_log_storage[self._own_hash].stop()
-        del global_log_storage[self._own_hash]
+        global_log_storage[self._own_id].stop()
+        del global_log_storage[self._own_id]
         return
 
     def _proxy_call(self, function, *args, **kwargs):
-        attr = getattr(global_log_storage[self._own_hash], function, None)
+        attr = getattr(global_log_storage[self._own_id], function, None)
         if attr is not None:
             ret = attr(*args, **kwargs)
         else:
             raise KeyError(
-                "object {} has no attr {}".format(self._log, function)
+                "object {} has no attr {}".format(self, function)
                 )
         return ret
 
     @property
     def stdout(self):
-        return getattr(global_log_storage[self._own_hash], 'stdout', None)
+        return getattr(global_log_storage[self._own_id], 'stdout', None)
 
     @property
     def stderr(self):
-        return getattr(global_log_storage[self._own_hash], 'stderr', None)
+        return getattr(global_log_storage[self._own_id], 'stderr', None)
 
     def stop(self, *args, **kwargs):
         return self._proxy_call('stop', *args, **kwargs)
