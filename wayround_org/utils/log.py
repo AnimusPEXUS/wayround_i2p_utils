@@ -35,8 +35,8 @@ class _LoggingFileLikeObject:
             self._pipe[0],
             mode='r',
             # buffering=0,
-            # closefd=False
-            closefd=True
+            closefd=False
+            # closefd=True # setting this to True causes Exceptions
             )
 
         self._sync_out_lock = threading.Lock()
