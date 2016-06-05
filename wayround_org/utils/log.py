@@ -29,8 +29,8 @@ class _LoggingFileLikeObject:
 
         self._log = log_instance
         self._typ = typ
-        # self._pipe = os.pipe2(os.O_NONBLOCK)
-        self._pipe = os.pipe()
+        self._pipe = os.pipe2(os.O_NONBLOCK)
+        # self._pipe = os.pipe()
         self._pipe_read_file = open(
             self._pipe[0],
             mode='r',
@@ -39,7 +39,7 @@ class _LoggingFileLikeObject:
             # closefd=True # setting this to True causes Exceptions
             )
 
-        self._sync_out_lock = threading.Lock()
+        # self._sync_out_lock = threading.Lock()
 
         self._stop_flag = threading.Event()
 
@@ -62,6 +62,8 @@ class _LoggingFileLikeObject:
 
     def _thread_run(self):
 
+        buff = ''
+
         while True:
 
             if self._stop_flag.is_set():
@@ -74,26 +76,44 @@ class _LoggingFileLikeObject:
 
             if len(sel_res) == 0:
                 continue
-
-            try:
-                line = self._pipe_read_file.readline()
-            except OSError:
-                logging.exception("error")
-                continue
-
-            with self._sync_out_lock:
-
-                if self._stop_flag.is_set():
+            else:
+                readed = self._pipe_read_file.read()
+                if readed is None:
+                    continue
+                elif len(readed) == 0:
                     break
+                else:
+                    pass
 
-                #line = str(line, 'utf-8')
-                line = line.rstrip('\n\r\0')
+                buff += readed
+                readed = None
 
-                if self._typ == 'info':
-                    self._log.info(line)
+                if '\n' in buff:
 
-                if self._typ == 'error':
-                    self._log.error(line)
+                    buff_lines = buff.split('\n')
+
+                    if len(buff_lines) > 1:
+                        for i in range(len(buff_lines) - 1):
+
+                            if self._stop_flag.is_set():
+                                break
+
+                            line = buff_lines[i]
+
+                            #line = str(line, 'utf-8')
+                            line = line.rstrip('\n\r\0')
+
+                            if self._typ == 'info':
+                                self._log.info(line)
+
+                            if self._typ == 'error':
+                                self._log.error(line)
+
+                            line = None
+
+                        buff = buff_lines[-1]
+
+                        buff_lines = None
 
         threading.Thread(target=self.stop).start()
 
@@ -155,8 +175,8 @@ class LogStrong:
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-            or os.path.islink(log_dir)
-            ):
+                    or os.path.islink(log_dir)
+                ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir

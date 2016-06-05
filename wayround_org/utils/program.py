@@ -269,13 +269,13 @@ def program(command_name, commands, additional_data=None):
         if isinstance(i, threading.Thread):
             thrs.append(i)
 
-    #'''
+    '''
     for i in thrs:
         if i.name != 'MainThread':
             gc.collect()
             # print("joining with {}".format(i))
             i.join()
-    #'''
+    '''
 
     if ret['message'] != DO_NOT_PRINT_EXIT_MESSAGE:
 
