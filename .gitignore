@@ -6,6 +6,7 @@
 /build
 /MANIFEST
 /wayround_org/__init__.py
+/tests/test_logs
 *.py?
 *~
 *.so

@@ -6,6 +6,7 @@ import sys
 import weakref
 import select
 import time
+import fcntl
 
 
 import wayround_org.utils.path
@@ -29,14 +30,32 @@ class _LoggingFileLikeObject:
 
         self._log = log_instance
         self._typ = typ
-        self._pipe = os.pipe2(os.O_NONBLOCK)
-        # self._pipe = os.pipe()
+
+        # WARNING: using non-blocking may lead to exception by some utils.
+        #          for instance tar extracting mozjs17.0.0.tar.gz
+        #          will exit with error "tar: write error".
+        #          this indicates what some apps have problem writing
+        #          into non-blocking pipe
+        #
+        #self._pipe = os.pipe2(os.O_NONBLOCK)
+
+        # WARNING 2: using blocking pipe may end up into inability for loop
+        #            in _thread_run to exit, doe to waiting for pipe input.
+        #
+        self._pipe = os.pipe()
+
+        # WARNING 3: So it is required to left self._pipe[1] blocking and
+        #            make self._pipe[0] non-blocking
+        fcntl.fcntl(self._pipe[0], fcntl.F_SETFL, os.O_NONBLOCK)
+
         self._pipe_read_file = open(
             self._pipe[0],
-            mode='r',
-            # buffering=0,
+            mode='rb',
+            buffering=-1,
+
+            # setting this to True causes in some cases Exceptions
             closefd=False
-            # closefd=True # setting this to True causes Exceptions
+            # closefd=True
             )
 
         # self._sync_out_lock = threading.Lock()
@@ -56,19 +75,25 @@ class _LoggingFileLikeObject:
     def fileno(self):
         return self._pipe[1]
 
+    def close(self):
+        # NOTE: this is file_like_object so close() method is required
+        #       but it should not cause log to stop
+        return
+
     def stop(self):
         self._stop_flag.set()
         return
 
     def _thread_run(self):
 
-        buff = ''
+        buff = b''
 
         while True:
 
             if self._stop_flag.is_set():
                 break
 
+            # NOTE: select is only meaningful when pipe is non-blocking
             sel_res = select.select([self._pipe_read_file], [], [], 0.5)[0]
 
             if self._stop_flag.is_set():
@@ -76,44 +101,51 @@ class _LoggingFileLikeObject:
 
             if len(sel_res) == 0:
                 continue
+
+            readed = self._pipe_read_file.read(1024)
+
+            if readed is None:
+                continue
+
+            if len(readed) == 0:
+                # NOTE: normally len(readed) == 0 means what writer closed
+                #       it's pipe's file descriptor.
+                #       but we don't need this. we need to continue accept
+                #       data and close only when log object dies, not earlier
+                continue
+
             else:
-                readed = self._pipe_read_file.read()
-                if readed is None:
-                    continue
-                elif len(readed) == 0:
-                    break
-                else:
-                    pass
+                pass
 
-                buff += readed
-                readed = None
+            buff += readed
+            readed = None
 
-                if '\n' in buff:
+            if b'\n' in buff:
 
-                    buff_lines = buff.split('\n')
+                buff_lines = buff.split(b'\n')
 
-                    if len(buff_lines) > 1:
-                        for i in range(len(buff_lines) - 1):
+                if len(buff_lines) > 1:
+                    for i in range(len(buff_lines) - 1):
 
-                            if self._stop_flag.is_set():
-                                break
+                        if self._stop_flag.is_set():
+                            break
 
-                            line = buff_lines[i]
+                        line = buff_lines[i]
 
-                            #line = str(line, 'utf-8')
-                            line = line.rstrip('\n\r\0')
+                        line = str(line, 'utf-8')
+                        line = line.rstrip('\n\r\0')
 
-                            if self._typ == 'info':
-                                self._log.info(line)
+                        if self._typ == 'info':
+                            self._log.info(line)
 
-                            if self._typ == 'error':
-                                self._log.error(line)
+                        if self._typ == 'error':
+                            self._log.error(line)
 
-                            line = None
+                        line = None
 
-                        buff = buff_lines[-1]
+                    buff = buff_lines[-1]
 
-                        buff_lines = None
+                    buff_lines = None
 
         threading.Thread(target=self.stop).start()
 
@@ -122,12 +154,12 @@ class _LoggingFileLikeObject:
         try:
             os.close(self._pipe[1])
         except OSError:
-            pass
+            self._log.exception("error closing pipe write end")
 
         try:
             os.close(self._pipe[0])
         except OSError:
-            pass
+            self._log.exception("error closing pipe read end")
 
         return
 
@@ -152,7 +184,6 @@ class LogStrong:
 
         ret = 0
         self.code = 0
-        # self.fileobj = None
         self.logname = logname
         self.log_filename = None
         self.longest_logname = longest_logname
@@ -175,8 +206,8 @@ class LogStrong:
         os.makedirs(log_dir, exist_ok=True)
 
         if (not os.path.isdir(log_dir)
-                    or os.path.islink(log_dir)
-                ):
+                or os.path.islink(log_dir)
+            ):
             logging.error(
                 "Current file type is not acceptable: {}".format(
                     log_dir
@@ -231,6 +262,8 @@ class LogStrong:
         return
 
     def stop(self, echo=True):
+
+        # print("log stopping: {}".format(self.logname))
 
         with self._stop_lock:
 

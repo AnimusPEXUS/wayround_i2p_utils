@@ -312,7 +312,7 @@ def isdirempty(dirname):
 is_dir_empty = isdirempty
 
 
-def remove_if_exists(file_or_dir, remove_dead_lymlinks=False, verbose=True):
+def remove_if_exists(file_or_dir, remove_dead_symlinks=False, verbose=True):
 
     ret = 0
 

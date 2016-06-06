@@ -7,6 +7,8 @@ import threading
 import time
 import gc
 import pprint
+import os
+import signal
 
 import wayround_org.utils.error
 import wayround_org.utils.getopt
@@ -289,39 +291,51 @@ def program(command_name, commands, additional_data=None):
             )
 
         thr = threading.enumerate()
+
         if len(thr) != 1:
-            time.sleep(5)
-            thr = threading.enumerate()
-            if len(thr) != 1:
-                logging.warning('-------------------------')
-                logging.warning(
-                    "Threading delay detected:\n{}".format(
-                        pprint.pformat(thr)
-                        )
+
+            times_to_wait = 10
+            times_waited = 0
+
+            logging.warning('-------------------------')
+            logging.warning(
+                "Threading delay detected:\n{}".format(
+                    pprint.pformat(thr)
                     )
-                logging.warning(
-                    "Trying to call garbage collector forcibly"
-                    )
-                logging.warning(
-                    "Collection results. Unreachable objects: {}".format(
-                        gc.collect()
-                        )
-                    )
+                )
+            logging.warning(
+                "will suicide if threads won't finish in 10 seconds"
+                )
+
+            while True:
+
                 thr = threading.enumerate()
-                if len(thr) != 1:
-                    time.sleep(5)
-                    thr = threading.enumerate()
-                    if len(thr) != 1:
-                        logging.error(
-                            "Continued threading delay:\n{}".format(
-                                pprint.pformat(thr)
-                                )
+
+                if times_to_wait == times_waited and len(thr) != 1:
+                    logging.error(
+                        "threading finishing failure:\n{}".format(
+                            pprint.pformat(thr)
                             )
-                    else:
-                        logging.info("Threading Cleanup Successful")
-            else:
-                logging.info('-------------------------')
-                logging.info("Threding finished")
+                        )
+                    print("Goodbye")
+                    os.kill(os.getpid(), signal.SIGKILL)
+
+                gc.collect()
+
+                if len(thr) == 1:
+                    logging.info('-------------------------')
+                    logging.info("Threding finished")
+                    logging.info(
+                        "Exit Code: {} ({})".format(
+                            ret['code'], ret['message'])
+                        )
+                    break
+
+                gc.collect()
+
+                time.sleep(1)
+
+                times_waited += 1
 
     return ret['code']
 

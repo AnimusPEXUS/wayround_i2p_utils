@@ -113,7 +113,14 @@ def _extract_tar_arch(file_name, output_dir, compressor, log=None):
         err = log.stderr
 
     p = subprocess.Popen(
-        ['tar', '-xf', file_name, '-C', output_dir, '-v'],
+        [
+            'tar',
+            '-xf', file_name,
+            '-C', output_dir,
+            '-v',
+            '--no-same-owner',
+            '--no-same-permissions'
+            ],
         stderr=err,
         stdout=out
         )
@@ -704,6 +711,16 @@ def extract_low(
 
     if not os.path.isdir(tmpdir):
         os.makedirs(tmpdir)
+
+    outdir_files = os.listdir(outdir)
+
+    for i in outdir_files:
+        ij = wayround_org.utils.path.join(outdir, i)
+        wayround_org.utils.file.remove_if_exists(ij)
+        del ij
+        del i
+
+    del outdir_files
 
     if log:
         log.info("Extracting {}".format(os.path.basename(tarball)))
