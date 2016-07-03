@@ -703,24 +703,22 @@ def extract_low(
         outdir,
         unwrap_dir=False,
         rename_dir=False,
-        more_when_one_extracted_ok=False
+        more_when_one_extracted_ok=False,
+        cleanup_output_dir=True
         ):
 
     if not os.path.isdir(outdir):
-        os.makedirs(outdir)
+        os.makedirs(outdir, exist_ok=True)
 
     if not os.path.isdir(tmpdir):
-        os.makedirs(tmpdir)
+        os.makedirs(tmpdir, exist_ok=True)
 
-    outdir_files = os.listdir(outdir)
+    if cleanup_output_dir:
+        outdir_files = os.listdir(outdir)
 
-    for i in outdir_files:
-        ij = wayround_org.utils.path.join(outdir, i)
-        wayround_org.utils.file.remove_if_exists(ij)
-        del ij
-        del i
-
-    del outdir_files
+        for i in outdir_files:
+            ij = wayround_org.utils.path.join(outdir, i)
+            wayround_org.utils.file.remove_if_exists(ij)
 
     if log:
         log.info("Extracting {}".format(os.path.basename(tarball)))
