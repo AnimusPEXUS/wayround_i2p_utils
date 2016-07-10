@@ -21,12 +21,26 @@ def findtool(which=None, where=None):
     return which
 
 
-def pkgconfig_include(names, which=None, where=None):
+def pkgconfig_include(names, which=None, where=None, remove_Is=False):
     ret = pkgconfig(names, '--cflags', which=which, where=where)
     s = ret.split()
     for i in range(len(s) - 1, -1, -1):
         if not s[i].startswith('-I'):
             del s[i]
+        if remove_Is:
+            s[i] = s[i][2:]
+    ret = ' '.join(s)
+    return ret
+
+
+def pkgconfig_libs(names, which=None, where=None, remove_ls=False):
+    ret = pkgconfig(names, '--libs', which=which, where=where)
+    s = ret.split()
+    for i in range(len(s) - 1, -1, -1):
+        if not s[i].startswith('-l'):
+            del s[i]
+        if remove_ls:
+            s[i] = s[i][2:]
     ret = ' '.join(s)
     return ret
 
