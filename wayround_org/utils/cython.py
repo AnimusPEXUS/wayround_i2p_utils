@@ -35,7 +35,8 @@ def cythonize(file_list, verbose=True, cython_options=None):
                     '__init__.py'
                     )
                 #print("touching {}".format(init_name))
-                init_names.append(init_name)
+                if not os.path.isfile(init_name):
+                    init_names.append(init_name)
 
     for i in init_names:
         with open(i, 'w'):
