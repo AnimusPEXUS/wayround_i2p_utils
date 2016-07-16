@@ -284,9 +284,11 @@ def program(command_name, commands, additional_data=None):
         mm = ret.get('main_message')
 
         if mm is not None:
-            logging.info('{}'.format(mm))
+            # NOTE: here is print. not logging.info - to not prefix main
+            #       message with [i]
+            print('{}'.format(mm))
 
-        logging.info(
+        print(
             "Exit Code: {} ({})".format(ret['code'], ret['message'])
             )
 
@@ -381,8 +383,8 @@ def _format_command_list(subtree, level_depth):
     if level is None:
         ret = None
     else:
-        print('\n'.join(level.keys()))
-        ret = ''
+        # print('\n'.join(level.keys()))
+        ret = '\n'.join(level.keys())
 
     return
 
@@ -484,6 +486,6 @@ commands:
     --help-list    list commands in section
 """
 
-    print(ret)
+    # print(ret)
 
-    return
+    return ret
