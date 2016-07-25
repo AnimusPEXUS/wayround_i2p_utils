@@ -7,6 +7,7 @@ Partially supported truncated dates and times
 
 import datetime
 import re
+import pytz
 
 # FIXME: Year expansions are not supported due to python datetime limitations
 
@@ -820,7 +821,16 @@ def gen_tz(h, m, plus=True):
 
 def format_tz(value, sep=True, minu=True, zed=False):
 
-    if value is not None and not isinstance(value, datetime.timezone):
+    if (value is not None
+            and not isinstance(
+                value,
+                (
+                    datetime.timezone,
+                    pytz.tzfile.StaticTzInfo
+                    )
+                )
+            ):
+        # print("{}".format(type(value)))
         raise TypeError("`value' must be None or inst of datetime.timezone")
 
     ret = None

@@ -1,6 +1,6 @@
 
 """
-Based on RFC3501
+Based on RFC3501 (IMAP 4rev1)
 """
 
 

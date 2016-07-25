@@ -489,3 +489,30 @@ commands:
     # print(ret)
 
     return ret
+
+
+class MainScript:
+    
+    def __init__(self, commands_module, script_name_for_help, debug_level='INFO'):  
+        return
+    
+    def main(self):
+        import sys
+
+        del sys.path[0]
+
+        import logging
+
+        import wayround_org.utils.program
+
+        wayround_org.utils.program.logging_setup(loglevel='INFO')
+
+        import wayround_org.tasktracker.commands
+
+        commands = wayround_org.tasktracker.commands.commands()
+
+        ret = wayround_org.utils.program.program('wro-tasktracker', commands, None)
+        return
+
+
+   

@@ -1,11 +1,19 @@
 
 """
-Based on RFC5322
+Based on RFC5322 - Internet Message Format
+Note the time line:
+    rfc822
+       v
+    rfc2822
+       v
+    rfc5322
 """
 
 
-import re
+# import re # NOTE: re can't do decimal sets like [\x{10}-\x20]
+import regex
 import datetime
+import pytz
 
 import wayround_org.utils.datetime_iso8601
 
@@ -30,8 +38,21 @@ TIMEOFDAY_EXPRESSION = (
 
 ZONE_EXPRESSION = (
     r'\s*'
+    r'('
+    r'('
     r'(?P<zone_sign>[+-]?)'
     r'(?P<zone_val>(?P<zone_hours>\d{2})(?P<zone_minutes>\d{2}))'
+    r')'
+    r'|'
+    r'(?P<obs_zone>' +
+    (r'UT|GMT|EST|EDT|CST|CDT|MST|MDT|PST|PDT' +
+     r'|[\x{:x}-\x{:x}]'.format(65, 73) +
+     r'|[\x{:x}-\x{:x}]'.format(75, 90) +
+     r'|[\x{:x}-\x{:x}]'.format(97, 105) +
+     r'|[\x{:x}-\x{:x}]'.format(107, 122)
+     ) +
+    r')'
+    r')'
     r'\s*'
     )
 
@@ -60,7 +81,7 @@ DATETIME_EXPRESSION = (
     )
 
 
-DATETIME_EXPRESSION_C = re.compile(DATETIME_EXPRESSION)
+DATETIME_EXPRESSION_C = regex.compile(DATETIME_EXPRESSION)
 
 MONTHES = [
     "Jan", "Feb", "Mar", "Apr",
@@ -68,24 +89,37 @@ MONTHES = [
     "Sep", "Oct", "Nov", "Dec"
     ]
 
+
 DAYSOFWEEK = [
     "Mon", "Tue", "Wed", "Thu",
     "Fri", "Sat", "Sun"
     ]
 
 
-def str_to_datetime(value):
+def match_DATETIME_EXPRESSION_C(value):
+    return DATETIME_EXPRESSION_C.match(value)
+
+
+def str_to_datetime(value, already_parsed=None):
     """
     Parse string and make datetime.datetime of it
+
+    if already_parsed is not None - value is ignored.
+    already_parsed - presumed to be result of match_DATETIME_EXPRESSION_C()
     """
 
-    if not isinstance(value, str):
-        raise TypeError("`value' must be inst of str")
-
     ret = None
-
     ret_attributes = set()
-    re_res = DATETIME_EXPRESSION_C.match(value)
+
+    if already_parsed is None:
+
+        if not isinstance(value, str):
+            raise TypeError("`value' must be inst of str")
+
+        re_res = DATETIME_EXPRESSION_C.match(value)
+
+    else:
+        re_res = already_parsed
 
     if re_res:
 
@@ -98,15 +132,24 @@ def str_to_datetime(value):
             second = int(second)
             ret_attributes.add('second')
 
-        zonesign = '+'
-        if re_res.group('zone_sign') == '-':
-            zonesign = '-'
+        obs_zone = re_res.group('obs_zone')
+        if obs_zone is not None:
+            if obs_zone not in pytz.all_timezones:
+                raise Exception(
+                    "zone name `{}' not supported by pytz".format(obs_zone)
+                    )
+            tzinfo = pytz.timezone(obs_zone)
+        else:
 
-        tzinfo = wayround_org.utils.datetime_iso8601.gen_tz(
-            int(re_res.group('zone_hours')),
-            int(re_res.group('zone_minutes')),
-            plus=zonesign == '+'
-            )
+            zonesign = '+'
+            if re_res.group('zone_sign') == '-':
+                zonesign = '-'
+
+            tzinfo = wayround_org.utils.datetime_iso8601.gen_tz(
+                int(re_res.group('zone_hours')),
+                int(re_res.group('zone_minutes')),
+                plus=zonesign == '+'
+                )
 
         result = datetime.datetime(
             year=int(re_res.group('year')),
@@ -176,7 +219,8 @@ def str_parse_test():
     """
 
     tests = [
-        'Fri, 29 Jan 2016 13:36:08 +0200'
+        'Fri, 29 Jan 2016 13:36:08 +0200',
+        'Sun, 06 Nov 1994 08:49:37 GMT'  # from rfc7231
         ]
 
     for value in tests:
