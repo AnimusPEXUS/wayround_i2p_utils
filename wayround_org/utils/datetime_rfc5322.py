@@ -10,7 +10,6 @@ Note the time line:
 """
 
 
-# import re # NOTE: re can't do decimal sets like [\x{10}-\x20]
 import regex
 import datetime
 import pytz
