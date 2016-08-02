@@ -95,6 +95,12 @@ DAYSOFWEEK = [
     ]
 
 
+def check_datetime_has_tzinfo(value):
+    if not hasattr(value, 'tzinfo') or value.tzinfo is None:
+        raise ValueError("supplied datetime must have time zone info")
+    return
+
+
 def match_DATETIME_EXPRESSION_C(value):
     return DATETIME_EXPRESSION_C.match(value)
 
@@ -173,8 +179,7 @@ def datetime_to_str(value, attrs=None):
     if not isinstance(value, datetime.datetime):
         raise TypeError("`value' must be inst of datetime.datetime")
 
-    if not hasattr(value, 'tzinfo') or value.tzinfo is None:
-        raise ValueError("supplied datetime must have time zone info")
+    check_datetime_has_tzinfo(value)
 
     if attrs is None:
         attrs = set(['dayofweek', 'second'])
