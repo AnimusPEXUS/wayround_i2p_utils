@@ -166,17 +166,21 @@ def encoded_bytes_list_split_by_size(in_list, size):
 
     new_lst = []
     new_lst_size = 0
+
     for i in in_list:
 
         len_i = len(i)
 
         if (new_lst_size + len_i) > size:
             ret.append(new_lst)
-            new_lst = []
-            new_lst_size = 0
+            new_lst = [i]
+            new_lst_size = len_i
         else:
             new_lst.append(i)
             new_lst_size += len_i
+
+    if len(new_lst) != 0:
+        ret.append(new_lst)
 
     return ret
 
