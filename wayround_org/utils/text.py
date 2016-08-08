@@ -130,3 +130,58 @@ def get_line_ranges(txt, nl='\n'):
 
 def get_line_index_at_offset(offset, ranges):
     return wayround_org.utils.range.get_range_first_index(offset, ranges)
+
+
+def str_to_encoded_bytes_list(in_str, encoding='utf-8'):
+
+    if not isinstance(in_str, str):
+        raise TypeError("`in_str' must be str")
+
+    ret = []
+    for i in in_str:
+        ret.append(i.encode(encoding))
+
+    return ret
+
+
+def encoded_bytes_list_size(in_list):
+    ret = 0
+    for i in in_list:
+        ret += len(i)
+    return ret
+
+
+def encoded_bytes_list_split_by_size(in_list, size):
+
+    if not isinstance(size, int):
+        raise TypeError("`size' must be int")
+
+    if size < 0:
+        raise ValueError("`size' must be positive")
+
+    if size < 10:
+        raise ValueError("`size' must be value of 10 or larger")
+
+    ret = []
+
+    new_lst = []
+    new_lst_size = 0
+    for i in in_list:
+
+        len_i = len(i)
+
+        if (new_lst_size + len_i) > size:
+            ret.append(new_lst)
+            new_lst = []
+            new_lst_size = 0
+        else:
+            new_lst.append(i)
+            new_lst_size += len_i
+
+    return ret
+
+
+def merge_encoded_bylentes_lists_inside_list(in_list):
+    for i in range(len(in_list)):
+        in_list[i] = b''.join(in_list[i])
+    return
