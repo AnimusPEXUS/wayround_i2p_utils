@@ -29,6 +29,7 @@ DIFFICULT_NAMES = [
     'openjdk-8-src-b132-03_mar_2014.zip',
     'openssl-0.9.7a.tar.gz',
     'org.apache.felix.ipojo.manipulator-1.8.4-project.tar.gz',
+    'pa_stable_v19_20140130.tgz',
     'pkcs11-helper-1.05.tar.bz2',
     'qca-pkcs11-0.1-20070425.tar.bz2',
     'tcl8.4.19-src.tar.gz',
