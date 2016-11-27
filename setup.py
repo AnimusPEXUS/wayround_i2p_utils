@@ -24,8 +24,8 @@ py_link_args = str(p.communicate()[0], encoding='utf-8').split()
 
 
 setup(
-    name='wayround_org_utils',
-    version='1.15',
+    name='wayround_i2p_utils',
+    version='1.16',
     description='Various service modules',
     long_description="""\
 This package contains various useful modules functions and classes.
@@ -34,15 +34,15 @@ This package contains various useful modules functions and classes.
 
     author='Alexey Gorshkov',
     author_email='animus@wayround.org',
-    url='https://github.com/AnimusPEXUS/wayround_org_utils',
+    url='https://github.com/AnimusPEXUS/wayround_i2p_utils',
     install_requires=[
-        'wayround_org_mail',
+        'wayround_i2p_mail',
         'regex',
         'pytz'
         ],
     packages=[
-        'wayround_org.utils',
-        'wayround_org.utils.format'
+        'wayround_i2p.utils',
+        'wayround_i2p.utils.format'
         ],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
@@ -50,14 +50,14 @@ This package contains various useful modules functions and classes.
         ],
     ext_modules=[
         Extension(
-            "wayround_org.utils.format.elf_bin",
-            ["wayround_org/utils/format/elf_bin.c"],
+            "wayround_i2p.utils.format.elf_bin",
+            ["wayround_i2p/utils/format/elf_bin.c"],
             extra_compile_args=py_compile_args,
             extra_link_args=py_link_args,
             ),
         ] ,
     package_data={
-        'wayround_org.utils': [
+        'wayround_i2p.utils': [
             'config.sub',
             os.path.join('format', '*.c'),
             os.path.join('format', '*.h')
